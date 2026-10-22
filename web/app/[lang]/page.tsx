@@ -8,11 +8,13 @@ import ScanForm from "@/components/ScanForm";
 import Pricing from "@/components/Pricing";
 import MaskHeading from "@/components/MaskHeading";
 import SectionHead from "@/components/SectionHead";
+import { faqJsonLd, ldScript } from "@/lib/seo";
 
 export default async function Landing({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: l } = await params; const lang = (isLocale(l) ? l : "en") as Locale; const t = dict(lang); const h = t.hero;
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldScript(faqJsonLd(lang)) }} />
       <Hero t={t} lang={lang} />
       <main className="vx-below text-white">
         <Reveal as="section" id="scan-form" className="vx-section mx-auto grid max-w-6xl scroll-mt-20 items-center gap-12 !pt-10 md:grid-cols-[1.05fr_1fr]">

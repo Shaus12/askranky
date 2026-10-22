@@ -5,9 +5,15 @@ import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmai
 import * as V from './src/views.js'; import { isMockMode } from './src/providers/index.js';
 import { token, safeEqual, issueMagicLink, consumeMagic } from './src/security/tokens.js'; import { createRateLimiter } from './src/security/ratelimit.js';
 import { verifyTurnstile, turnstileSiteKey } from './src/security/turnstile.js'; import { esc } from './src/security/html.js';
-import { isPrelaunch } from './src/prelaunch.js'; import { billingPage, notFoundPage, langOf } from './src/pages.js'; import { robotsTxt, sitemapXml } from './src/seo.js';
+import { isPrelaunch } from './src/prelaunch.js'; import { billingPage, notFoundPage, langOf } from './src/pages.js'; import { robotsTxt, sitemapXml, llmsTxt } from './src/seo.js';
+import { renderTx } from './src/email/templates.js'; import { setConsent, verifyUnsubToken, unsubUrl, unsubHeaders } from './src/consent.js'; import { unsubscribePage } from './src/pages.js';
+import { startBillingCron, ymd } from './src/jobs/billing-sync.js';
 
-const app = express(); app.disable('x-powered-by'); if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY); app.use(express.urlencoded({ extended: false })); app.use(express.json()); app.use(express.static('public'));
+const app = express(); app.disable('x-powered-by'); if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY); app.use(express.urlencoded({ extended: false })); app.use(express.json()); // noindex on private pages (meta robots is also in the HTML; the header covers redirects and server-rendered pages).
+const NOINDEX = /^\/(?:(?:he|en)\/)?(?:dashboard|login|checkout|billing|auth|mock-checkout|unsubscribe)(?:\/|$)/;
+app.use((q, r, next) => { if (NOINDEX.test(q.path)) r.set('X-Robots-Tag', 'noindex, nofollow'); next(); });
+app.use(express.static('public'));
+const addMonth = d => { const x = new Date(d), day = x.getUTCDate(); x.setUTCDate(1); x.setUTCMonth(x.getUTCMonth() + 1); x.setUTCDate(Math.min(day, new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 0)).getUTCDate())); return x; }; // clamps Jan 31 → Feb 28
 const BASE = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
 const freeScanIps = new Map();
 const wantsJson = q => q.path.startsWith('/api/');
@@ -30,9 +36,15 @@ async function emailMagicLink(a) {
 export const CONSENT_VERSION = 'scan-form-2026-10-22';
 function recordConsent(a, body) {
   const v = body?.marketingConsent; if (!(v === true || v === 'on' || v === '1' || v === 'true')) return;
-  a.marketingConsent = { granted: true, at: new Date().toISOString(), lang: body?.lang === 'he' ? 'he' : 'en', source: 'scan-form', version: CONSENT_VERSION };
+  setConsent(a, 'marketing', true, 'scan-form'); a.marketingConsent = { granted: true, at: a.marketingConsent.at, lang: body?.lang === 'he' ? 'he' : 'en', source: 'scan-form', version: CONSENT_VERSION };
   getDb().events.push({ at: a.marketingConsent.at, type: 'consent.marketing', account: a.id, version: CONSENT_VERSION }); save();
 }
+async function sendReportEmail(account, business, scan, lang) { const u = unsubUrl(BASE, account, 'all', lang === 'he' ? 'he' : 'en');
+  await sendEmail({ to: account.email, headers: unsubHeaders(u), subject: `Your ${BRAND.name} report: ${business.name} scored ${scan.summary.score}/100`, html: renderWeeklyEmail({ business, scan, reportUrl: `${BASE}/r/${scan.id}`, unsubscribeUrl: u }) }); }
+// Admin-only test checkout while pre-launch: ADMIN_TEST_TOKEN via x-admin-test-token header (or ?admin_token=), compared
+// timing-safe. Only ever with the mock payments provider, so no real card can be charged before launch.
+export const adminTestOk = q => { const t = process.env.ADMIN_TEST_TOKEN; if (!t || t.length < 16 || getPayments().id !== 'mock') return false;
+  const g = String(q.get('x-admin-test-token') || q.query?.admin_token || q.body?.adminToken || ''); return safeEqual(g, t); };
 function findOrCreateAccount(email) {
   const db = getDb(); let a = Object.values(db.accounts).find(x => x.email === email.toLowerCase());
   if (!a) { a = { id: id(10), key: token(32), email: email.toLowerCase(), plan: 'free', createdAt: new Date().toISOString(), usage: {} }; db.accounts[a.id] = a; save(); }
@@ -40,6 +52,7 @@ function findOrCreateAccount(email) {
 }
 
 app.get('/health', (q, r) => r.json({ ok: true, brand: BRAND.name, mockScans: isMockMode(), payments: getPayments().id, prelaunch: isPrelaunch(), store: BACKEND }));
+app.get('/llms.txt', (q, r) => r.type('text/plain; charset=utf-8').send(llmsTxt()));
 app.get('/robots.txt', (q, r) => r.type('text/plain').send(robotsTxt()));
 app.get('/sitemap.xml', (q, r) => r.type('application/xml').send(sitemapXml()));
 // Pre-launch waitlist: stores an email + language, never starts a payment.
@@ -59,7 +72,7 @@ app.post('/scan', scanLimiter, captcha, async (q, r) => {
   db.businesses[business.id] = business; save();
   try {
     const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1);
-    await sendEmail({ to: account.email, subject: `Your ${BRAND.name} report: ${business.name} scored ${scan.summary.score}/100`, html: renderWeeklyEmail({ business, scan, reportUrl: `${BASE}/r/${scan.id}` }) });
+    await sendReportEmail(account, business, scan, q.body?.lang);
     r.redirect(`/r/${scan.id}`);
   } catch (e) { r.status(e.code === 'CAP' ? 429 : 500).send(V.landing(e.message)); }
 });
@@ -69,16 +82,16 @@ app.post('/scan', scanLimiter, captcha, async (q, r) => {
 // The quote is frozen on the account at checkout start and re-checked against PLANS on return.
 const displayCurrencyFor = q => { const c = String(q.body?.currency || '').toUpperCase(); return CURRENCIES.includes(c) ? c : detectCurrency(q, q.body?.lang).currency; };
 async function startCheckout(q) {
-  if (isPrelaunch()) return { prelaunch: true };
+  const adminTest = isPrelaunch() && adminTestOk(q); if (isPrelaunch() && !adminTest) return { prelaunch: true };
   const plan = Object.hasOwn(PLANS, q.body?.plan) ? PLANS[q.body.plan] : null; if (!isPaid(plan) || !q.body?.email) return null;
   const billing = billingFor(plan, displayCurrencyFor(q));
-  const account = findOrCreateAccount(q.body.email); account.pendingPlan = plan.id; account.pendingBilling = billing; account.pendingLang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : langOf(q); const state = account.checkoutState = token(24); save();
+  const account = findOrCreateAccount(q.body.email); account.pendingPlan = plan.id; account.pendingBilling = billing; account.pendingLang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : langOf(q); const state = account.checkoutState = token(24); if (adminTest) account.pendingAdminTest = true; else delete account.pendingAdminTest; save();
   const { redirectUrl } = await getPayments().createCheckout({ account, plan, billing, state, returnUrl: `${BASE}/billing/return?lang=${account.pendingLang}` }); return { redirectUrl, billing };
 }
 app.post('/checkout', async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).send(billingPage('prelaunch', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (!c) return r.status(400).send('bad plan'); r.redirect(c.redirectUrl); });
 app.get('/billing/return', async (q, r) => {
-  if (isPrelaunch()) return r.status(403).send(billingPage('prelaunch', langOf(q)));
   const db = getDb(); const [accId, state] = String(q.query.Identifier || '').split('.'); const account = Object.hasOwn(db.accounts, accId) ? db.accounts[accId] : null;
+  if (isPrelaunch() && !(account?.pendingAdminTest && getPayments().id === 'mock')) return r.status(403).send(billingPage('prelaunch', langOf(q)));
   if (!account || !account.checkoutState || !safeEqual(state, account.checkoutState)) return r.status(400).send(billingPage('invalid', langOf(q)));
   const plan = PLANS[account.pendingPlan || 'starter']; const lang = q.query.lang === 'he' || q.query.lang === 'en' ? q.query.lang : account.pendingLang || langOf(q);
   // Re-derive from PLANS (never trust stored/client amounts); keeps the currency chosen at checkout start.
@@ -86,14 +99,19 @@ app.get('/billing/return', async (q, r) => {
   try {
     const res = await getPayments().handleReturn(q.query, account, plan, billing);
     if (!res.ok) return r.send(billingPage('failed', lang, res.error));
-    Object.assign(account, { plan: plan.id, subscriptionRef: res.subscriptionRef, paidAt: new Date().toISOString(), billing: { currency: billing.currency, amount: billing.amount } }); delete account.pendingPlan; delete account.pendingBilling; delete account.checkoutState; delete account.pendingLang; save();
+    Object.assign(account, { plan: plan.id, subscriptionRef: res.subscriptionRef, paidAt: new Date().toISOString(), billing: { currency: billing.currency, amount: billing.amount }, status: 'active', lang, paidThrough: addMonth(new Date()).toISOString(), ...(account.pendingAdminTest ? { adminTest: true } : {}) }); delete account.cancelledAt; delete account.pendingAdminTest; delete account.pendingPlan; delete account.pendingBilling; delete account.checkoutState; delete account.pendingLang; save();
     db.events.push({ at: new Date().toISOString(), type: 'subscription.activated', account: account.id, plan: plan.id, currency: billing.currency, amount: billing.amount }); save();
     // Don't hand the dashboard key to whoever holds this URL: email a single-use magic link instead.
     await emailMagicLink(account);
+    await sendEmail({ to: account.email, ...renderTx('receipt', lang, { planName: plan.name, amount: billing.amount, currency: billing.currency, paidThrough: ymd(account.paidThrough), receiptUrl: res.receiptUrl }) });
     r.send(billingPage('ok', lang));
   } catch (e) { r.status(502).send(billingPage('error', lang, e.message)); }
 });
-app.post('/webhooks/payments', async (q, r) => { const res = await getPayments().handleWebhook(q.body, q.headers); if (!res.ok) return r.sendStatus(401); getDb().events.push({ at: new Date().toISOString(), ...res.event }); save(); r.sendStatus(200); });
+// Webhooks are rejected unless SUMIT_WEBHOOK_SECRET is set AND the request carries it (x-webhook-secret header or
+// ?secret= in the trigger URL), compared timing-safe. Applies to every provider, mock included.
+export const webhookAuthorized = q => { const s = process.env.SUMIT_WEBHOOK_SECRET || ''; if (s.length < 16) return false;
+  return safeEqual(String(q.get('x-webhook-secret') || q.query?.secret || ''), s); };
+app.post('/webhooks/payments', async (q, r) => { if (!webhookAuthorized(q)) return r.sendStatus(401); const res = await getPayments().handleWebhook(q.body, q.headers); if (!res.ok) return r.sendStatus(401); getDb().events.push({ at: new Date().toISOString(), ...res.event }); save(); r.sendStatus(200); });
 
 const accountFor = q => { const db = getDb(); const a = Object.hasOwn(db.accounts, q.params.id) ? db.accounts[q.params.id] : null; return a && safeEqual(String(q.query.key ?? q.get('x-dashboard-key') ?? ''), a.key) ? a : null; };
 function auth(q, r) { const a = accountFor(q); if (!a) { r.status(403).send('forbidden'); return null; } return a; }
@@ -111,8 +129,31 @@ app.post('/dashboard/:id/rescan', async (q, r) => {
 
 
 
+// Self-serve cancel (dashboard key). Requires {confirm:true}; cancels the standing order via the payments adapter, keeps
+// access until paidThrough, emails a written confirmation (Consumer Protection Law s.13D).
+app.post('/api/dashboard/:id/cancel', async (q, r) => {
+  const a = accountFor(q); if (!a) return r.status(403).json({ error: 'forbidden' });
+  if (q.body?.confirm !== true) return r.status(400).json({ error: 'Confirmation required.' });
+  if (a.plan === 'free' || !a.subscriptionRef) return r.status(400).json({ error: 'No active subscription.' });
+  if (a.status === 'cancelled') return r.json({ ok: true, already: true, paidThrough: a.paidThrough });
+  try { const res = await getPayments().cancel(a); if (!res?.ok) throw new Error('cancel failed'); } catch (e) { return r.status(502).json({ error: 'Could not cancel right now. Please try again or email ' + BRAND.supportEmail }); }
+  const now = new Date(); a.status = 'cancelled'; a.cancelledAt = now.toISOString(); a.paidThrough ||= addMonth(a.paidAt || now).toISOString();
+  getDb().events.push({ at: a.cancelledAt, type: 'subscription.cancelled', account: a.id, plan: a.plan, source: 'dashboard' }); save();
+  const lang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : a.lang || 'en';
+  await sendEmail({ to: a.email, ...renderTx('cancel', lang, { planName: PLANS[a.plan].name, cancelDate: ymd(now), paidThrough: ymd(a.paidThrough), currency: a.billing?.currency }) });
+  r.json({ ok: true, paidThrough: a.paidThrough });
+});
+// Unsubscribe: GET shows a confirm page (so mail scanners prefetching the link don't unsubscribe); POST performs it.
+// POST also serves RFC 8058 one-click (List-Unsubscribe-Post). Token = HMAC-signed account id + channel.
+const unsubAccount = t => { const v = verifyUnsubToken(t); const db = getDb(); return v && Object.hasOwn(db.accounts, v.accountId) ? { a: db.accounts[v.accountId], channel: v.channel } : null; };
+app.use('/unsubscribe', (q, r, next) => { r.set('X-Robots-Tag', 'noindex, nofollow'); r.set('Referrer-Policy', 'no-referrer'); r.set('Cache-Control', 'no-store'); next(); });
+app.get('/unsubscribe', (q, r) => { const u = unsubAccount(q.query.t); r.status(u ? 200 : 400).send(unsubscribePage(u ? 'confirm' : 'invalid', langOf(q), String(q.query.t || ''))); });
+app.post('/unsubscribe', loginLimiter, (q, r) => { const t = q.query.t || q.body?.t; const u = unsubAccount(t); if (!u) return r.status(400).send(unsubscribePage('invalid', langOf(q)));
+  setConsent(u.a, u.channel, false, q.body?.['List-Unsubscribe'] === 'One-Click' ? 'one-click' : 'unsubscribe-page'); getDb().events.push({ at: new Date().toISOString(), type: 'consent.optout', account: u.a.id, channel: u.channel }); save();
+  r.send(unsubscribePage('done', langOf(q))); });
+
 // ---------- JSON API for the Next.js frontend (web/) ----------
-const pub = a => ({ id: a.id, email: a.email, plan: a.plan, active: !!a.subscriptionRef });
+const pub = a => ({ id: a.id, email: a.email, plan: a.plan, active: !!a.subscriptionRef && a.status !== 'cancelled', status: a.status || (a.subscriptionRef ? 'active' : null), paidThrough: a.paidThrough || null, cancelledAt: a.cancelledAt || null });
 app.get('/api/config', (q, r) => r.json({ brand: BRAND, plans: publicPlans(), usdBilling: usdBillingEnabled(), mock: isMockMode(), prelaunch: isPrelaunch(), turnstileSiteKey: turnstileSiteKey() }));
 app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body || {};
@@ -125,7 +166,7 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   db.businesses[business.id] = business; save();
   try {
     const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1);
-    await sendEmail({ to: account.email, subject: `Your ${BRAND.name} report: ${business.name} scored ${scan.summary.score}/100`, html: renderWeeklyEmail({ business, scan, reportUrl: `${BASE}/r/${scan.id}` }) });
+    await sendReportEmail(account, business, scan, q.body?.lang);
     r.json({ reportId: scan.id });
   } catch (e) { r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }
 });
@@ -185,7 +226,7 @@ app.get('/r/:id', (q, r) => r.redirect(`/${prefLang(q)}/r/${encodeURIComponent(q
 app.get('/dashboard/:id', (q, r) => r.redirect(`/${prefLang(q)}/dashboard/${encodeURIComponent(q.params.id)}${qs(q)}`));
 app.get('/login', (q, r) => r.redirect(`/${prefLang(q)}/login`));
 app.get('/pricing', (q, r) => r.redirect(`/${prefLang(q)}#pricing`));
-app.get('/mock-checkout', (q, r) => isPrelaunch() ? r.redirect(`/${prefLang(q)}/checkout`) : r.redirect(`/${prefLang(q)}/checkout${qs(q)}`));
+app.get('/mock-checkout', (q, r) => { const k = String(q.query.account || '').split('.')[0]; const acc = Object.hasOwn(getDb().accounts, k) ? getDb().accounts[k] : null; return isPrelaunch() && !(acc?.pendingAdminTest && getPayments().id === 'mock') ? r.redirect(`/${prefLang(q)}/checkout`) : r.redirect(`/${prefLang(q)}/checkout${qs(q)}${isPrelaunch() ? (qs(q) ? '&' : '?') + 'admintest=1' : ''}`); });
 app.get('/legal/:lang(he|en)/:doc', (q, r) => r.redirect(`/${q.params.lang}/legal?doc=${encodeURIComponent(q.params.doc)}`));
 app.get('/legal/:doc', (q, r) => r.redirect(`/${prefLang(q)}/legal?doc=${encodeURIComponent(q.params.doc)}`));
 app.get('/:lang', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang) : next());
@@ -198,5 +239,6 @@ app.use((q, r) => { if (wantsJson(q)) return r.status(404).json({ error: 'not fo
 
 const port = process.env.PORT || 3000;
 if (process.argv[1]?.endsWith('server.js')) { const cfg = (await import('./src/config-check.js')).logConfig(); if (!cfg.ok && process.env.CONFIG_STRICT === '1') process.exit(1); }
+if (process.argv[1]?.endsWith('server.js') && process.env.BILLING_SYNC_CRON === '1') { startBillingCron(); console.log('billing sync: in-process daily scheduler on'); }
 if (process.argv[1]?.endsWith('server.js')) app.listen(port, process.env.HOST || '0.0.0.0', () => console.log(`${BRAND.name} on http://localhost:${port} (scans: ${isMockMode() ? 'MOCK' : 'LIVE'}, payments: ${getPayments().id})`));
 export default app;

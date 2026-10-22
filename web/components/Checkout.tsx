@@ -14,7 +14,8 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
   if (!q || pre === null) return <main className="min-h-[60vh]" />;
   const c = t.checkout; const account = q.get("account");
   // Pre-launch: never start a payment; collect a waitlist email instead.
-  if (pre) {
+  // Admin test checkout (server verified ADMIN_TEST_TOKEN and marked this checkout; /billing/return re-checks): show the mock card page.
+  if (pre && !(account && q.get("admintest") === "1")) {
     const join = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); setErr("");
       try { await api("/api/waitlist", { body: { email: String(new FormData(e.currentTarget).get("email") || ""), lang, plan: q.get("plan") } }); setJoined(true); } catch (x: any) { setErr(x.message); } };
     return (

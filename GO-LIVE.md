@@ -28,12 +28,39 @@ After the first deploy with `DATABASE_URL`: optionally import old JSON data once
 - Optional: `OPENAI_MODEL`, `GEMINI_MODEL`, `PERPLEXITY_MODEL`, `SCAN_RATE_MAX`, `SCAN_RATE_WINDOW_MS`
 
 ## 2. Email
-- `EMAIL_MODE=resend`, `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `Ranky <hello@askranky.com>`, domain verified in Resend)
+- `EMAIL_MODE=resend`, `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `Ranky <hello@askranky.com>`, domain verified in Resend; default `Ranky <reports@askranky.com>`)
+- `EMAIL_REPLY_TO` (default `SUPPORT_EMAIL`, i.e. support@askranky.com)
+- `UNSUBSCRIBE_SECRET`: long random string (e.g. `openssl rand -base64 32`). Signs the unsubscribe links in weekly/report emails.
+  **Required** for live email (config error otherwise). Changing it invalidates links in emails already sent.
+- Weekly/report emails carry a signed `/unsubscribe` link + `List-Unsubscribe` / one-click headers. Opt-outs are stored
+  per account (`emailPrefs`, `consentHistory` with timestamps) and the weekly job skips them. Receipts, failed-payment and
+  cancellation emails are transactional and always sent (templates: ops/email-templates §4–6, HE/EN).
 
 ## 3. Payments (SUMIT, ILS only)
 - `PAYMENTS_PROVIDER=sumit`, `SUMIT_COMPANY_ID`, `SUMIT_API_KEY`, `SUMIT_PUBLIC_API_KEY`, `SUMIT_WEBHOOK_SECRET`
 - Keep `ENABLE_USD_BILLING=false`. USD stays display-only; customers are charged the ILS list price.
+- `SUMIT_WEBHOOK_SECRET` (≥16 chars) is now **mandatory**: without it every `/webhooks/payments` call is rejected (401).
+  Configure the SUMIT trigger URL as `https://askranky.com/webhooks/payments?secret=<SUMIT_WEBHOOK_SECRET>` (or send header `x-webhook-secret`).
+- **Daily billing sync** (SUMIT sends no IPN for renewals). Pick ONE:
+  - Render Cron Job (preferred): command `npm run billing:sync`, schedule `0 4 * * *` (UTC), same env vars as the web service
+    (needs `DATABASE_URL` + `NODE_ENV=production` so it reads the same Postgres DB).
+  - or in-process: `BILLING_SYNC_CRON=1` on the web service (single instance only; first run 1 min after boot, then every 24h).
+  The job renews `paidThrough` + sends a receipt email, marks failed payments `past_due` + sends one failed-payment email,
+  downgrades to free after 7 days unpaid, and ends cancelled plans at `paidThrough`.
+- Self-serve cancel: dashboard → "Cancel subscription" → confirm → `POST /api/dashboard/:id/cancel` → SUMIT
+  `/billing/recurring/cancel/`, access kept until `paidThrough`, written confirmation email (s.13D).
 - In SUMIT: company set as עוסק פטור, default document קבלה, no VAT; renewals also produce קבלה. First real charge only with Shai's approval.
+
+## 3b. Pre-launch admin test checkout
+- `ADMIN_TEST_TOKEN` (≥16 random chars). While pre-launch, `POST /api/checkout` with header `x-admin-test-token: <token>`
+  starts a **mock** checkout (never with `PAYMENTS_PROVIDER=sumit`); the account is flagged `adminTest: true`. Compared
+  timing-safe. Leave unset to disable. Remove at launch.
+
+## 3c. SEO
+- JSON-LD (Organization, WebSite, SoftwareApplication, FAQPage) is in the static build. Paid `Offer`s are published only
+  when the web build runs with `NEXT_PUBLIC_CHECKOUT_LIVE=1` (set it in the Render build env at launch, then rebuild).
+- `/llms.txt`, per-page meta/OG (`public/og-he.png`, `og-en.png`, `logo.png`; regenerate with `cd web && node scripts/og-images.mjs`),
+  `X-Robots-Tag: noindex` on dashboard/login/checkout/billing/auth/unsubscribe.
 
 ## 4. Launch
 - `npm run config:check` shows no errors → set `PRELAUNCH=0` (or leave unset: auto-off once scans and payments are both live).

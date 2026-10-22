@@ -33,3 +33,15 @@ export function notFoundPage(lang = 'en') {
   const en = { lang: 'en', code: '404', title: 'Page not found', text: 'The link is wrong or the page has moved.', links: [['/en', 'Home'], ['/en/scan', 'Free scan', true]] };
   return branded({ lang, title: lang === 'he' ? 'העמוד לא נמצא' : 'Page not found', blocks: lang === 'he' ? [he, en] : [en, he] });
 }
+const UNSUB = {
+  confirm: { he: ['ביטול הרשמה למיילים', 'לחיצה על הכפתור תפסיק את הדוחות השבועיים ומיילי העדכונים. מיילים הכרחיים (קבלות, כניסה לחשבון) ימשיכו להישלח.', 'ביטול הרשמה'],
+    en: ['Unsubscribe from emails', 'This stops weekly reports and update emails. Essential emails (receipts, sign-in links) still arrive.', 'Unsubscribe'] },
+  done: { he: ['ההרשמה בוטלה', 'לא נשלח לך יותר דוחות שבועיים או מיילי עדכונים. אפשר להירשם מחדש בכל עת דרך התמיכה.'], en: ['You are unsubscribed', 'We will not send you weekly reports or update emails anymore. You can opt back in anytime via support.'] },
+  invalid: { he: ['הקישור לא תקין', 'קישור ביטול ההרשמה שגוי. פנה/י לתמיכה ונבטל ידנית.'], en: ['Invalid link', 'This unsubscribe link is not valid. Contact support and we will remove you manually.'] },
+};
+// Unsubscribe confirm/done/invalid page (HE RTL + EN). The confirm step is a POST form so link prefetchers can't opt people out.
+export function unsubscribePage(kind, lang = 'en', t = '') {
+  const [title, text, cta] = UNSUB[kind][lang === 'he' ? 'he' : 'en'];
+  const form = cta ? `<form method="post" action="/unsubscribe?t=${encodeURIComponent(t)}&amp;lang=${lang}"><button class="btn" type="submit" style="border:0;cursor:pointer;font:inherit;font-weight:700">${esc(cta)}</button></form>` : '';
+  return branded({ lang, title, blocks: [{ lang, title, text, links: [[`/${lang}`, lang === 'he' ? 'לעמוד הבית' : 'Home', !!cta]] }] }).replace('</section>', form + '</section>');
+}

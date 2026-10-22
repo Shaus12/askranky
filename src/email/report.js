@@ -1,5 +1,5 @@
 import { BRAND } from '../brand.js'; import { esc, safeUrl } from '../security/html.js';
-export function renderWeeklyEmail({ business, scan, prev, reportUrl }) {
+export function renderWeeklyEmail({ business, scan, prev, reportUrl, unsubscribeUrl }) {
   const s = scan.summary; const delta = prev ? s.score - prev.summary.score : null;
   const eng = Object.entries(s.byEngine).map(([e, v]) => `<tr><td>${esc(e)}</td><td>${+v.mentions}/${+v.checks}</td><td>${esc(v.avgRank ?? '–')}</td></tr>`).join('');
   return `<!doctype html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#111">
@@ -10,6 +10,6 @@ export function renderWeeklyEmail({ business, scan, prev, reportUrl }) {
 <h3>Who AI recommends instead</h3><ol>${s.topCompetitors.map(c => `<li>${esc(c.name)} (${+c.count}x)</li>`).join('')}</ol>
 <h3>This week's 3 fixes</h3>${scan.fixes.map((f, i) => `<p><b>${i + 1}. ${esc(f.title)}</b><br>${esc(f.why)}</p><pre style="background:#f4f4f5;padding:8px;white-space:pre-wrap">${esc(f.copy)}</pre>`).join('')}
 <p><a href="${safeUrl(reportUrl)}">See the full report →</a></p>
-<p style="color:#888;font-size:12px">${scan.mock ? '[MOCK DATA] ' : ''}Results come from the engines' APIs and can differ from the consumer apps. ${esc(BRAND.name)} · ${esc(BRAND.legalEntity)} · <a href="{{unsubscribe}}">Unsubscribe</a></p>
+<p style="color:#888;font-size:12px">${scan.mock ? '[MOCK DATA] ' : ''}Results come from the engines' APIs and can differ from the consumer apps. ${esc(BRAND.name)} · ${esc(BRAND.legalEntity)} · ${unsubscribeUrl ? `<a href="${safeUrl(unsubscribeUrl)}">Unsubscribe</a>` : ''}</p>
 </body></html>`;
 }

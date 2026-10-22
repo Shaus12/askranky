@@ -11,6 +11,7 @@ import TrendChart from "./TrendChart";
 export default function Dashboard({ t, lang }: { t: Dict; lang: Locale }) {
   const [d, setD] = useState<any>(null); const [err, setErr] = useState(""); const [busy, setBusy] = useState("");
   const [auth, setAuth] = useState<{ id: string; key: string } | null>(null);
+  const [confirming, setConfirming] = useState(false); const [cancelMsg, setCancelMsg] = useState("");
   useEffect(() => {
     const id = idFromPath("dashboard"); const q = new URLSearchParams(location.search); const sk = `ranky-key-${id}`;
     const key = q.get("key") || sessionStorage.getItem(sk) || "";
@@ -24,6 +25,12 @@ export default function Dashboard({ t, lang }: { t: Dict; lang: Locale }) {
     try { const j = await api<{ reportId: string }>(`/api/dashboard/${encodeURIComponent(auth.id)}/rescan`, { body: { businessId }, headers: { "x-dashboard-key": auth.key } }); location.href = `/${lang}/r/${j.reportId}`; }
     catch (e: any) { setErr(e.message); setBusy(""); }
   }
+  async function cancel() {
+    if (!auth) return; setBusy("cancel"); setErr("");
+    try { const j = await api<{ paidThrough: string }>(`/api/dashboard/${encodeURIComponent(auth.id)}/cancel`, { body: { confirm: true, lang }, headers: { "x-dashboard-key": auth.key } });
+      setD({ ...d, account: { ...d.account, status: "cancelled", active: false, paidThrough: j.paidThrough } }); setCancelMsg(`${t.dash.cancelDone} ${String(j.paidThrough).slice(0, 10)}`); setConfirming(false); }
+    catch (e: any) { setErr(e.message); } finally { setBusy(""); }
+  }
   if (err && !d) return <main className="mx-auto max-w-md px-4 py-20 text-center"><p role="alert" className="card p-6 text-red-200">{err}</p><Link href={`/${lang}/login`} className="btn-cta mt-8">{t.login.nav}</Link></main>;
   if (!d) return <main className="min-h-[60vh] py-20 text-center text-slate-400">{t.live.loading}</main>;
   return (
@@ -31,6 +38,21 @@ export default function Dashboard({ t, lang }: { t: Dict; lang: Locale }) {
       <h1 className="font-head vx-h3">{t.dash.title}</h1>
       <span className="hairline mt-6 block w-40" /><p className="mt-5 text-slate-300"><span dir="ltr">{d.account.email}</span> · {t.dash.plan}: <b className="text-white">{d.account.plan}</b> · {t.dash.usage}: <span dir="ltr">{d.usage.used}/{d.usage.cap}</span></p>
       {err && <p role="alert" className="mt-4 text-red-200">{err}</p>}
+      {d.account.plan !== "free" && d.account.status && (
+        <section className="card mt-8 p-6" data-subscription aria-labelledby="sub-h">
+          <h2 id="sub-h" className="text-lg font-bold">{t.dash.sub}</h2>
+          <p className="mt-2 text-slate-300">{d.account.status === "cancelled" ? `${t.dash.cancelled} ${String(d.account.paidThrough || "").slice(0, 10)}` : d.account.status === "past_due" ? t.dash.pastDue : t.dash.active}</p>
+          {cancelMsg && <p role="status" className="mt-3 text-emerald-200">{cancelMsg}</p>}
+          {d.account.status !== "cancelled" && !confirming && <button onClick={() => setConfirming(true)} className="btn-outline mt-4 !py-2" data-cancel>{t.dash.cancel}</button>}
+          {confirming && (
+            <div role="alertdialog" aria-labelledby="cancel-h" aria-describedby="cancel-b" className="mt-4 rounded-2xl border border-red-300/30 bg-red-500/10 p-5" data-cancel-confirm>
+              <h3 id="cancel-h" className="font-bold">{t.dash.cancelTitle}</h3><p id="cancel-b" className="mt-2 text-slate-300">{t.dash.cancelBody}</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button onClick={cancel} disabled={busy === "cancel"} className="btn-outline !py-2 !border-red-300/60 disabled:opacity-60">{busy === "cancel" ? "…" : t.dash.cancelYes}</button>
+                <button onClick={() => setConfirming(false)} autoFocus className="btn-cta !py-2">{t.dash.cancelNo}</button>
+              </div>
+            </div>)}
+        </section>)}
       {!d.businesses.length && <p className="card mt-8 p-6">{t.dash.none}</p>}
       <div className="mt-8 grid gap-6">
         {d.businesses.map((b: any) => { const last = b.scans.at(-1); return (

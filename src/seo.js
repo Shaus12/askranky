@@ -10,6 +10,18 @@ export function sitemapXml() {
   const u = (l, p) => x(`${SITE()}/${l}${p}`);
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n` +
     SITEMAP_PAGES.flatMap(p => ['he', 'en'].map(l => `  <url><loc>${u(l, p)}</loc>` +
-      `<xhtml:link rel="alternate" hreflang="he" href="${u('he', p)}"/><xhtml:link rel="alternate" hreflang="en" href="${u('en', p)}"/><xhtml:link rel="alternate" hreflang="x-default" href="${x(SITE() + (p ? '/he' + p : ''))}"/>` +
+      `<xhtml:link rel="alternate" hreflang="he" href="${u('he', p)}"/><xhtml:link rel="alternate" hreflang="en" href="${u('en', p)}"/><xhtml:link rel="alternate" hreflang="x-default" href="${x(SITE() + (p ? '/en' + p : '/'))}"/>` +
       `<changefreq>weekly</changefreq><priority>${p ? '0.6' : '1.0'}</priority></url>`)).join('\n') + '\n</urlset>\n';
 }
+// llms.txt (seo-audit #4): plain summary + key pages for AI crawlers.
+export const llmsTxt = () => `# Ranky
+> Ranky (askranky.com) checks whether ChatGPT, Perplexity and Google's AI recommend a local business, shows who gets named instead and which sources are cited, and suggests 3 fixes. Free first scan. Markets: US (English) and Israel (Hebrew).
+
+## Pages
+- [Home (EN)](${SITE()}/en)
+- [Home (HE)](${SITE()}/he)
+- [Free scan](${SITE()}/en/scan)
+- [Sample report](${SITE()}/en/report)
+- [Terms](${SITE()}/en/legal?doc=terms)
+- [Privacy](${SITE()}/en/legal?doc=privacy)
+`;

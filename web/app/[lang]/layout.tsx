@@ -3,7 +3,7 @@ import type { Viewport } from "next";
 import { notFound } from "next/navigation";
 import { dir, isLocale, locales } from "@/lib/i18n";
 import SmoothScroll from "@/components/SmoothScroll";
-import { metaFor } from "@/lib/seo";
+import { metaFor, siteJsonLd, ldScript } from "@/lib/seo";
 import DemoBanner from "@/components/DemoBanner";
 
 export const generateStaticParams = () => locales.map((lang) => ({ lang }));
@@ -18,6 +18,7 @@ export default async function LangLayout({ children, params }: { children: React
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&family=Rubik:wght@500;700;800&family=Plus+Jakarta+Sans:wght@500;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldScript(siteJsonLd(lang)) }} />
       </head>
       <body><DemoBanner lang={lang} /><SmoothScroll />{children}</body>
     </html>
