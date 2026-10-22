@@ -1,17 +1,33 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { Dict, Locale } from "@/lib/i18n";
-import { api } from "@/lib/api";
+import { api, getConfig } from "@/lib/api";
 import { fmt, type Billing, type Pricing } from "@/lib/prices";
 // ?plan=starter → email form → POST /api/checkout → payment provider redirect.
 // ?account=… → mock payment page (stands in for the SUMIT hosted page while PAYMENTS_PROVIDER=mock).
 export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
   const [q, setQ] = useState<URLSearchParams | null>(null); const [err, setErr] = useState(""); const [bill, setBill] = useState<Billing | null>(null);
-  useEffect(() => { const sp = new URLSearchParams(location.search); setQ(sp);
+  const [pre, setPre] = useState<boolean | null>(null); const [joined, setJoined] = useState(false);
+  useEffect(() => { const sp = new URLSearchParams(location.search); setQ(sp); getConfig().then((c) => setPre(!!c.prelaunch));
     // Show exactly what the server will charge (server re-prices on POST; the client never sends an amount).
     api<Pricing>(`/api/pricing?lang=${lang}`).then((j) => setBill(j.plans.find((p) => p.id === (sp.get("plan") || "starter"))?.billing || null)).catch(() => {}); }, [lang]);
-  if (!q) return <main className="min-h-[60vh]" />;
+  if (!q || pre === null) return <main className="min-h-[60vh]" />;
   const c = t.checkout; const account = q.get("account");
+  // Pre-launch: never start a payment; collect a waitlist email instead.
+  if (pre) {
+    const join = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); setErr("");
+      try { await api("/api/waitlist", { body: { email: String(new FormData(e.currentTarget).get("email") || ""), lang, plan: q.get("plan") } }); setJoined(true); } catch (x: any) { setErr(x.message); } };
+    return (
+      <main className="mx-auto max-w-md px-5 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center" data-prelaunch><div className="card space-y-4 p-8">
+        <span className="rounded-full border border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100 px-3 py-1 text-xs">{c.soon}</span>
+        <h1 className="font-head vx-h3 mt-3 !text-3xl">{c.soonTitle}</h1><p className="text-slate-400">{c.soonSub}</p>
+        {joined ? <p role="status" className="text-emerald-200">{c.joined}</p> : <form onSubmit={join} className="space-y-4 text-start">
+          <label className="vx-label">{c.email}<input name="email" type="email" required dir="ltr" className="vx-input" /></label>
+          {err && <p role="alert" className="text-sm text-red-200">{err}</p>}
+          <button className="btn-cta w-full">{c.join}</button></form>}
+        <p className="text-xs text-slate-500">{c.demo}</p>
+      </div></main>);
+  }
   if (account) { const a = encodeURIComponent(account); return (
     <main className="mx-auto max-w-md px-4 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center"><div className="card p-8">
       <span className="rounded-full border border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100 px-3 py-1 text-xs">{c.pill}</span>
@@ -21,7 +37,7 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
   const plan = q.get("plan") || "starter";
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); const email = String(new FormData(e.currentTarget).get("email") || "");
-    try { const j = await api<{ redirectUrl: string }>("/api/checkout", { body: { plan, email, lang, currency: bill?.displayCurrency } }); location.href = j.redirectUrl; } catch (x: any) { setErr(x.message); }
+    try { const j = await api<{ redirectUrl: string }>("/api/checkout", { body: { plan, email, lang, currency: bill?.displayCurrency } }); location.href = j.redirectUrl; } catch (x: any) { if (x.status === 403) setPre(true); else setErr(x.message); }
   }
   const p = t.pricing.plans.find((x) => x.id === plan) || t.pricing.plans[1];
   return (

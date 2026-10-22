@@ -5,6 +5,7 @@ import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmai
 import * as V from './src/views.js'; import { isMockMode } from './src/providers/index.js';
 import { token, safeEqual, issueMagicLink, consumeMagic } from './src/security/tokens.js'; import { createRateLimiter } from './src/security/ratelimit.js';
 import { verifyTurnstile, turnstileSiteKey } from './src/security/turnstile.js'; import { esc } from './src/security/html.js';
+import { isPrelaunch } from './src/prelaunch.js'; import { billingPage, notFoundPage, langOf } from './src/pages.js'; import { robotsTxt, sitemapXml } from './src/seo.js';
 
 const app = express(); app.disable('x-powered-by'); if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY); app.use(express.urlencoded({ extended: false })); app.use(express.json()); app.use(express.static('public'));
 const BASE = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
@@ -30,7 +31,13 @@ function findOrCreateAccount(email) {
   return a;
 }
 
-app.get('/health', (q, r) => r.json({ ok: true, brand: BRAND.name, mockScans: isMockMode(), payments: getPayments().id }));
+app.get('/health', (q, r) => r.json({ ok: true, brand: BRAND.name, mockScans: isMockMode(), payments: getPayments().id, prelaunch: isPrelaunch() }));
+app.get('/robots.txt', (q, r) => r.type('text/plain').send(robotsTxt()));
+app.get('/sitemap.xml', (q, r) => r.type('application/xml').send(sitemapXml()));
+// Pre-launch waitlist: stores an email + language, never starts a payment.
+app.post('/api/waitlist', loginLimiter, (q, r) => { const email = String(q.body?.email || '').trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 200) return r.status(400).json({ error: 'Enter a valid email.' });
+  const db = getDb(); db.waitlist ||= []; if (!db.waitlist.some(w => w.email === email)) { db.waitlist.push({ email, lang: q.body?.lang === 'he' ? 'he' : 'en', plan: Object.hasOwn(PLANS, q.body?.plan) ? q.body.plan : null, at: new Date().toISOString() }); save(); }
+  r.json({ ok: true }); });
 
 app.post('/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body;
@@ -54,27 +61,29 @@ app.post('/scan', scanLimiter, captcha, async (q, r) => {
 // The quote is frozen on the account at checkout start and re-checked against PLANS on return.
 const displayCurrencyFor = q => { const c = String(q.body?.currency || '').toUpperCase(); return CURRENCIES.includes(c) ? c : detectCurrency(q, q.body?.lang).currency; };
 async function startCheckout(q) {
+  if (isPrelaunch()) return { prelaunch: true };
   const plan = Object.hasOwn(PLANS, q.body?.plan) ? PLANS[q.body.plan] : null; if (!isPaid(plan) || !q.body?.email) return null;
   const billing = billingFor(plan, displayCurrencyFor(q));
-  const account = findOrCreateAccount(q.body.email); account.pendingPlan = plan.id; account.pendingBilling = billing; const state = account.checkoutState = token(24); save();
-  const { redirectUrl } = await getPayments().createCheckout({ account, plan, billing, state, returnUrl: `${BASE}/billing/return` }); return { redirectUrl, billing };
+  const account = findOrCreateAccount(q.body.email); account.pendingPlan = plan.id; account.pendingBilling = billing; account.pendingLang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : langOf(q); const state = account.checkoutState = token(24); save();
+  const { redirectUrl } = await getPayments().createCheckout({ account, plan, billing, state, returnUrl: `${BASE}/billing/return?lang=${account.pendingLang}` }); return { redirectUrl, billing };
 }
-app.post('/checkout', async (q, r) => { const c = await startCheckout(q); if (!c) return r.status(400).send('bad plan'); r.redirect(c.redirectUrl); });
+app.post('/checkout', async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).send(billingPage('prelaunch', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (!c) return r.status(400).send('bad plan'); r.redirect(c.redirectUrl); });
 app.get('/billing/return', async (q, r) => {
+  if (isPrelaunch()) return r.status(403).send(billingPage('prelaunch', langOf(q)));
   const db = getDb(); const [accId, state] = String(q.query.Identifier || '').split('.'); const account = Object.hasOwn(db.accounts, accId) ? db.accounts[accId] : null;
-  if (!account || !account.checkoutState || !safeEqual(state, account.checkoutState)) return r.status(400).send(V.message('Checkout link invalid', '<a href="/pricing">Start again</a>'));
-  const plan = PLANS[account.pendingPlan || 'starter'];
+  if (!account || !account.checkoutState || !safeEqual(state, account.checkoutState)) return r.status(400).send(billingPage('invalid', langOf(q)));
+  const plan = PLANS[account.pendingPlan || 'starter']; const lang = q.query.lang === 'he' || q.query.lang === 'en' ? q.query.lang : account.pendingLang || langOf(q);
   // Re-derive from PLANS (never trust stored/client amounts); keeps the currency chosen at checkout start.
   const billing = billingFor(plan, account.pendingBilling?.displayCurrency || 'ILS');
   try {
     const res = await getPayments().handleReturn(q.query, account, plan, billing);
-    if (!res.ok) return r.send(V.message('Payment failed', '<a href="/pricing">Try again</a>', res.error));
-    Object.assign(account, { plan: plan.id, subscriptionRef: res.subscriptionRef, paidAt: new Date().toISOString(), billing: { currency: billing.currency, amount: billing.amount } }); delete account.pendingPlan; delete account.pendingBilling; delete account.checkoutState; save();
+    if (!res.ok) return r.send(billingPage('failed', lang, res.error));
+    Object.assign(account, { plan: plan.id, subscriptionRef: res.subscriptionRef, paidAt: new Date().toISOString(), billing: { currency: billing.currency, amount: billing.amount } }); delete account.pendingPlan; delete account.pendingBilling; delete account.checkoutState; delete account.pendingLang; save();
     db.events.push({ at: new Date().toISOString(), type: 'subscription.activated', account: account.id, plan: plan.id, currency: billing.currency, amount: billing.amount }); save();
     // Don't hand the dashboard key to whoever holds this URL: email a single-use magic link instead.
     await emailMagicLink(account);
-    r.send(V.message('Payment received', '<p>Check your inbox: we emailed you a private link to your dashboard.</p>'));
-  } catch (e) { r.status(502).send(V.message('Payment error', '', e.message)); }
+    r.send(billingPage('ok', lang));
+  } catch (e) { r.status(502).send(billingPage('error', lang, e.message)); }
 });
 app.post('/webhooks/payments', async (q, r) => { const res = await getPayments().handleWebhook(q.body, q.headers); if (!res.ok) return r.sendStatus(401); getDb().events.push({ at: new Date().toISOString(), ...res.event }); save(); r.sendStatus(200); });
 
@@ -96,7 +105,7 @@ app.post('/dashboard/:id/rescan', async (q, r) => {
 
 // ---------- JSON API for the Next.js frontend (web/) ----------
 const pub = a => ({ id: a.id, email: a.email, plan: a.plan, active: !!a.subscriptionRef });
-app.get('/api/config', (q, r) => r.json({ brand: BRAND, plans: publicPlans(), usdBilling: usdBillingEnabled(), mock: isMockMode(), turnstileSiteKey: turnstileSiteKey() }));
+app.get('/api/config', (q, r) => r.json({ brand: BRAND, plans: publicPlans(), usdBilling: usdBillingEnabled(), mock: isMockMode(), prelaunch: isPrelaunch(), turnstileSiteKey: turnstileSiteKey() }));
 app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body || {};
   if (!name || !category || !city || !email) return r.status(400).json({ error: 'Please fill all required fields.' });
@@ -114,8 +123,8 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
 });
 app.get('/api/report/:id', (q, r) => { const db = getDb(); const s = db.scans[q.params.id]; if (!s) return r.status(404).json({ error: 'not found' });
   const b = db.businesses[s.businessId]; const hist = (b.scanIds || []).map(i => db.scans[i]).filter(Boolean); const idx = hist.findIndex(x => x.id === s.id);
-  r.json({ business: { name: b.name, category: b.category, city: b.city, website: b.website }, scan: s, previousScore: idx > 0 ? hist[idx - 1].summary.score : null, history: hist.slice(0, idx + 1).map(x => x.summary.score) }); });
-app.post('/api/checkout', async (q, r) => { const c = await startCheckout(q); if (!c) return r.status(400).json({ error: 'Choose a plan and enter your email.' }); r.json(c); });
+  r.json({ demo: !!s.mock || isPrelaunch(), business: { name: b.name, category: b.category, city: b.city, website: b.website }, scan: s, previousScore: idx > 0 ? hist[idx - 1].summary.score : null, history: hist.slice(0, idx + 1).map(x => x.summary.score) }); });
+app.post('/api/checkout', async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).json({ error: 'Pre-launch: checkout is not open yet. Join the waitlist.', prelaunch: true }); if (!c) return r.status(400).json({ error: 'Choose a plan and enter your email.' }); r.json(c); });
 // Pricing for the UI: detected display currency + server prices + what checkout will actually charge.
 app.get('/api/pricing', (q, r) => {
   const forced = String(q.query.currency || '').toUpperCase(); const d = CURRENCIES.includes(forced) ? { currency: forced, source: 'query' } : detectCurrency(q, q.query.lang);
@@ -159,14 +168,15 @@ app.get('/r/:id', (q, r) => r.redirect(`/${prefLang(q)}/r/${encodeURIComponent(q
 app.get('/dashboard/:id', (q, r) => r.redirect(`/${prefLang(q)}/dashboard/${encodeURIComponent(q.params.id)}${qs(q)}`));
 app.get('/login', (q, r) => r.redirect(`/${prefLang(q)}/login`));
 app.get('/pricing', (q, r) => r.redirect(`/${prefLang(q)}#pricing`));
-app.get('/mock-checkout', (q, r) => r.redirect(`/${prefLang(q)}/checkout${qs(q)}`));
+app.get('/mock-checkout', (q, r) => isPrelaunch() ? r.redirect(`/${prefLang(q)}/checkout`) : r.redirect(`/${prefLang(q)}/checkout${qs(q)}`));
 app.get('/legal/:doc', (q, r) => r.redirect(`/${prefLang(q)}/legal?doc=${encodeURIComponent(q.params.doc)}`));
 app.get('/:lang', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang) : next());
 app.get('/:lang/r/:id', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'report') : next());
 app.get('/:lang/dashboard/:id', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'dashboard') : next());
 app.get('/:lang/:page', (q, r, next) => LANGS.includes(q.params.lang) && ['scan', 'report', 'login', 'dashboard', 'checkout', 'legal'].includes(q.params.page) ? page(r, q.params.lang, q.params.page) : next());
 app.get(['/he.txt', '/en.txt', '/:lang/:page.txt'], (q, r) => { const f = path.join(OUT, q.path); return LANGS.some(l => q.path.startsWith('/' + l)) && fs.existsSync(f) && !q.path.includes('..') ? r.sendFile(f) : r.sendStatus(404); });
-app.use((q, r) => { const f = path.join(OUT, '404.html'); return fs.existsSync(f) ? r.status(404).sendFile(f) : r.sendStatus(404); });
+// Branded bilingual 404 (RTL Hebrew + English, order follows the URL language or preference). JSON for /api.
+app.use((q, r) => { if (wantsJson(q)) return r.status(404).json({ error: 'not found' }); const m = /^\/(he|en)(\/|$)/.exec(q.path); r.status(404).type('html').send(notFoundPage(m ? m[1] : prefLang(q))); });
 
 const port = process.env.PORT || 3000;
 if (process.argv[1]?.endsWith('server.js')) app.listen(port, process.env.HOST || '0.0.0.0', () => console.log(`${BRAND.name} on http://localhost:${port} (scans: ${isMockMode() ? 'MOCK' : 'LIVE'}, payments: ${getPayments().id})`));

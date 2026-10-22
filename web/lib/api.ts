@@ -7,15 +7,15 @@ export async function api<T = any>(path: string, opts: { method?: string; body?:
   if (!r.ok) throw Object.assign(new Error(j.error || `Request failed (${r.status})`), { status: r.status });
   return j as T;
 }
-export type Config = { turnstileSiteKey: string | null; mock: boolean; brand: { name: string; domain: string } };
+export type Config = { turnstileSiteKey: string | null; mock: boolean; prelaunch?: boolean; brand: { name: string; domain: string } };
 let cfg: Promise<Config> | null = null;
-export const getConfig = () => (cfg ||= api<Config>("/api/config").catch(() => ({ turnstileSiteKey: null, mock: true, brand: { name: "Ranky", domain: "askranky.com" } })));
+export const getConfig = () => (cfg ||= api<Config>("/api/config").catch(() => ({ turnstileSiteKey: null, mock: true, prelaunch: true, brand: { name: "Ranky", domain: "askranky.com" } })));
 const LABEL: Record<string, string> = { chatgpt: "ChatGPT", gemini: "Gemini", perplexity: "Perplexity" };
 // Map the Express /api/report/:id payload onto the shape ReportBody renders.
 export function toReport(j: any): ReportData {
   const s = j.scan.summary;
   return {
-    id: j.scan.id, mock: !!j.scan.mock, live: true, date: String(j.scan.at).slice(0, 10),
+    id: j.scan.id, mock: !!(j.scan.mock || j.demo), live: true, date: String(j.scan.at).slice(0, 10),
     business: { name: j.business.name, category: j.business.category, city: j.business.city },
     score: s.score, mentionRate: s.mentionRate, avgRank: s.avgRank || 0, checks: s.checks,
     byEngine: Object.entries(s.byEngine as Record<string, { checks: number; mentions: number }>).map(([e, v]) => ({ engine: LABEL[e] || e, rate: v.checks ? v.mentions / v.checks : 0 })),

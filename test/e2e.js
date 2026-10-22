@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'; import { useTempData } from './helpers.
 process.env.DISABLE_IP_LIMIT = '1'; 
 const { default: app } = await import('../server.js'); const { getDb } = await import('../src/store.js');
 const { analyzeAnswer } = await import('../src/extract.js'); const { checkBudget } = await import('../src/costs.js');
-const srv = app.listen(3999); const B = 'http://127.0.0.1:3999';
+const srv = app.listen(0); await new Promise(r => srv.once('listening', r)); const B = 'http://127.0.0.1:' + srv.address().port;
 const post = (p, data) => fetch(B + p, { method: 'POST', redirect: 'manual', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(data) });
 try {
   // extraction unit test

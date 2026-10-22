@@ -6,7 +6,7 @@ const { default: app, scanLimiter } = await import('../server.js'); const store 
 const V = await import('../src/views.js'); const { renderWeeklyEmail } = await import('../src/email/report.js');
 const { esc, safeUrl } = await import('../src/security/html.js'); const T = await import('../src/security/tokens.js');
 const { createRateLimiter } = await import('../src/security/ratelimit.js'); const TS = await import('../src/security/turnstile.js');
-const srv = app.listen(3998); const B = 'http://127.0.0.1:3998'; let n = 0; const ok = m => { n++; console.log('  ✓', m); };
+const srv = app.listen(0); await new Promise(r => srv.once('listening', r)); const B = 'http://127.0.0.1:' + srv.address().port; let n = 0; const ok = m => { n++; console.log('  ✓', m); };
 const form = (p, d, h = {}) => fetch(B + p, { method: 'POST', redirect: 'manual', headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...h }, body: new URLSearchParams(d) });
 const json = (p, d, h = {}) => fetch(B + p, { method: 'POST', redirect: 'manual', headers: { 'Content-Type': 'application/json', ...h }, body: JSON.stringify(d) });
 const X = `<script>alert(1)</script>"'><img src=x onerror=alert(2)>`;

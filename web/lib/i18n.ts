@@ -39,7 +39,7 @@ const en = {
     ["Can I cancel anytime?", "Yes. Monthly plans, no contracts, cancel from your account."],
   ] },
   finalCta: { title: "Find out in 60 seconds", sub: "Your competitors may already be the answer. Let's change that." },
-  footer: { disclaimer: "Results come from the engines' APIs, which approximate but don't exactly match the consumer apps.", terms: "Terms", privacy: "Privacy", refunds: "Refunds" },
+  footer: { disclaimer: "Results come from the engines' APIs, which approximate but don't exactly match the consumer apps.", terms: "Terms", privacy: "Privacy", refunds: "Refunds", accessibility: "Accessibility", aiDisclaimer: "AI disclaimer" },
   scan: { title: "Scanning your AI visibility", sub: "Acme Plumbing · Plumber · Austin, TX",
     asking: "Asking", engines: ["ChatGPT", "Gemini", "Perplexity"], steps: ["Building buyer questions", "Asking ChatGPT…", "Asking Gemini…", "Asking Perplexity…", "Finding competitors & cited sources", "Writing your 3 fixes"],
     done: "Your report is ready", view: "View my report", checks: "checks done", mock: "Demo mode: sample data, no real AI engines are queried." },
@@ -54,7 +54,7 @@ const en = {
   live: { real: "Live results from ChatGPT, Gemini and Perplexity APIs.", history: "Score history", notFound: "Report not found", loading: "Loading report…", answers: "What the AI engines said" },
   login: { title: "Sign in to your dashboard", sub: "Enter the email you used for your scan or subscription. We'll email you a single-use link, valid for 15 minutes.", email: "Email", send: "Email me a sign-in link", sent: "If that email has an account, we sent a sign-in link. Check your inbox.", nav: "Sign in" },
   dash: { title: "Your dashboard", plan: "Plan", usage: "Checks used this month", rescan: "Re-scan now", open: "Open report", none: "No scans yet.", bad: "This dashboard link is invalid or expired. Request a new sign-in link.", scans: "scans", last: "Last score" },
-  checkout: { pill: "Test mode", title: "Secure payment", sub: "This page stands in for the SUMIT hosted card page. No real charge happens.", pay: "Pay (test)", decline: "Simulate decline", email: "Email", start: "Continue to payment", charged: "You will be charged", fallback: "USD card billing isn't live yet, so this plan is billed in shekels at its Israeli price. Your card issuer converts it.", noVat: "No VAT. Receipt (קבלה) by email." },
+  checkout: { soon: "Coming soon", soonTitle: "Ranky is pre-launch", soonSub: "We are not taking payments yet. Leave your email and we will tell you the moment plans open, with a launch offer.", join: "Join the waitlist", joined: "You are on the list! We will email you.", demo: "Demo version: scans and reports use sample data, not real AI engines.", pill: "Test mode", title: "Secure payment", sub: "This page stands in for the SUMIT hosted card page. No real charge happens.", pay: "Pay (test)", decline: "Simulate decline", email: "Email", start: "Continue to payment", charged: "You will be charged", fallback: "USD card billing isn't live yet, so this plan is billed in shekels at its Israeli price. Your card issuer converts it.", noVat: "No VAT. Receipt (קבלה) by email." },
 };
 type Dict = typeof en;
 const he: Dict = {
@@ -93,7 +93,7 @@ const he: Dict = {
     ["אפשר לבטל בכל עת?", "כן. מנוי חודשי, בלי התחייבות, ביטול מהחשבון."],
   ] },
   finalCta: { title: "גלה תוך 60 שניות", sub: "ייתכן שהמתחרים שלך כבר התשובה. בוא נשנה את זה." },
-  footer: { disclaimer: "התוצאות מגיעות מה־API של המנועים, שמקרב אך אינו זהה בדיוק לאפליקציות לצרכנים.", terms: "תנאים", privacy: "פרטיות", refunds: "החזרים" },
+  footer: { disclaimer: "התוצאות מגיעות מה־API של המנועים, שמקרב אך אינו זהה בדיוק לאפליקציות לצרכנים.", terms: "תנאים", privacy: "פרטיות", refunds: "החזרים", accessibility: "הצהרת נגישות", aiDisclaimer: "הבהרת AI" },
   scan: { title: "סורקים את הנראות שלך ב־AI", sub: "אינסטלציה אקמה · אינסטלטור · תל אביב",
     asking: "שואלים את", engines: ["ChatGPT", "Gemini", "Perplexity"], steps: ["בונים שאלות של קונים", "שואלים את ChatGPT…", "שואלים את Gemini…", "שואלים את Perplexity…", "מאתרים מתחרים ומקורות מצוטטים", "כותבים את 3 התיקונים שלך"],
     done: "הדוח שלך מוכן", view: "לצפייה בדוח", checks: "בדיקות הושלמו", mock: "מצב הדגמה: נתונים לדוגמה, לא נשלחות שאלות למנועי AI אמיתיים." },
@@ -108,7 +108,7 @@ const he: Dict = {
   live: { real: "תוצאות אמיתיות מה־API של ChatGPT, ‏Gemini ו־Perplexity.", history: "היסטוריית ציון", notFound: "הדוח לא נמצא", loading: "טוען דוח…", answers: "מה ענו מנועי ה־AI" },
   login: { title: "כניסה לדשבורד", sub: "הזן את האימייל שבו השתמשת לסריקה או למנוי. נשלח לך קישור חד־פעמי, בתוקף ל־15 דקות.", email: "אימייל", send: "שלחו לי קישור כניסה", sent: "אם יש חשבון עם האימייל הזה, שלחנו קישור כניסה. בדוק את תיבת הדואר.", nav: "כניסה" },
   dash: { title: "הדשבורד שלך", plan: "מסלול", usage: "בדיקות החודש", rescan: "סרוק מחדש", open: "לדוח", none: "אין עדיין סריקות.", bad: "קישור הדשבורד לא תקין או שפג תוקפו. בקש קישור כניסה חדש.", scans: "סריקות", last: "ציון אחרון" },
-  checkout: { pill: "מצב בדיקה", title: "תשלום מאובטח", sub: "העמוד הזה מחליף את עמוד הסליקה של SUMIT. לא מתבצע חיוב אמיתי.", pay: "שלם (בדיקה)", decline: "הדמיית סירוב", email: "אימייל", start: "המשך לתשלום", charged: "סכום החיוב", fallback: "חיוב בדולר עדיין לא פעיל, ולכן המסלול יחויב בשקלים לפי המחיר בישראל. חברת האשראי תמיר את הסכום.", noVat: "ללא מע\"מ. קבלה תישלח במייל." },
+  checkout: { soon: "בקרוב", soonTitle: "Ranky לפני השקה", soonSub: "עדיין לא גובים תשלום. השאירו מייל ונעדכן ברגע שהמנויים נפתחים, עם הטבת השקה.", join: "הצטרפו לרשימת ההמתנה", joined: "נרשמת! נעדכן אותך במייל.", demo: "גרסת הדגמה: הסריקות והדוחות מבוססים על נתוני דמו, לא על מנועי AI אמיתיים.", pill: "מצב בדיקה", title: "תשלום מאובטח", sub: "העמוד הזה מחליף את עמוד הסליקה של SUMIT. לא מתבצע חיוב אמיתי.", pay: "שלם (בדיקה)", decline: "הדמיית סירוב", email: "אימייל", start: "המשך לתשלום", charged: "סכום החיוב", fallback: "חיוב בדולר עדיין לא פעיל, ולכן המסלול יחויב בשקלים לפי המחיר בישראל. חברת האשראי תמיר את הסכום.", noVat: "ללא מע\"מ. קבלה תישלח במייל." },
 };
 export const dict = (l: Locale): Dict => (l === "he" ? he : en);
 export type { Dict };

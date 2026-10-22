@@ -22,7 +22,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   const [step, setStep] = useState(0); const [reportId, setReportId] = useState(""); const [error, setError] = useState("");
   const started = useRef(false);
   useEffect(() => {
-    getConfig().then((c) => setMock(c.mock));
+    getConfig().then((c) => setMock(c.mock || !!c.prelaunch));
     const q = new URLSearchParams(window.location.search);
     if (q.has("step")) { setMode("demo"); setBiz({ name: lang === "he" ? "אינסטלציה אקמה" : "Acme Plumbing", category: lang === "he" ? "אינסטלטור" : "Plumber", city: lang === "he" ? "תל אביב-יפו" : "Austin, TX", email: "" }); setStep(Math.min(Number(q.get("step")), n)); return; }
     const raw = sessionStorage.getItem(PENDING); if (!raw) { setMode("form"); return; }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'; import { useTempData } from './helpers.
 const TD = useTempData('pricing'); delete process.env.ENABLE_USD_BILLING; delete process.env.PAYMENTS_PROVIDER;
 const { default: app } = await import('../server.js'); const { getDb } = await import('../src/store.js');
 const { PLANS, priceOf } = await import('../src/plans.js'); const C = await import('../src/currency.js'); const S = await import('../src/payments/sumit.js');
-const srv = app.listen(3997); const B = 'http://127.0.0.1:3997'; let n = 0; const ok = m => { n++; console.log('  ✓', m); };
+const srv = app.listen(0); await new Promise(r => srv.once('listening', r)); const B = 'http://127.0.0.1:' + srv.address().port; let n = 0; const ok = m => { n++; console.log('  ✓', m); };
 const get = (p, h = {}) => fetch(B + p, { headers: h }).then(r => r.json());
 const co = (body, h = {}) => fetch(B + '/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json', ...h }, body: JSON.stringify(body) });
 const fake = h => ({ headers: Object.fromEntries(Object.entries(h).map(([k, v]) => [k.toLowerCase(), v])) });
@@ -15,6 +15,9 @@ try {
   assert.equal(C.detectCurrency(fake({ 'Accept-Language': 'he-IL,he;q=0.9' })).currency, 'ILS'); ok('Accept-Language he → ILS');
   assert.equal(C.detectCurrency(fake({}), 'he').currency, 'ILS'); assert.equal(C.detectCurrency(fake({ cookie: 'ranky_lang=he' })).currency, 'ILS'); ok('Hebrew UI locale → ILS');
   assert.equal(C.detectCurrency(fake({ 'CF-IPCountry': 'IL' })).currency, 'ILS'); assert.equal(C.detectCurrency(fake({ 'CF-IPCountry': 'US', 'Accept-Language': 'he' })).currency, 'USD'); ok('CF-IPCountry beats language (IL → ILS, US → USD)');
+  assert.deepEqual(C.detectCurrency(fake({ 'CF-IPCountry': 'US' }), 'he'), { currency: 'ILS', source: 'locale' }); assert.equal(C.detectCurrency(fake({ 'CF-IPCountry': 'US', cookie: 'ranky_lang=he' })).currency, 'ILS'); ok('Hebrew UI beats geo (/he from US → ILS)');
+  assert.equal(C.detectCurrency(fake({ 'CF-IPCountry': 'IL', cookie: 'ranky_lang=he' }), 'en').currency, 'ILS'); assert.equal(C.detectCurrency(fake({ 'CF-IPCountry': 'US', cookie: 'ranky_lang=he' }), 'en').currency, 'USD'); ok('explicit lang=en ignores stale ranky_lang=he cookie; geo decides');
+  assert.equal(C.detectCurrency(fake({ cookie: 'ranky_currency=USD' }), 'he').currency, 'USD'); ok('toggle cookie beats Hebrew UI');
   assert.equal(C.detectCurrency(fake({ cookie: 'ranky_currency=USD', 'CF-IPCountry': 'IL' }), 'he').currency, 'USD'); assert.equal(C.detectCurrency(fake({ cookie: 'a=1; ranky_currency=ILS' })).currency, 'ILS'); ok('manual toggle cookie beats everything');
   assert.equal(C.detectCurrency(fake({ cookie: 'ranky_currency=BTC' })).currency, 'USD'); ok('invalid cookie ignored');
   // /api/pricing
