@@ -1,0 +1,108 @@
+export const locales = ["en", "he"] as const;
+export type Locale = (typeof locales)[number];
+export const isLocale = (l: string): l is Locale => (locales as readonly string[]).includes(l);
+export const dir = (l: Locale) => (l === "he" ? "rtl" : "ltr");
+
+const en = {
+  brand: "Ranky",
+  nav: { how: "How it works", sample: "Sample report", pricing: "Pricing", faq: "FAQ", cta: "Free scan" },
+  hero: {
+    eyebrow: "AI visibility for local businesses",
+    title: "Does ChatGPT recommend your business?",
+    sub: "We ask ChatGPT, Gemini and Perplexity the questions your customers ask, then show where you rank, who gets picked instead, and 3 fixes to climb.",
+    cta: "Run my free AI scan", ghost: "See a sample report", note: "Free · 60 seconds · No card needed",
+    form: { name: "Business name", website: "Website", category: "Category", city: "City", email: "Email (we send your report)" },
+    ph: { name: "Acme Plumbing", website: "https://acmeplumbing.com", category: "Plumber", city: "Austin, TX", email: "you@business.com" },
+  },
+  engines: "Checks the engines your customers already use",
+  how: { title: "How it works", steps: [
+    ["Tell us who you are", "Business name, city and category. That's it."],
+    ["We ask the AI engines", "Real buyer questions like “best emergency plumber in Austin” across ChatGPT, Gemini and Perplexity."],
+    ["Get your score + 3 fixes", "See your rank, the competitors named instead of you, the sources AI cites, and ready-to-paste fixes."],
+  ] },
+  sample: { title: "A report you can act on", sub: "Not just charts: concrete changes, every week.", open: "Open the full sample report" },
+  pricing: { title: "Simple pricing", sub: "Monthly, cancel anytime. No VAT added.", popular: "Most popular", mo: "/mo", currency: "Currency",
+    vatNote: "Prices are final: we're a VAT-exempt dealer (עוסק פטור), so no VAT is added. You get a receipt (קבלה) for every payment.",
+    plans: [
+      { id: "free", name: "Free scan", items: ["1 business", "5 questions × 3 AI engines", "One-time scan", "Top 3 competitors", "3 fixes"], cta: "Run free scan" },
+      { id: "starter", name: "Starter", items: ["1 business", "15 questions × 3 AI engines", "Weekly tracking + email report", "Top 3 competitors", "3 fixes every week"], cta: "Start Starter" },
+      { id: "pro", name: "Pro", items: ["3 businesses", "20 questions each × 3 engines", "Weekly tracking + email reports", "Top 5 competitors", "3 fixes per report"], cta: "Start Pro" },
+      { id: "agency", name: "Agency", items: ["10 businesses", "15 questions each × 3 engines", "Weekly tracking + email reports", "Top 5 competitors", "3 fixes per report"], cta: "Start Agency" },
+    ] },
+  faq: { title: "Questions, answered", items: [
+    ["Is this exactly what ChatGPT shows my customers?", "Close, not identical. We use each engine's official API with web search, which approximates the consumer apps. Answers vary between runs, so we focus on trends over time."],
+    ["What does the score mean?", "0–100, based on how often you're mentioned and how high you rank across all questions and engines. A low score is simply room to grow, and most local businesses start there."],
+    ["How fast can I improve?", "Many fixes (a direct-answer paragraph, getting listed on the pages AI cites) can show up within a few weekly runs."],
+    ["Can I cancel anytime?", "Yes. Monthly plans, no contracts, cancel from your account."],
+  ] },
+  finalCta: { title: "Find out in 60 seconds", sub: "Your competitors may already be the answer. Let's change that." },
+  footer: { disclaimer: "Results come from the engines' APIs, which approximate but don't exactly match the consumer apps.", terms: "Terms", privacy: "Privacy", refunds: "Refunds" },
+  scan: { title: "Scanning your AI visibility", sub: "Acme Plumbing · Plumber · Austin, TX",
+    asking: "Asking", engines: ["ChatGPT", "Gemini", "Perplexity"], steps: ["Building buyer questions", "Asking ChatGPT…", "Asking Gemini…", "Asking Perplexity…", "Finding competitors & cited sources", "Writing your 3 fixes"],
+    done: "Your report is ready", view: "View my report", checks: "checks done", mock: "Demo mode: sample data, no real AI engines are queried." },
+  report: { title: "AI visibility report", mock: "MOCK DATA: sample report, no real AI engines were queried.",
+    score: "AI Visibility Score", band: { low: "Big opportunity", mid: "Getting noticed", high: "Strong presence" },
+    bandText: { low: "AI engines rarely name you yet. That's the opportunity: the fixes below target the exact sources they cite.", mid: "You show up sometimes. A few targeted fixes can move you into the top picks.", high: "AI engines recommend you often. Keep it that way with weekly tracking." },
+    mention: "of answers mention you", rank: "average position when listed", checks: "checks",
+    byEngine: "Mention rate by engine", trend: "Projected trend with weekly fixes", competitors: "Recommended instead of you", sources: "Sources AI cites", yours: "your site",
+    fixes: "Your 3 fixes", copy: "Ready-to-paste copy", cta: "Track this weekly and watch your score climb", ctaBtn: "Start for $19/mo", weeks: "Week" },
+  form: { submit: "Run my free AI scan", required: "Please fill all required fields.", captcha: "Please complete the CAPTCHA.", cityHint: "Start typing an Israeli city or enter any city" },
+  scanErr: { title: "We couldn't run the scan", retry: "Try again" },
+  live: { real: "Live results from ChatGPT, Gemini and Perplexity APIs.", history: "Score history", notFound: "Report not found", loading: "Loading report…", answers: "What the AI engines said" },
+  login: { title: "Sign in to your dashboard", sub: "Enter the email you used for your scan or subscription. We'll email you a single-use link, valid for 15 minutes.", email: "Email", send: "Email me a sign-in link", sent: "If that email has an account, we sent a sign-in link. Check your inbox.", nav: "Sign in" },
+  dash: { title: "Your dashboard", plan: "Plan", usage: "Checks used this month", rescan: "Re-scan now", open: "Open report", none: "No scans yet.", bad: "This dashboard link is invalid or expired. Request a new sign-in link.", scans: "scans", last: "Last score" },
+  checkout: { pill: "Test mode", title: "Secure payment", sub: "This page stands in for the SUMIT hosted card page. No real charge happens.", pay: "Pay (test)", decline: "Simulate decline", email: "Email", start: "Continue to payment", charged: "You will be charged", fallback: "USD card billing isn't live yet, so this plan is billed in shekels at its Israeli price. Your card issuer converts it.", noVat: "No VAT. Receipt (קבלה) by email." },
+};
+type Dict = typeof en;
+const he: Dict = {
+  brand: "Ranky",
+  nav: { how: "איך זה עובד", sample: "דוח לדוגמה", pricing: "מחירים", faq: "שאלות", cta: "סריקה חינם" },
+  hero: {
+    eyebrow: "נראות ב־AI לעסקים מקומיים",
+    title: "האם ChatGPT ממליץ על העסק שלך?",
+    sub: "אנחנו שואלים את ChatGPT, ‏Gemini ו־Perplexity את השאלות שהלקוחות שלך שואלים, ומראים איפה אתה מדורג, מי נבחר במקומך, ו־3 תיקונים כדי לטפס.",
+    cta: "הפעל סריקת AI חינם", ghost: "לדוח לדוגמה", note: "חינם · 60 שניות · בלי כרטיס אשראי",
+    form: { name: "שם העסק", website: "אתר", category: "תחום", city: "עיר", email: "אימייל (לשם נשלח הדוח)" },
+    ph: { name: "אינסטלציה אקמה", website: "https://acme.co.il", category: "אינסטלטור", city: "תל אביב-יפו", email: "you@business.com" },
+  },
+  engines: "בודקים את המנועים שהלקוחות שלך כבר משתמשים בהם",
+  how: { title: "איך זה עובד", steps: [
+    ["ספר לנו מי אתה", "שם העסק, עיר ותחום. זהו."],
+    ["אנחנו שואלים את מנועי ה־AI", "שאלות אמיתיות של קונים, כמו „אינסטלטור חירום מומלץ בתל אביב”, ב־ChatGPT, ‏Gemini ו־Perplexity."],
+    ["מקבלים ציון ו־3 תיקונים", "הדירוג שלך, המתחרים שנבחרו במקומך, המקורות ש־AI מצטט, ותיקונים מוכנים להדבקה."],
+  ] },
+  sample: { title: "דוח שאפשר לפעול לפיו", sub: "לא רק גרפים: שינויים מעשיים, כל שבוע.", open: "לדוח המלא לדוגמה" },
+  pricing: { title: "מחירים פשוטים", sub: "חודשי, ביטול בכל עת. בלי מע\"מ.", popular: "הכי פופולרי", mo: "/חודש", currency: "מטבע",
+    vatNote: "המחיר סופי: אנחנו עוסק פטור, ולכן לא מתווסף מע\"מ. על כל תשלום תקבלו קבלה.",
+    plans: [
+      { id: "free", name: "סריקה חינם", items: ["עסק אחד", "5 שאלות × 3 מנועי AI", "סריקה חד־פעמית", "3 מתחרים מובילים", "3 תיקונים"], cta: "לסריקה חינם" },
+      { id: "starter", name: "Starter", items: ["עסק אחד", "15 שאלות × 3 מנועי AI", "מעקב שבועי + דוח במייל", "3 מתחרים מובילים", "3 תיקונים כל שבוע"], cta: "התחל Starter" },
+      { id: "pro", name: "Pro", items: ["3 עסקים", "20 שאלות לכל עסק × 3 מנועים", "מעקב שבועי + דוחות במייל", "5 מתחרים מובילים", "3 תיקונים לכל דוח"], cta: "התחל Pro" },
+      { id: "agency", name: "Agency", items: ["10 עסקים", "15 שאלות לכל עסק × 3 מנועים", "מעקב שבועי + דוחות במייל", "5 מתחרים מובילים", "3 תיקונים לכל דוח"], cta: "התחל Agency" },
+    ] },
+  faq: { title: "שאלות ותשובות", items: [
+    ["זה בדיוק מה ש־ChatGPT מראה ללקוחות שלי?", "קרוב, אבל לא זהה. אנחנו משתמשים ב־API הרשמי של כל מנוע עם חיפוש ברשת, שמקרב את האפליקציות לצרכנים. התשובות משתנות בין הרצות, ולכן אנחנו מתמקדים במגמות."],
+    ["מה המשמעות של הציון?", "0–100, לפי כמה פעמים מזכירים אותך וכמה גבוה אתה מדורג בכל השאלות והמנועים. ציון נמוך הוא פשוט מקום לצמוח, ורוב העסקים המקומיים מתחילים שם."],
+    ["כמה מהר אפשר להשתפר?", "הרבה תיקונים (פסקת תשובה ישירה, הופעה בעמודים ש־AI מצטט) יכולים להשפיע תוך כמה הרצות שבועיות."],
+    ["אפשר לבטל בכל עת?", "כן. מנוי חודשי, בלי התחייבות, ביטול מהחשבון."],
+  ] },
+  finalCta: { title: "גלה תוך 60 שניות", sub: "ייתכן שהמתחרים שלך כבר התשובה. בוא נשנה את זה." },
+  footer: { disclaimer: "התוצאות מגיעות מה־API של המנועים, שמקרב אך אינו זהה בדיוק לאפליקציות לצרכנים.", terms: "תנאים", privacy: "פרטיות", refunds: "החזרים" },
+  scan: { title: "סורקים את הנראות שלך ב־AI", sub: "אינסטלציה אקמה · אינסטלטור · תל אביב",
+    asking: "שואלים את", engines: ["ChatGPT", "Gemini", "Perplexity"], steps: ["בונים שאלות של קונים", "שואלים את ChatGPT…", "שואלים את Gemini…", "שואלים את Perplexity…", "מאתרים מתחרים ומקורות מצוטטים", "כותבים את 3 התיקונים שלך"],
+    done: "הדוח שלך מוכן", view: "לצפייה בדוח", checks: "בדיקות הושלמו", mock: "מצב הדגמה: נתונים לדוגמה, לא נשלחות שאלות למנועי AI אמיתיים." },
+  report: { title: "דוח נראות ב־AI", mock: "נתוני דמו: דוח לדוגמה, לא נשלחו שאלות למנועי AI אמיתיים.",
+    score: "ציון נראות ב־AI", band: { low: "הזדמנות גדולה", mid: "מתחילים לשים לב אליך", high: "נוכחות חזקה" },
+    bandText: { low: "מנועי ה־AI עדיין כמעט לא מזכירים אותך. זו ההזדמנות: התיקונים למטה מכוונים בדיוק למקורות שהם מצטטים.", mid: "אתה מופיע לפעמים. כמה תיקונים ממוקדים יכולים להכניס אותך לבחירות המובילות.", high: "מנועי ה־AI ממליצים עליך הרבה. שמור על זה עם מעקב שבועי." },
+    mention: "מהתשובות מזכירות אותך", rank: "מיקום ממוצע כשמופיעים", checks: "בדיקות",
+    byEngine: "שיעור אזכור לפי מנוע", trend: "מגמה צפויה עם תיקונים שבועיים", competitors: "הומלצו במקומך", sources: "מקורות ש־AI מצטט", yours: "האתר שלך",
+    fixes: "3 התיקונים שלך", copy: "טקסט מוכן להדבקה", cta: "עקוב כל שבוע וראה את הציון עולה", ctaBtn: "התחל ב־$19 לחודש", weeks: "שבוע" },
+  form: { submit: "הפעל סריקת AI חינם", required: "נא למלא את כל שדות החובה.", captcha: "נא להשלים את בדיקת ה־CAPTCHA.", cityHint: "התחל להקליד עיר בישראל, או כל עיר אחרת" },
+  scanErr: { title: "לא הצלחנו להריץ את הסריקה", retry: "נסה שוב" },
+  live: { real: "תוצאות אמיתיות מה־API של ChatGPT, ‏Gemini ו־Perplexity.", history: "היסטוריית ציון", notFound: "הדוח לא נמצא", loading: "טוען דוח…", answers: "מה ענו מנועי ה־AI" },
+  login: { title: "כניסה לדשבורד", sub: "הזן את האימייל שבו השתמשת לסריקה או למנוי. נשלח לך קישור חד־פעמי, בתוקף ל־15 דקות.", email: "אימייל", send: "שלחו לי קישור כניסה", sent: "אם יש חשבון עם האימייל הזה, שלחנו קישור כניסה. בדוק את תיבת הדואר.", nav: "כניסה" },
+  dash: { title: "הדשבורד שלך", plan: "מסלול", usage: "בדיקות החודש", rescan: "סרוק מחדש", open: "לדוח", none: "אין עדיין סריקות.", bad: "קישור הדשבורד לא תקין או שפג תוקפו. בקש קישור כניסה חדש.", scans: "סריקות", last: "ציון אחרון" },
+  checkout: { pill: "מצב בדיקה", title: "תשלום מאובטח", sub: "העמוד הזה מחליף את עמוד הסליקה של SUMIT. לא מתבצע חיוב אמיתי.", pay: "שלם (בדיקה)", decline: "הדמיית סירוב", email: "אימייל", start: "המשך לתשלום", charged: "סכום החיוב", fallback: "חיוב בדולר עדיין לא פעיל, ולכן המסלול יחויב בשקלים לפי המחיר בישראל. חברת האשראי תמיר את הסכום.", noVat: "ללא מע\"מ. קבלה תישלח במייל." },
+};
+export const dict = (l: Locale): Dict => (l === "he" ? he : en);
+export type { Dict };
