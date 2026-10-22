@@ -28,8 +28,8 @@ export default function ScoreGauge({ score, label, size = 280 }: { score: number
           strokeDasharray={C} strokeDashoffset={C} />
       </svg>
       <div className="absolute inset-x-0 bottom-1 text-center">
-        <div className="text-6xl font-extrabold tabular-nums" style={{ color: bandColor(score) }}>{n}<span className="text-xl text-slate-400">/100</span></div>
-        <div className="text-sm text-slate-500">{label}</div>
+        <div className="text-6xl font-bold font-head tabular-nums" style={{ color: bandColor(score) }}>{n}<span className="text-xl text-slate-400">/100</span></div>
+        <div className="text-sm text-slate-400">{label}</div>
       </div>
     </div>
   );

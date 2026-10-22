@@ -22,12 +22,12 @@ export default function ScanForm({ t, lang }: { t: Dict; lang: Locale }) {
     router.push(`/${lang}/scan`);
   }
   return (
-    <form onSubmit={submit} className="glass space-y-3 p-6" noValidate>
+    <form onSubmit={submit} className="card space-y-3 p-6 md:p-7" noValidate>
       {fields.map((f) => (
-        <label key={f} className="block text-sm text-slate-300">{h.form[f]}{f !== "website" && <span className="text-cta"> *</span>}
+        <label key={f} className="vx-label">{h.form[f]}{f !== "website" && <span className="text-sky-300" aria-hidden> *</span>}
           <input name={f} type={f === "email" ? "email" : f === "website" ? "url" : "text"} placeholder={h.ph[f]} dir={f === "website" || f === "email" ? "ltr" : undefined}
             list={f === "city" ? "il-cities" : undefined} autoComplete={f === "email" ? "email" : f === "city" ? "off" : undefined} required={f !== "website"}
-            className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white placeholder:text-slate-500 focus:border-brand-400 focus:outline-none" />
+            className="vx-input" />
         </label>))}
       <datalist id="il-cities">{ISRAELI_CITIES.map((c) => <option key={c.slug} value={c[lang]} />)}</datalist>
       <Turnstile siteKey={siteKey} lang={lang} />

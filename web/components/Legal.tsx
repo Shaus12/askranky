@@ -6,5 +6,5 @@ import { api } from "@/lib/api";
 export default function Legal({ t, lang }: { t: Dict; lang: Locale }) {
   const [md, setMd] = useState("");
   useEffect(() => { const doc = new URLSearchParams(location.search).get("doc") || location.pathname.split("/").filter(Boolean)[2] || "terms"; api(`/api/legal/${encodeURIComponent(doc)}?lang=${lang}`).then((j) => setMd(j.markdown)).catch(() => setMd("Not found")); }, [lang]);
-  return <main className="mx-auto max-w-3xl px-4 py-12"><article dir={lang === "he" ? "rtl" : "ltr"} className="card whitespace-pre-wrap p-8 text-start text-slate-800">{md || t.live.loading}</article></main>;
+  return <main className="mx-auto max-w-3xl px-5 py-[clamp(3rem,calc(var(--u)*80),5rem)]"><article dir={lang === "he" ? "rtl" : "ltr"} className="card vx-prose whitespace-pre-wrap p-6 text-start md:p-10">{md || t.live.loading}</article></main>;
 }

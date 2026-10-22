@@ -5,5 +5,5 @@ import ReportView from "@/components/ReportView";
 
 export default async function Report({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: l } = await params; const lang = (isLocale(l) ? l : "en") as Locale; const t = dict(lang);
-  return (<><div className="hero-bg text-white"><Nav t={t} lang={lang} path="/report" /></div><ReportView t={t} lang={lang} /><Footer t={t} lang={lang} /></>);
+  return (<div className="vx-page"><Nav t={t} lang={lang} path="/report" /><ReportView t={t} lang={lang} /><Footer t={t} lang={lang} /></div>);
 }

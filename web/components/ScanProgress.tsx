@@ -6,6 +6,9 @@ import type { Dict, Locale } from "@/lib/i18n";
 import { reducedMotion } from "@/lib/motion";
 import { api, getConfig } from "@/lib/api";
 import ScanForm, { PENDING } from "./ScanForm";
+import Reveal from "./Reveal";
+import MaskHeading from "./MaskHeading";
+
 
 const STEP_MS = 1100;
 type Pending = { name: string; website?: string; category: string; city: string; email: string; turnstileToken?: string };
@@ -40,28 +43,29 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
 
   if (mode === "init") return <main className="min-h-[60vh]" />;
   if (mode === "form") return (
-    <main className="mx-auto max-w-xl px-4 py-14">
-      <h1 className="mb-6 text-center text-3xl font-extrabold md:text-4xl">{t.hero.title}</h1>
-      <ScanForm t={t} lang={lang} />
-    </main>);
+    <main><Reveal className="mx-auto max-w-xl px-5 py-[clamp(3rem,calc(var(--u)*80),5rem)]">
+      <MaskHeading as="h1" className="vx-h3" text={t.hero.title} />
+      <span data-hair className="hairline mx-auto my-8 block w-40" />
+      <div data-reveal><ScanForm t={t} lang={lang} /></div>
+    </Reveal></main>);
   const done = step >= n; const TOTAL = 15;
   const pct = Math.round((step / n) * 100);
   const checks = Math.min(TOTAL, Math.max(0, Math.round(((step - 1) / 3) * TOTAL)));
   const engineState = (i: number) => (step > i + 1 ? "done" : step === i + 1 ? "active" : "wait");
   const link = mode === "demo" ? `/${lang}/report` : `/${lang}/r/${reportId}`;
   return (
-    <main className="mx-auto max-w-2xl px-4 py-14">
-      {mock && <p className="rounded-full border border-cta/30 bg-cta/10 px-4 py-1.5 text-center text-xs text-amber-200">{s.mock}</p>}
-      <h1 className="mt-8 text-center text-3xl font-extrabold md:text-4xl" aria-live="polite">{error ? t.scanErr.title : done ? s.done : s.title}</h1>
+    <main className="mx-auto max-w-2xl px-5 py-[clamp(3rem,calc(var(--u)*80),5rem)]">
+      {mock && <p className="mx-auto w-fit rounded-full border border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100 px-4 py-1.5 text-center text-xs">{s.mock}</p>}
+      <h1 className="font-head vx-h3 mt-8 text-center" aria-live="polite">{error ? t.scanErr.title : done ? s.done : s.title}</h1>
       {biz && <p className="mt-2 text-center text-slate-400">{[biz.name, biz.category, biz.city].join(" · ")}</p>}
       {error ? (
-        <div className="glass mt-10 p-6 text-center"><p role="alert" className="text-red-200">{error}</p>
+        <div className="card mt-10 p-6 text-center"><p role="alert" className="text-red-200">{error}</p>
           <button onClick={() => { setError(""); setMode("form"); }} className="btn-cta mt-6">{t.scanErr.retry}</button></div>
       ) : (<>
       <div className="mt-10 grid grid-cols-3 gap-3">
         {s.engines.map((e, i) => { const st = engineState(i); return (
-          <div key={e} className={`glass p-4 text-center transition ${st === "active" ? "ring-2 ring-brand-400 shadow-[0_0_40px_-10px_#8b5cf6]" : ""}`}>
-            <div className={`mx-auto grid h-12 w-12 place-items-center rounded-full text-lg font-bold ${st === "done" ? "bg-score-high/20 text-score-high" : st === "active" ? "bg-brand-500/30 text-white" : "bg-white/5 text-slate-500"}`}>
+          <div key={e} className={`card p-4 text-center transition ${st === "active" ? "ring-2 ring-brand-400 shadow-[0_0_40px_-10px_#3b82f6]" : ""}`}>
+            <div className={`mx-auto grid h-12 w-12 place-items-center rounded-full text-lg font-bold ${st === "done" ? "bg-score-high/20 text-score-high" : st === "active" ? "bg-white/50/30 text-white" : "bg-white/5 text-slate-400"}`}>
               {st === "done" ? "✓" : e[0]}
             </div>
             <div className="mt-2 text-sm font-semibold">{e}</div>
@@ -71,19 +75,19 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
       <div className="mt-8">
         <div className="flex justify-between text-sm text-slate-400"><span>{checks}/{TOTAL} {s.checks}</span><span className="tabular-nums">{pct}%</span></div>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-violet-glow transition-[width] duration-700 rtl:bg-gradient-to-l" style={{ width: `${pct}%` }} />
+          <div className="h-full rounded-full bg-gradient-to-r from-brand-600 to-sky-400 transition-[width] duration-700 rtl:bg-gradient-to-l" style={{ width: `${pct}%` }} />
         </div>
       </div>
-      <ol className="glass mt-8 space-y-3 p-6">
+      <ol className="card mt-8 space-y-3 p-6">
         {s.steps.map((label, i) => { const st = i < step ? "done" : i === step ? "active" : "wait"; return (
-          <li key={label} className={`flex items-center gap-3 ${st === "wait" ? "text-slate-500" : "text-white"}`}>
-            <span className={`grid h-6 w-6 place-items-center rounded-full text-xs ${st === "done" ? "bg-score-high/20 text-score-high" : st === "active" ? "bg-brand-500/40" : "bg-white/5"}`}>
+          <li key={label} className={`flex items-center gap-3 ${st === "wait" ? "text-slate-400" : "text-white"}`}>
+            <span className={`grid h-6 w-6 place-items-center rounded-full text-xs ${st === "done" ? "bg-score-high/20 text-score-high" : st === "active" ? "bg-white/50/40" : "bg-white/5"}`}>
               {st === "done" ? "✓" : st === "active" ? <span className="dot h-2 w-2 rounded-full bg-white" /> : i + 1}
             </span>{label}
           </li>); })}
       </ol>
       <div className="mt-10 text-center">
-        {done ? <a href={link} className="btn-cta">{s.view} <span className="rtl:rotate-180">→</span></a> : <span className="text-sm text-slate-500">~60s</span>}
+        {done ? <a href={link} className="btn-cta">{s.view} <span className="rtl:rotate-180">→</span></a> : <span className="text-sm text-slate-400">~60s</span>}
       </div></>)}
     </main>
   );

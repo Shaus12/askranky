@@ -13,9 +13,9 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
   if (!q) return <main className="min-h-[60vh]" />;
   const c = t.checkout; const account = q.get("account");
   if (account) { const a = encodeURIComponent(account); return (
-    <main className="mx-auto max-w-md px-4 py-16 text-center"><div className="glass p-8">
-      <span className="rounded-full bg-cta/20 px-3 py-1 text-xs text-amber-200">{c.pill}</span>
-      <h1 className="mt-4 text-3xl font-extrabold">{c.title}</h1><p className="mt-2 text-slate-400">{c.sub}</p>
+    <main className="mx-auto max-w-md px-4 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center"><div className="card p-8">
+      <span className="rounded-full border border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100 px-3 py-1 text-xs">{c.pill}</span>
+      <h1 className="font-head vx-h3 mt-5 !text-3xl">{c.title}</h1><p className="mt-2 text-slate-400">{c.sub}</p>
       <div className="mt-8 flex flex-col gap-3"><a className="btn-cta" href={`/billing/return?Valid=1&Token=tok_test&Identifier=${a}`}>{c.pay}</a><a className="btn-ghost" href={`/billing/return?Valid=0&Identifier=${a}`}>{c.decline}</a></div>
     </div></main>); }
   const plan = q.get("plan") || "starter";
@@ -25,12 +25,12 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
   }
   const p = t.pricing.plans.find((x) => x.id === plan) || t.pricing.plans[1];
   return (
-    <main className="mx-auto max-w-md px-4 py-16"><form onSubmit={submit} className="glass space-y-4 p-8">
-      <h1 className="text-2xl font-extrabold">{p.name}{bill && <> · <span dir="ltr">{fmt(bill.displayAmount, bill.displayCurrency)}</span>{t.pricing.mo}</>}</h1>
-      {bill && <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-slate-300" data-billing={bill.currency}>
+    <main className="mx-auto max-w-md px-5 py-[clamp(3rem,calc(var(--u)*96),6rem)]"><form onSubmit={submit} className="card space-y-4 p-8">
+      <h1 className="font-head text-2xl font-bold">{p.name}{bill && <> · <span dir="ltr">{fmt(bill.displayAmount, bill.displayCurrency)}</span>{t.pricing.mo}</>}</h1>
+      {bill && <div className="vx-copy p-3 text-sm text-slate-300" data-billing={bill.currency}>
         <p>{c.charged}: <b dir="ltr" className="text-white">{fmt(bill.amount, bill.currency)}</b>{t.pricing.mo}</p>
-        {bill.fallback && <p className="mt-1 text-amber-200">{c.fallback}</p>}<p className="mt-1 text-slate-400">{c.noVat}</p></div>}
-      <label className="block text-sm text-slate-300">{c.email}<input name="email" type="email" required dir="ltr" className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white" /></label>
+        {bill.fallback && <p className="mt-1 text-amber-100">{c.fallback}</p>}<p className="mt-1 text-slate-400">{c.noVat}</p></div>}
+      <label className="vx-label">{c.email}<input name="email" type="email" required dir="ltr" className="vx-input" /></label>
       {err && <p role="alert" className="text-sm text-red-200">{err}</p>}
       <button className="btn-cta w-full">{c.start}</button>
     </form></main>

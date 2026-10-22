@@ -24,22 +24,22 @@ export default function Dashboard({ t, lang }: { t: Dict; lang: Locale }) {
     try { const j = await api<{ reportId: string }>(`/api/dashboard/${encodeURIComponent(auth.id)}/rescan`, { body: { businessId }, headers: { "x-dashboard-key": auth.key } }); location.href = `/${lang}/r/${j.reportId}`; }
     catch (e: any) { setErr(e.message); setBusy(""); }
   }
-  if (err && !d) return <main className="mx-auto max-w-md px-4 py-20 text-center"><p role="alert" className="glass p-6 text-red-200">{err}</p><Link href={`/${lang}/login`} className="btn-cta mt-8">{t.login.nav}</Link></main>;
+  if (err && !d) return <main className="mx-auto max-w-md px-4 py-20 text-center"><p role="alert" className="card p-6 text-red-200">{err}</p><Link href={`/${lang}/login`} className="btn-cta mt-8">{t.login.nav}</Link></main>;
   if (!d) return <main className="min-h-[60vh] py-20 text-center text-slate-400">{t.live.loading}</main>;
   return (
-    <main className="mx-auto max-w-5xl px-4 py-12">
-      <h1 className="text-3xl font-extrabold md:text-4xl">{t.dash.title}</h1>
-      <p className="mt-2 text-slate-400"><span dir="ltr">{d.account.email}</span> · {t.dash.plan}: <b className="text-white">{d.account.plan}</b> · {t.dash.usage}: <span dir="ltr">{d.usage.used}/{d.usage.cap}</span></p>
+    <main className="mx-auto max-w-5xl px-5 py-[clamp(3rem,calc(var(--u)*80),5rem)]">
+      <h1 className="font-head vx-h3">{t.dash.title}</h1>
+      <span className="hairline mt-6 block w-40" /><p className="mt-5 text-slate-300"><span dir="ltr">{d.account.email}</span> · {t.dash.plan}: <b className="text-white">{d.account.plan}</b> · {t.dash.usage}: <span dir="ltr">{d.usage.used}/{d.usage.cap}</span></p>
       {err && <p role="alert" className="mt-4 text-red-200">{err}</p>}
-      {!d.businesses.length && <p className="glass mt-8 p-6">{t.dash.none}</p>}
+      {!d.businesses.length && <p className="card mt-8 p-6">{t.dash.none}</p>}
       <div className="mt-8 grid gap-6">
         {d.businesses.map((b: any) => { const last = b.scans.at(-1); return (
-          <div key={b.id} className="card grid gap-6 p-6 text-slate-900 md:grid-cols-[200px_1fr_auto] md:items-center">
+          <div key={b.id} className="card grid gap-6 p-6  md:grid-cols-[200px_1fr_auto] md:items-center">
             <div>{last && <ScoreGauge score={last.summary.score} label={t.dash.last} />}</div>
-            <div><h2 className="text-xl font-bold">{b.name}</h2><p className="text-slate-500">{b.category} · {b.city} · {b.scans.length} {t.dash.scans}</p>
+            <div><h2 className="text-xl font-bold">{b.name}</h2><p className="text-slate-400">{b.category} · {b.city} · {b.scans.length} {t.dash.scans}</p>
               {b.scans.length > 1 && <div className="mt-3 max-w-sm"><TrendChart values={b.scans.map((s: any) => s.summary.score)} weekLabel={t.report.weeks} /></div>}</div>
             <div className="flex flex-col gap-2">
-              {last && <a href={`/${lang}/r/${last.id}`} className="rounded-full border border-brand-200 px-5 py-2 text-center font-semibold text-brand-700">{t.dash.open}</a>}
+              {last && <a href={`/${lang}/r/${last.id}`} className="btn-outline !py-2">{t.dash.open}</a>}
               {d.account.plan !== "free" && <button onClick={() => rescan(b.id)} disabled={!!busy} className="btn-cta !py-2 disabled:opacity-60">{busy === b.id ? "…" : t.dash.rescan}</button>}
             </div>
           </div>); })}

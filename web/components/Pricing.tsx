@@ -13,23 +13,23 @@ export default function Pricing({ t, lang }: { t: Dict; lang: Locale }) {
   const pick = (c: Currency) => { setCurrencyCookie(c); setCur(c); load(c); };
   const price = (id: string) => data?.plans.find((p) => p.id === id)?.prices[cur] ?? PRICES[id][cur];
   return (<>
-    <div data-reveal className="mt-6 flex justify-center">
-      <div role="radiogroup" aria-label={t.pricing.currency} dir="ltr" className="inline-flex rounded-full border border-brand-200 bg-white p-1 text-sm font-semibold shadow-sm">
+    <div data-reveal className="mt-10 flex justify-center">
+      <div role="radiogroup" aria-label={t.pricing.currency} dir="ltr" className="inline-flex rounded-full border border-white/15 bg-white/5 p-1 text-sm font-semibold">
         {(["ILS", "USD"] as Currency[]).map((c) => (
           <button key={c} type="button" role="radio" aria-checked={cur === c} onClick={() => pick(c)} data-currency={c}
-            className={`rounded-full px-4 py-1.5 transition ${cur === c ? "bg-brand-600 text-white" : "text-brand-700 hover:bg-brand-50"}`}>{c === "ILS" ? "₪ ILS" : "$ USD"}</button>))}
+            className={`rounded-full px-4 py-1.5 transition ${cur === c ? "bg-brand-600 text-white" : "text-sky-300 hover:bg-white/5"}`}>{c === "ILS" ? "₪ ILS" : "$ USD"}</button>))}
       </div>
     </div>
-    <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
       {t.pricing.plans.map((p) => { const hot = p.id === "pro"; const v = price(p.id); return (
-        <div data-reveal key={p.id} className={`card relative flex flex-col p-6 ${hot ? "border-brand-500 ring-2 ring-brand-500 lg:-translate-y-2" : ""}`}>
+        <div data-reveal key={p.id} className={`card relative flex flex-col p-6 ${hot ? "vx-hot lg:-translate-y-2" : ""}`}>
           {hot && <span className="absolute -top-3 start-6 rounded-full bg-brand-600 px-3 py-1 text-xs font-semibold text-white">{t.pricing.popular}</span>}
           <h3 className="text-lg font-bold">{p.name}</h3>
-          <div className="mt-2 text-4xl font-extrabold"><span dir="ltr" data-price={p.id}>{fmt(v, cur)}</span><span className="text-base font-medium text-slate-500">{v ? t.pricing.mo : ""}</span></div>
-          <ul className="mt-4 flex-1 space-y-2 text-slate-600">{p.items.map((it) => <li key={it} className="flex gap-2"><span className="text-brand-600">✓</span>{it}</li>)}</ul>
-          <Link href={v ? `/${lang}/checkout?plan=${p.id}` : `/${lang}/scan`} className={`mt-6 ${hot ? "btn-cta" : "rounded-full border border-brand-200 px-6 py-3 text-center font-semibold text-brand-700 hover:bg-brand-50"}`}>{p.cta}</Link>
+          <div className="font-head mt-3 text-4xl font-bold text-white"><span dir="ltr" data-price={p.id}>{fmt(v, cur)}</span><span className="text-base font-medium text-slate-400">{v ? t.pricing.mo : ""}</span></div>
+          <ul className="mt-4 flex-1 space-y-2 text-slate-300">{p.items.map((it) => <li key={it} className="flex gap-2"><span aria-hidden className="text-sky-400">✓</span>{it}</li>)}</ul>
+          <Link href={v ? `/${lang}/checkout?plan=${p.id}` : `/${lang}/scan`} className={`mt-6 ${hot ? "btn-cta" : "btn-outline"}`}>{p.cta}</Link>
         </div>); })}
     </div>
-    <p data-reveal className="mx-auto mt-6 max-w-2xl text-center text-sm text-slate-500">{t.pricing.vatNote}</p>
+    <p data-reveal className="mx-auto mt-6 max-w-2xl text-center text-sm text-slate-400">{t.pricing.vatNote}</p>
   </>);
 }

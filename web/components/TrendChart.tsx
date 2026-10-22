@@ -24,11 +24,11 @@ export default function TrendChart({ values, weekLabel }: { values: number[]; we
   }, []);
   return (
     <svg ref={ref} viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ direction: "ltr" }} role="img" aria-label={values.join(", ")}>
-      <defs><linearGradient id="g-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#8b5cf6" stopOpacity=".3" /><stop offset="1" stopColor="#8b5cf6" stopOpacity="0" /></linearGradient></defs>
-      {[25, 50, 75].map((g) => <line key={g} x1={P} x2={W - P} y1={H - P - (g / 100) * (H - 2 * P)} y2={H - P - (g / 100) * (H - 2 * P)} stroke="#e6e6f2" />)}
+      <defs><linearGradient id="g-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3b82f6" stopOpacity=".3" /><stop offset="1" stopColor="#3b82f6" stopOpacity="0" /></linearGradient></defs>
+      {[25, 50, 75].map((g) => <line key={g} x1={P} x2={W - P} y1={H - P - (g / 100) * (H - 2 * P)} y2={H - P - (g / 100) * (H - 2 * P)} stroke="rgba(148,163,184,.15)" />)}
       <path data-area d={`${d} L${pts.at(-1)![0]} ${H - P} L${P} ${H - P} Z`} fill="url(#g-area)" />
-      <path data-line d={d} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="4" fill="#fff" stroke="#6366f1" strokeWidth="2" />)}
+      <path data-line d={d} fill="none" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="4" fill="#01061a" stroke="#93c5fd" strokeWidth="2" />)}
       {pts.map((p, i) => <text key={i} x={p[0]} y={H - 6} fontSize="9" textAnchor="middle" fill="#94a3b8">{weekLabel} {i + 1}</text>)}
     </svg>
   );
