@@ -169,5 +169,5 @@ app.get(['/he.txt', '/en.txt', '/:lang/:page.txt'], (q, r) => { const f = path.j
 app.use((q, r) => { const f = path.join(OUT, '404.html'); return fs.existsSync(f) ? r.status(404).sendFile(f) : r.sendStatus(404); });
 
 const port = process.env.PORT || 3000;
-if (process.argv[1]?.endsWith('server.js')) app.listen(port, '127.0.0.1', () => console.log(`${BRAND.name} on http://localhost:${port} (scans: ${isMockMode() ? 'MOCK' : 'LIVE'}, payments: ${getPayments().id})`));
+if (process.argv[1]?.endsWith('server.js')) app.listen(port, process.env.HOST || '0.0.0.0', () => console.log(`${BRAND.name} on http://localhost:${port} (scans: ${isMockMode() ? 'MOCK' : 'LIVE'}, payments: ${getPayments().id})`));
 export default app;
