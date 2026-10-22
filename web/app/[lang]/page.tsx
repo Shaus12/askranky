@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { dict, isLocale, type Locale } from "@/lib/i18n";
-import Nav from "@/components/Nav";
+import Hero from "@/components/Hero";
 import Footer from "@/components/Footer";
-import BlurText from "@/components/BlurText";
 import Reveal from "@/components/Reveal";
 import ReportBody from "@/components/ReportBody";
 import ScanForm from "@/components/ScanForm";
@@ -12,18 +11,13 @@ export default async function Landing({ params }: { params: Promise<{ lang: stri
   const { lang: l } = await params; const lang = (isLocale(l) ? l : "en") as Locale; const t = dict(lang); const h = t.hero;
   return (
     <>
-      <div className="hero-bg relative overflow-hidden text-white">
-        <div className="grid-fade pointer-events-none absolute inset-0" />
-        <Nav t={t} lang={lang} />
-        <section className="relative mx-auto grid max-w-6xl gap-10 px-4 pb-20 pt-14 md:grid-cols-[1.1fr_.9fr] md:pt-24">
+      <Hero t={t} lang={lang} />
+      <div className="vx-below text-white">
+        <section id="scan-form" className="mx-auto grid max-w-6xl scroll-mt-6 items-center gap-10 px-4 pb-16 pt-4 md:grid-cols-[1fr_1fr]">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-brand-200"><span className="dot h-2 w-2 rounded-full bg-score-high" />{h.eyebrow}</span>
-            <h1 className="mt-5 text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl md:text-6xl"><BlurText text={h.title} wordClassName="shimmer" /></h1>
-            <p className="mt-5 max-w-xl text-lg text-slate-300">{h.sub}</p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href={`/${lang}/scan`} className="btn-cta">{h.cta} <span className="rtl:rotate-180">→</span></Link>
-              <a href="#sample" className="btn-ghost">{h.ghost}</a>
-            </div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-sky-200"><span className="dot h-2 w-2 rounded-full bg-score-high" />{h.eyebrow}</span>
+            <h2 className="font-head mt-4 text-3xl font-bold md:text-4xl">{h.title}</h2>
+            <p className="mt-4 text-slate-300">{h.sub}</p>
             <p className="mt-4 text-sm text-slate-400">{h.note}</p>
           </div>
           <ScanForm t={t} lang={lang} />

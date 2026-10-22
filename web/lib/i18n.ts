@@ -7,6 +7,9 @@ const en = {
   brand: "Ranky",
   nav: { how: "How it works", sample: "Sample report", pricing: "Pricing", faq: "FAQ", cta: "Free scan" },
   hero: {
+    l1: "Your next customer", l2: "is asking ChatGPT.",
+    lede: "Ranky checks what ChatGPT, Gemini and Perplexity say when locals ask for a business like yours, and shows you how to become the answer.",
+    discover: "Run a free scan below",
     eyebrow: "AI visibility for local businesses",
     title: "Does ChatGPT recommend your business?",
     sub: "We ask ChatGPT, Gemini and Perplexity the questions your customers ask, then show where you rank, who gets picked instead, and 3 fixes to climb.",
@@ -58,6 +61,9 @@ const he: Dict = {
   brand: "Ranky",
   nav: { how: "איך זה עובד", sample: "דוח לדוגמה", pricing: "מחירים", faq: "שאלות", cta: "סריקה חינם" },
   hero: {
+    l1: "הלקוח הבא שלך", l2: "שואל את ChatGPT",
+    lede: "Ranky בודק מה ChatGPT, ‏Gemini ו־Perplexity עונים כשלקוחות באזור מחפשים עסק כמו שלך, ומראה לך איך להפוך לתשובה.",
+    discover: "לסריקה חינם למטה",
     eyebrow: "נראות ב־AI לעסקים מקומיים",
     title: "האם ChatGPT ממליץ על העסק שלך?",
     sub: "אנחנו שואלים את ChatGPT, ‏Gemini ו־Perplexity את השאלות שהלקוחות שלך שואלים, ומראים איפה אתה מדורג, מי נבחר במקומך, ו־3 תיקונים כדי לטפס.",
