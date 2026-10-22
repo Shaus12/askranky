@@ -7,12 +7,21 @@
     "start": "node server.js",
     "build": "cd web && npm run build",
     "dev:web": "cd web && npm run dev",
-    "test": "node test/e2e.js && node test/security.js && node test/hebrew.js && node test/pricing.js && node test/live-regression.js && node test/qa.js",
+    "test": "node test/e2e.js && node test/security.js && node test/hebrew.js && node test/pricing.js && node test/live-regression.js && node test/qa.js && node test/pg.js && node test/ops.js",
     "weekly": "node src/weekly.js",
-    "shots": "node web/scripts/screenshots.mjs"
+    "shots": "node web/scripts/screenshots.mjs",
+    "config:check": "node scripts/config-check.js",
+    "db:check": "node scripts/db-check.js",
+    "db:import": "node scripts/import-json-to-pg.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "@neondatabase/serverless": "^1.2.0",
+    "express": "^4.19.2",
+    "pg": "^8.23.1",
+    "ws": "^8.22.0"
   },
-  "description": "Ranky (askranky.com): AI visibility scans for local businesses"
+  "description": "Ranky (askranky.com): AI visibility scans for local businesses",
+  "devDependencies": {
+    "pg-mem": "^3.0.14"
+  }
 }

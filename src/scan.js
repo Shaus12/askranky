@@ -9,8 +9,8 @@ import { getDb, save, id } from './store.js';
 export async function runScan(account, business, { engines = ENGINES, maxQuestions } = {}) {
   const plan = PLANS[account.plan];
   const questions = buildQuestions(business, Math.min(plan.questionsPerBusiness, maxQuestions || Infinity));
-  const budget = checkBudget(account, engines, questions.length);
-  if (!budget.ok) throw Object.assign(new Error(budget.reason), { code: 'CAP' });
+  const budget = checkBudget(account, engines, questions.length, engines.filter(e => !getProvider(e).mock));
+  if (!budget.ok) throw Object.assign(new Error(budget.reason), { code: 'CAP', he: budget.reasonHe });
 
   const results = []; let cost = 0;
   for (const q of questions) for (const e of engines) {
@@ -18,7 +18,7 @@ export async function runScan(account, business, { engines = ENGINES, maxQuestio
     try {
       const ans = await p.ask(q, { business });
       results.push({ question: q, engine: e, engineLabel: p.label, mock: !!p.mock, answer: ans.text, usage: ans.usage, searches: ans.searches, ...analyzeAnswer(ans, business) });
-      cost += COST_PER_CHECK[e];
+      if (!p.mock) cost += COST_PER_CHECK[e];
     } catch (err) { results.push({ question: q, engine: e, error: String(err.message).slice(0, 300) }); }
   }
   recordSpend(account, results.filter(r => !r.error).length, cost);

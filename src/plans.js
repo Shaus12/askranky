@@ -14,4 +14,5 @@ export const priceOf = (plan, currency) => { if (!CURRENCIES.includes(currency))
 export const formatPrice = (amount, currency) => currency === 'ILS' ? `₪${amount}` : `$${amount}`;
 // Estimated USD cost per single check (1 question x 1 engine), from Oct-2026 published API prices.
 export const COST_PER_CHECK = { chatgpt: 0.014, perplexity: 0.008, gemini: 0.02 };
+// Deprecated: use dailyCapUsd() in costs.js (reads env per call).
 export const GLOBAL_DAILY_SPEND_CAP_USD = Number(process.env.DAILY_SPEND_CAP_USD || 10);

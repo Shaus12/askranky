@@ -1,6 +1,6 @@
 import express from 'express'; import fs from 'node:fs'; import path from 'node:path';
 import { BRAND } from './src/brand.js'; import { PLANS, isPaid, CURRENCIES } from './src/plans.js'; import { detectCurrency, billingFor, publicPlans, usdBillingEnabled } from './src/currency.js';
-import { getDb, save, id } from './src/store.js'; import { runScan } from './src/scan.js';
+import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan } from './src/scan.js';
 import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail } from './src/email/report.js'; import { sendEmail } from './src/email/send.js';
 import * as V from './src/views.js'; import { isMockMode } from './src/providers/index.js';
 import { token, safeEqual, issueMagicLink, consumeMagic } from './src/security/tokens.js'; import { createRateLimiter } from './src/security/ratelimit.js';
@@ -31,7 +31,7 @@ function findOrCreateAccount(email) {
   return a;
 }
 
-app.get('/health', (q, r) => r.json({ ok: true, brand: BRAND.name, mockScans: isMockMode(), payments: getPayments().id, prelaunch: isPrelaunch() }));
+app.get('/health', (q, r) => r.json({ ok: true, brand: BRAND.name, mockScans: isMockMode(), payments: getPayments().id, prelaunch: isPrelaunch(), store: BACKEND }));
 app.get('/robots.txt', (q, r) => r.type('text/plain').send(robotsTxt()));
 app.get('/sitemap.xml', (q, r) => r.type('application/xml').send(sitemapXml()));
 // Pre-launch waitlist: stores an email + language, never starts a payment.
@@ -119,7 +119,7 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
     const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1);
     await sendEmail({ to: account.email, subject: `Your ${BRAND.name} report: ${business.name} scored ${scan.summary.score}/100`, html: renderWeeklyEmail({ business, scan, reportUrl: `${BASE}/r/${scan.id}` }) });
     r.json({ reportId: scan.id });
-  } catch (e) { r.status(e.code === 'CAP' ? 429 : 500).json({ error: e.message }); }
+  } catch (e) { r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }
 });
 app.get('/api/report/:id', (q, r) => { const db = getDb(); const s = db.scans[q.params.id]; if (!s) return r.status(404).json({ error: 'not found' });
   const b = db.businesses[s.businessId]; const hist = (b.scanIds || []).map(i => db.scans[i]).filter(Boolean); const idx = hist.findIndex(x => x.id === s.id);
@@ -179,5 +179,6 @@ app.get(['/he.txt', '/en.txt', '/:lang/:page.txt'], (q, r) => { const f = path.j
 app.use((q, r) => { if (wantsJson(q)) return r.status(404).json({ error: 'not found' }); const m = /^\/(he|en)(\/|$)/.exec(q.path); r.status(404).type('html').send(notFoundPage(m ? m[1] : prefLang(q))); });
 
 const port = process.env.PORT || 3000;
+if (process.argv[1]?.endsWith('server.js')) { const cfg = (await import('./src/config-check.js')).logConfig(); if (!cfg.ok && process.env.CONFIG_STRICT === '1') process.exit(1); }
 if (process.argv[1]?.endsWith('server.js')) app.listen(port, process.env.HOST || '0.0.0.0', () => console.log(`${BRAND.name} on http://localhost:${port} (scans: ${isMockMode() ? 'MOCK' : 'LIVE'}, payments: ${getPayments().id})`));
 export default app;

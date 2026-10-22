@@ -2,7 +2,9 @@
 // Order: 1) ranky_currency cookie (manual toggle)  2) Hebrew UI (?lang=he, or ranky_lang=he cookie when no lang given)
 // 3) geo header (CF-IPCountry / X-Vercel-IP-Country / X-Country-Code)  4) Accept-Language he/iw  5) USD.
 import { PLANS, CURRENCIES, priceOf, isPaid } from './plans.js';
-export const usdBillingEnabled = () => process.env.ENABLE_USD_BILLING === '1' || process.env.ENABLE_USD_BILLING === 'true';
+// ILS-only is enforced for real SUMIT billing until USD standing orders are verified: with PAYMENTS_PROVIDER=sumit, USD
+// billing also needs SUMIT_USD_VERIFIED=1 (see GO-LIVE.md). The config check flags ENABLE_USD_BILLING=true as an error.
+export const usdBillingEnabled = () => (process.env.ENABLE_USD_BILLING === '1' || process.env.ENABLE_USD_BILLING === 'true') && (process.env.PAYMENTS_PROVIDER !== 'sumit' || process.env.SUMIT_USD_VERIFIED === '1');
 const cookie = (q, k) => (new RegExp(`(?:^|;\\s*)${k}=([^;]*)`).exec(q.get?.('cookie') || q.headers?.cookie || '') || [])[1];
 const hdr = (q, k) => (q.get ? q.get(k) : q.headers?.[k]) || '';
 export function detectCurrency(q, lang) {

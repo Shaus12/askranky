@@ -1,0 +1,22 @@
+// Postgres store against pg-mem (in-memory Postgres; no Postgres server is installable on the box). Never touches DATABASE_URL.
+import assert from 'node:assert/strict'; import { newDb } from 'pg-mem';
+import { useTempData } from './helpers.js'; const TD = useTempData('pg');
+const P = await import('../src/store-pg.js'); let n = 0; const ok = m => { n++; console.log('  ✓', m); };
+const mem = newDb(); const { Pool } = mem.adapters.createPg(); const URL = 'postgres://u@h/db?sslmode=disable';
+assert.equal(P.sslFor(URL), false); assert.deepEqual(P.sslFor('postgres://u@h/db?sslmode=require'), { rejectUnauthorized: true }); ok('SSL on unless sslmode=disable');
+const pd = process.env.PG_DRIVER; delete process.env.PG_DRIVER; assert.equal(P.driverFor('postgres://u@ep-x.eu-central-1.aws.neon.tech/db'), 'neon'); assert.equal(P.driverFor(URL), 'pg'); if (pd) process.env.PG_DRIVER = pd; ok('Neon URLs use @neondatabase/serverless (443), others node-postgres');
+const a = await P.createPgStore(URL, { Pool }); const db = a.db();
+assert.deepEqual(Object.keys(db).sort(), ['accounts', 'businesses', 'events', 'scans', 'spend', 'waitlist']); ok('migrations create schema; empty document shape');
+db.accounts.x = { id: 'x', email: 'a@b.test', plan: 'free' }; db.businesses.b = { id: 'b', accountId: 'x' }; db.scans.s = { id: 's', summary: { score: 5 } };
+db.events.push({ type: 'e1' }); db.waitlist.push({ email: 'w@t.test' }); db.spend['2026-10-22'] = 0.42; await Promise.all([a.save(), a.save(), a.save()]); await a.flush();
+let b = await P.createPgStore(URL, { Pool }); assert.deepEqual(b.db(), db); ok('save → reload round-trips every collection (concurrent saves coalesce)');
+db.accounts.x.plan = 'pro'; delete db.scans.s; db.events.push({ type: 'e2' }); await a.save();
+b = await P.createPgStore(URL, { Pool }); assert.equal(b.db().accounts.x.plan, 'pro'); assert.equal(b.db().scans.s, undefined); assert.equal(b.db().events.length, 2); ok('updates, deletes and appends persist');
+const v = mem.public.many('SELECT max(version) AS v FROM schema_migrations')[0].v; await P.createPgStore(URL, { Pool }); assert.equal(mem.public.many('SELECT max(version) AS v FROM schema_migrations')[0].v, v); ok('migrations are idempotent');
+const m3 = newDb(); await P.createPgStore(URL, { Pool: m3.adapters.createPg().Pool, migrateOnStart: false }).catch(() => {}); assert.equal(m3.public.many("SELECT count(*)::int AS n FROM information_schema.tables WHERE table_name = 'accounts'")[0].n, 0); ok('PG_AUTO_MIGRATE=0 creates nothing');
+const m2 = newDb(); const c = await P.createPgStore(URL, { Pool: m2.adapters.createPg().Pool });
+const counts = await P.importJson(c, { accounts: { q: { id: 'q', email: 'q@t.test' } }, businesses: {}, scans: { z: { id: 'z' } }, spend: { d: 1 }, events: [{}, {}] });
+assert.deepEqual(counts, { accounts: 1, businesses: 0, scans: 1, events: 2, waitlist: 0 }); await assert.rejects(P.importJson(c, { accounts: {} }), /not empty/); ok('one-time JSON import; refuses non-empty target without --force');
+const st = await import('../src/store.js'); assert.equal(st.BACKEND, 'json'); ok('without DATABASE_URL (tests) the JSON store is used');
+assert.equal(st.wantsPostgres({ DATABASE_URL: 'x' }), false); assert.equal(st.wantsPostgres({ DATABASE_URL: 'x', NODE_ENV: 'production' }), true); assert.equal(st.wantsPostgres({ DATABASE_URL: 'x', STORE: 'postgres' }), true); assert.equal(st.wantsPostgres({ DATABASE_URL: 'x', NODE_ENV: 'production', STORE: 'json' }), false); assert.equal(st.wantsPostgres({ NODE_ENV: 'production' }), false); ok('Postgres only with DATABASE_URL + (production or STORE=postgres); dev box stays on JSON');
+TD.done(); console.log(`ALL POSTGRES STORE TESTS PASSED (${n})`);
