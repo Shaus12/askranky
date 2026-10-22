@@ -25,6 +25,14 @@ async function emailMagicLink(a) {
   await sendEmail({ to: a.email, subject: `Your ${BRAND.name} dashboard link`, html: `<p>Open your ${esc(BRAND.name)} dashboard (link valid 15 minutes, single use):</p><p><a href="${esc(link)}">${esc(link)}</a></p><p>If you didn't request this, ignore this email.</p>` });
 }
 
+// Optional marketing consent from the scan form (unchecked by default). Stored only when given, with timestamp, language
+// and the notice version shown; scanning never requires it. Transactional report emails are sent regardless.
+export const CONSENT_VERSION = 'scan-form-2026-10-22';
+function recordConsent(a, body) {
+  const v = body?.marketingConsent; if (!(v === true || v === 'on' || v === '1' || v === 'true')) return;
+  a.marketingConsent = { granted: true, at: new Date().toISOString(), lang: body?.lang === 'he' ? 'he' : 'en', source: 'scan-form', version: CONSENT_VERSION };
+  getDb().events.push({ at: a.marketingConsent.at, type: 'consent.marketing', account: a.id, version: CONSENT_VERSION }); save();
+}
 function findOrCreateAccount(email) {
   const db = getDb(); let a = Object.values(db.accounts).find(x => x.email === email.toLowerCase());
   if (!a) { a = { id: id(10), key: token(32), email: email.toLowerCase(), plan: 'free', createdAt: new Date().toISOString(), usage: {} }; db.accounts[a.id] = a; save(); }
@@ -43,7 +51,7 @@ app.post('/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body;
   if (!name || !category || !city || !email) return r.status(400).send(V.landing('Please fill all required fields.'));
   const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).send(V.landing('Free scan limit reached for today.'));
-  const db = getDb(); const account = findOrCreateAccount(email);
+  const db = getDb(); const account = findOrCreateAccount(email); recordConsent(account, q.body);
   if (account.plan === 'free' && Object.values(db.businesses).some(b => b.accountId === account.id && b.scanIds?.length)) {
     const b = Object.values(db.businesses).find(b => b.accountId === account.id); return r.redirect(`/r/${b.scanIds.at(-1)}`);
   }
@@ -110,7 +118,7 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body || {};
   if (!name || !category || !city || !email) return r.status(400).json({ error: 'Please fill all required fields.' });
   const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).json({ error: 'Free scan limit reached for today.' });
-  const db = getDb(); const account = findOrCreateAccount(email);
+  const db = getDb(); const account = findOrCreateAccount(email); recordConsent(account, q.body);
   const existing = Object.values(db.businesses).find(b => b.accountId === account.id && b.scanIds?.length);
   if (account.plan === 'free' && existing) return r.json({ reportId: existing.scanIds.at(-1), existing: true });
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim() };
@@ -142,14 +150,23 @@ app.post('/api/dashboard/:id/rescan', async (q, r) => {
   const b = Object.hasOwn(getDb().businesses, String(q.body?.businessId)) ? getDb().businesses[q.body.businessId] : null; if (!b || b.accountId !== a.id) return r.status(404).json({ error: 'not found' });
   try { const s = await runScan(a, b); r.json({ reportId: s.id }); } catch (e) { r.status(429).json({ error: e.message }); }
 });
-// Legal drafts in legal/*.md (Hebrew: *.he.md). Known placeholders come from BRAND/env; any other {{KEY}} renders as
-// "[KEY]" (or env LEGAL_KEY) so unfilled fields are visible but never leak template syntax.
-app.get('/api/legal/:doc', (q, r) => {
-  const doc = q.params.doc.replace(/[^a-z]/g, ''); const he = q.query.lang === 'he' && fs.existsSync(path.resolve('legal', doc + '.he.md'));
-  const f = path.resolve('legal', doc + (he ? '.he.md' : '.md')); if (!doc || !fs.existsSync(f)) return r.status(404).json({ error: 'not found' });
-  const known = { BRAND: BRAND.name, DOMAIN: BRAND.domain, EMAIL: BRAND.supportEmail, ENTITY: BRAND.legalEntity };
-  r.json({ lang: he ? 'he' : 'en', markdown: fs.readFileSync(f, 'utf8').replace(/\{\{([A-Z_]+)\}\}/g, (_, k) => known[k] ?? process.env['LEGAL_' + k] ?? `[${k}]`) });
-});
+// Legal docs in legal/*.md (Hebrew: *.he.md). Whitelisted names only (COMPLIANCE-NOTES.md is internal and never served).
+// Docs are pre-filled; known {{KEY}} placeholders are still substituted (Hebrew files get the Hebrew entity/address), and
+// any other {{KEY}} renders as "[KEY]" (or env LEGAL_KEY) so it is visible but never leaks template syntax.
+export const LEGAL_DOCS = ['terms', 'privacy', 'refunds', 'disclaimer', 'accessibility'];
+function legal(q, r, doc, lang) {
+  if (!LEGAL_DOCS.includes(doc)) return r.status(404).json({ error: 'not found' });
+  const he = lang === 'he' && fs.existsSync(path.resolve('legal', doc + '.he.md')); const f = path.resolve('legal', doc + (he ? '.he.md' : '.md'));
+  if (!fs.existsSync(f)) return r.status(404).json({ error: 'not found' });
+  const known = { BRAND: BRAND.name, DOMAIN: BRAND.domain, EMAIL: BRAND.supportEmail, ENTITY: he ? BRAND.legalEntityHe : BRAND.legalEntity, ENTITY_ID: BRAND.entityId,
+    ADDRESS: he ? BRAND.addressHe : BRAND.address, DPO_NAME: he ? BRAND.legalEntityHe : BRAND.legalEntity, DPO_EMAIL: BRAND.privacyEmail,
+    ACCESSIBILITY_COORDINATOR: he ? BRAND.legalEntityHe : BRAND.legalEntity, ACCESSIBILITY_EMAIL: BRAND.accessibilityEmail };
+  r.json({ lang: he ? 'he' : 'en', doc, markdown: fs.readFileSync(f, 'utf8').replace(/\{\{([A-Z_]+)\}\}/g, (_, k) => known[k] ?? process.env['LEGAL_' + k] ?? `[${k}]`) });
+}
+app.get('/api/legal/:lang(he|en)/:doc', (q, r) => legal(q, r, q.params.doc, q.params.lang));
+app.get('/api/legal/:doc', (q, r) => legal(q, r, q.params.doc, q.query.lang === 'he' ? 'he' : 'en'));
+// Seller disclosure for footer/checkout (Consumer Protection Law s.14C). Public business details only.
+app.get('/api/seller', (q, r) => r.json({ name: BRAND.legalEntity, nameHe: BRAND.legalEntityHe, entityId: BRAND.entityId, entityType: BRAND.entityType, entityTypeHe: BRAND.entityTypeHe, address: BRAND.address, addressHe: BRAND.addressHe, email: BRAND.supportEmail, vat: false }));
 // ---------- Next.js frontend (static export in web/out, built with `npm run build`) ----------
 // Pages are plain HTML; dynamic segments (/r/:id, /dashboard/:id) map onto one exported page whose client code reads the id from the URL.
 const OUT = path.resolve('web/out'); const LANGS = ['he', 'en'];
@@ -169,6 +186,7 @@ app.get('/dashboard/:id', (q, r) => r.redirect(`/${prefLang(q)}/dashboard/${enco
 app.get('/login', (q, r) => r.redirect(`/${prefLang(q)}/login`));
 app.get('/pricing', (q, r) => r.redirect(`/${prefLang(q)}#pricing`));
 app.get('/mock-checkout', (q, r) => isPrelaunch() ? r.redirect(`/${prefLang(q)}/checkout`) : r.redirect(`/${prefLang(q)}/checkout${qs(q)}`));
+app.get('/legal/:lang(he|en)/:doc', (q, r) => r.redirect(`/${q.params.lang}/legal?doc=${encodeURIComponent(q.params.doc)}`));
 app.get('/legal/:doc', (q, r) => r.redirect(`/${prefLang(q)}/legal?doc=${encodeURIComponent(q.params.doc)}`));
 app.get('/:lang', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang) : next());
 app.get('/:lang/r/:id', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'report') : next());

@@ -30,6 +30,10 @@ export default function ScanForm({ t, lang }: { t: Dict; lang: Locale }) {
             className="vx-input" />
         </label>))}
       <datalist id="il-cities">{ISRAELI_CITIES.map((c) => <option key={c.slug} value={c[lang]} />)}</datalist>
+      <label className="flex items-start gap-2 text-sm text-slate-300">
+        <input type="checkbox" name="marketingConsent" value="on" defaultChecked={false} className="mt-1 h-4 w-4 shrink-0 accent-emerald-500" data-consent />
+        <span>{t.form.consent}</span></label>
+      <p className="text-xs text-slate-400" data-privacy>{t.form.privacy} <a className="vx-link underline" href={`/${lang}/legal?doc=privacy`}>{t.form.privacyLink}</a>.</p>
       <Turnstile siteKey={siteKey} lang={lang} />
       {err && <p role="alert" className="rounded-lg bg-score-low/15 px-3 py-2 text-sm text-red-200">{err}</p>}
       <button className="btn-cta mt-2 w-full">{t.form.submit}</button>

@@ -46,6 +46,7 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
       {bill && <div className="vx-copy p-3 text-sm text-slate-300" data-billing={bill.currency}>
         <p>{c.charged}: <b dir="ltr" className="text-white">{fmt(bill.amount, bill.currency)}</b>{t.pricing.mo}</p>
         {bill.fallback && <p className="mt-1 text-amber-100">{c.fallback}</p>}<p className="mt-1 text-slate-400">{c.noVat}</p></div>}
+      <p className="text-xs text-slate-400" data-disclosure>{c.renew} {t.footer.seller}</p>
       <label className="vx-label">{c.email}<input name="email" type="email" required dir="ltr" className="vx-input" /></label>
       {err && <p role="alert" className="text-sm text-red-200">{err}</p>}
       <button className="btn-cta w-full">{c.start}</button>

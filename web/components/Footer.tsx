@@ -15,6 +15,7 @@ export default function Footer({ t, lang = "en" }: { t: Dict; lang?: Locale }) {
         </nav>
         <span className="hairline block w-full max-w-md" />
         <p className="max-w-xl text-slate-400">{t.footer.disclaimer}</p>
+        <p className="max-w-2xl text-xs text-slate-500" data-seller>{t.footer.seller}</p>
         <p className="flex flex-wrap justify-center gap-x-3 gap-y-1">© 2026 {t.brand} · <span dir="ltr">askranky.com</span> · {L("terms", t.footer.terms)} · {L("privacy", t.footer.privacy)} · {L("refunds", t.footer.refunds)} · {L("disclaimer", t.footer.aiDisclaimer)} · {L("accessibility", t.footer.accessibility)}</p>
       </div>
     </footer>

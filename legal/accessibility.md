@@ -1,10 +1,10 @@
-# Accessibility Statement — {{BRAND}}
-> **DRAFT — not legal advice.** Update after an actual accessibility audit. Last updated: [DATE]
+# Accessibility Statement — Ranky
+> **DRAFT — not legal advice.** Update after an actual accessibility audit. Last updated: 2026-10-22
 
-{{ENTITY}} ({{ENTITY_ID}}) is committed to equal access for all customers, including people with disabilities, in accordance with the Israeli Equal Rights for Persons with Disabilities Law, 5758-1998, and the Equal Rights for Persons with Disabilities (Service Accessibility Adjustments) Regulations, 5773-2013 (reg. 35).
+Shai Shotashvili (Exempt Dealer (Osek Patur) No. 322713082) is committed to equal access for all customers, including people with disabilities, in accordance with the Israeli Equal Rights for Persons with Disabilities Law, 5758-1998, and the Equal Rights for Persons with Disabilities (Service Accessibility Adjustments) Regulations, 5773-2013 (reg. 35).
 
 ## Conformance
-{{DOMAIN}} [conforms / is being adapted] to Israeli Standard IS 5568, based on WCAG 2.0 level AA. [WCAG 2.1 AA recommended; also relevant for US ADA expectations.]
+askranky.com [conforms / is being adapted] to Israeli Standard IS 5568, based on WCAG 2.0 level AA. [WCAG 2.1 AA recommended; also relevant for US ADA expectations.]
 
 ## What we have done
 - Semantic structure (headings, landmarks, lists), screen-reader support.
@@ -24,9 +24,8 @@
 Online-only service; no public premises.
 
 ## Accessibility coordinator / contact
-- Coordinator: {{ACCESSIBILITY_COORDINATOR}}
-- Email: {{ACCESSIBILITY_EMAIL}} (or {{EMAIL}})
-- Phone: {{PHONE}}
+- Coordinator: Shai Shotashvili
+- Email: shaysho1111@gmail.com (or shaysho1111@gmail.com)
 Please include the page, a description of the issue and the assistive technology used. We aim to reply within [5] business days.
 
-Statement last updated: [DATE]
+Statement last updated: 2026-10-22
