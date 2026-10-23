@@ -9,8 +9,8 @@ let n = 0; const ok = m => { n++; console.log('  ✓', m); };
 const biz = { name: 'אינסטלציה אקמה', category: 'אינסטלטור', city: 'תל אביב', website: 'https://acme.co.il' };
 
 assert.equal(TEMPLATES.he.length, TEMPLATES.en.length); assert.equal(businessLang(biz), 'he'); assert.equal(businessLang({ name: 'Acme', category: 'Plumber', city: 'Austin' }), 'en');
-const qs = buildQuestions(biz, 15); assert.equal(qs.length, 15); assert.ok(qs.every(q => /[\u05D0-\u05EA]/.test(q) && !q.includes('{'))); assert.equal(qs[0], 'מי האינסטלטור הכי טוב בתל אביב-יפו?'); ok('15 Hebrew templates, filled with category + localized city');
-assert.equal(buildQuestions({ name: 'Acme', category: 'Plumber', city: 'Haifa', lang: 'he' }, 1)[0], 'מי הPlumber הכי טוב בחיפה?'); ok('lang:"he" forces Hebrew templates; English city name localized to Hebrew');
+const qs = buildQuestions(biz, 15); assert.equal(qs.length, 15); assert.ok(qs.every(q => /[\u05D0-\u05EA]/.test(q) && !q.includes('{'))); assert.equal(qs[0], 'מי העסקים הטובים ביותר בתחום אינסטלטור בתל אביב-יפו?'); ok('15 Hebrew templates, filled with category + localized city');
+assert.equal(buildQuestions({ name: 'Acme', category: 'Plumber', city: 'Haifa', lang: 'he' }, 1)[0], 'מי העסקים הטובים ביותר בתחום Plumber בחיפה?'); ok('lang:"he" forces Hebrew templates; English city name localized to Hebrew');
 assert.ok(ISRAELI_CITIES.length >= 40); assert.equal(findCity('Tel Aviv').he, 'תל אביב-יפו'); assert.equal(findCity('באר-שבע').en, 'Beersheba'); assert.equal(localizeCity('Austin, TX', 'he'), 'Austin, TX'); ok(`${ISRAELI_CITIES.length} Israeli cities with he/en lookup + aliases`);
 
 // Hand-written Hebrew answers in the shapes real engines return.
