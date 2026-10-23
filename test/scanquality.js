@@ -87,4 +87,20 @@ let n = 0; const ok = m => { n++; console.log('  ✓', m); };
   } finally { globalThis.fetch = realFetch; for (const k of ['SCAN_MODE', 'GEMINI_API_KEY', 'LIVE_ENGINES']) delete process.env[k]; TD.done(); }
   ok('scan summary: redirect host excluded from topCitedHosts and from generated fixes (HE+EN, old stored scans too); checks/cost unchanged');
 }
+
+// 4. Progress UI: asymptotic creep, never stalls, calm slow note after 60 s (he + en)
+{
+  const { createRequire } = await import('node:module'); const req = createRequire(import.meta.url); const ts = req('../web/node_modules/typescript');
+  const js = ts.transpileModule(fs.readFileSync('web/lib/progress.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
+  const P = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'));
+  assert.equal(P.creepPct(0), 0); let prev = -1; for (let t = 0; t <= 300000; t += 1000) { const v = P.creepPct(t); assert.ok(v > prev, `stalls at ${t}ms`); assert.ok(v < P.CAP, `reaches cap at ${t}ms`); prev = v; }
+  assert.ok(P.creepPct(5000) > 10); assert.ok(P.creepPct(60000) > 75 && P.creepPct(60000) < 90); assert.ok(P.creepPct(120000) > 90); assert.ok(P.creepPct(120000) - P.creepPct(90000) >= 0.5, 'still visibly moving at 90-120 s');
+  assert.ok(Math.round(P.creepPct(70000)) !== 83 || Math.round(P.creepPct(100000)) > 83); assert.ok(P.creepPct(1e9) < 100);
+  for (const n of [3, 6]) { assert.equal(P.stepForPct(0, n), 0); assert.equal(P.stepForPct(P.CAP, n), n - 1); assert.ok(P.stepForPct(100, n) <= n - 1); }
+  assert.equal(P.isSlow(59999), false); assert.equal(P.isSlow(60000), true);
+  const i18n = fs.readFileSync('web/lib/i18n.ts', 'utf8'); assert.equal((i18n.match(/ slow: "/g) || []).length, 2); assert.match(i18n, /slow: "Almost there, a real scan takes a little longer"/); assert.match(i18n, /slow: "עוד רגע, הסריקה האמיתית לוקחת קצת יותר זמן"/);
+  const sp = fs.readFileSync('web/components/ScanProgress.tsx', 'utf8'); assert.match(sp, /creepPct/); assert.match(sp, /data-slow-note/); assert.match(sp, /s\.slow/); assert.ok(!/STEP_MS/.test(sp));
+  assert.match(sp, /setError\(errMessage\(e, t\)\)/); assert.match(sp, /t\.scanErr\.retry/); assert.match(sp, /location\.assign\(`\/\$\{lang\}\/r\//); assert.match(sp, /reducedMotion\(\)/);
+  ok('progress: asymptotic creep (never stalls or hits the cap), steps follow it, HE+EN "a bit longer" note after 60 s, error/retry/redirect/reduced-motion handling intact');
+}
 console.log(`ALL SCAN-QUALITY TESTS PASSED (${n})`); process.exit(0);

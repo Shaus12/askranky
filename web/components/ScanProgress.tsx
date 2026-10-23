@@ -6,12 +6,13 @@ import type { Dict, Locale } from "@/lib/i18n";
 import { reducedMotion } from "@/lib/motion";
 import { api, errMessage, getConfig, type Config } from "@/lib/api";
 import { demoNotices } from "@/lib/notices";
+import { creepPct, stepForPct, isSlow } from "@/lib/progress";
 import ScanForm, { PENDING } from "./ScanForm";
 import Reveal from "./Reveal";
 import MaskHeading from "./MaskHeading";
 
 
-const STEP_MS = 1100;
+const TICK_MS = 500;
 type Pending = { name: string; website?: string; category: string; city: string; email: string; turnstileToken?: string };
 
 // Shows the scan form when nothing is pending; otherwise POSTs /api/scan and animates progress until the real report id comes back.
@@ -21,7 +22,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   const [mode, setMode] = useState<"init" | "form" | "run" | "demo">("init");
   const [biz, setBiz] = useState<Pending | null>(null); const [cfg, setCfg] = useState<Config | null>(null); const nt = demoNotices(cfg, t);
   const [step, setStep] = useState(0); const [reportId, setReportId] = useState(""); const [existing, setExisting] = useState(false); const [error, setError] = useState("");
-  const started = useRef(false);
+  const started = useRef(false); const t0 = useRef(0); const maxPct = useRef(0); const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     getConfig().then(setCfg);
     const q = new URLSearchParams(window.location.search);
@@ -32,16 +33,20 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   }, [lang, n]);
   // Starts the scan (from the stored pending form after /[lang] → /[lang]/scan, or directly from the form shown on this page).
   function run(p: Pending) {
-    setBiz(p); setStep(0); setReportId(""); setExisting(false); setError(""); setMode("run");
+    t0.current = Date.now(); maxPct.current = 0; setElapsed(0); setBiz(p); setStep(0); setReportId(""); setExisting(false); setError(""); setMode("run");
     api<{ reportId: string; existing?: boolean }>("/api/scan", { body: { ...p, lang } })
       .then((j) => { sessionStorage.removeItem(PENDING); setExisting(!!j.existing); setReportId(j.reportId); })
       .catch((e) => { sessionStorage.removeItem(PENDING); setError(errMessage(e, t)); });
   }
-  // Animate up to the last step; only finish once the server answered.
+  // Progress creeps asymptotically (never visibly stalls while a real scan takes 1-2 min); it finishes only once the server answered.
   useEffect(() => {
     if (mode !== "run") return;
-    if (reducedMotion()) { setStep(reportId ? n : n - 1); return; }
-    const id = setInterval(() => setStep((x) => (x >= n - 1 ? (reportId ? n : x) : x + 1)), reportId ? 250 : STEP_MS);
+    const id = setInterval(() => {
+      const el = Date.now() - t0.current; setElapsed(el);
+      if (reducedMotion()) { setStep(reportId ? n : n - 1); return; }
+      if (reportId) setStep((x) => (x >= n ? x : x + 1));
+      else setStep((x) => Math.max(x, stepForPct(creepPct(el), n)));
+    }, reportId ? 250 : TICK_MS);
     return () => clearInterval(id);
   }, [mode, reportId, n]);
   useEffect(() => { if (mode === "run" && step >= n && reportId) { const id = setTimeout(() => location.assign(`/${lang}/r/${reportId}${existing ? "?existing=1" : ""}`), 900); return () => clearTimeout(id); } }, [mode, step, n, reportId, lang, router, existing]);
@@ -54,8 +59,10 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
       <div data-reveal><ScanForm t={t} lang={lang} onStart={(p) => run(p as unknown as Pending)} /></div>
     </Reveal></main>);
   const done = step >= n; const TOTAL = 15;
-  const pct = Math.round((step / n) * 100);
-  const checks = Math.min(TOTAL, Math.max(0, Math.round(((step - 1) / 3) * TOTAL)));
+  // Never goes backwards: creeping %, then step-based % once the report is ready, 100 when done.
+  maxPct.current = Math.max(maxPct.current, done ? 100 : reportId ? (step / n) * 100 : mode === "demo" ? (step / n) * 100 : creepPct(elapsed));
+  const pct = Math.round(maxPct.current); const slow = mode === "run" && !reportId && !error && isSlow(elapsed);
+  const checks = done ? TOTAL : Math.min(TOTAL - 1, Math.max(0, Math.round((pct / 100) * TOTAL)));
   const engineState = (i: number) => (step > i + 1 ? "done" : step === i + 1 ? "active" : "wait");
   const link = mode === "demo" ? `/${lang}/report` : `/${lang}/r/${reportId}`;
   return (
@@ -85,6 +92,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
           <div className="h-full rounded-full bg-gradient-to-r from-brand-600 to-sky-400 transition-[width] duration-700 rtl:bg-gradient-to-l" style={{ width: `${pct}%` }} />
         </div>
       </div>
+      {slow && <p role="status" data-slow-note className="mx-auto mt-6 w-fit max-w-full rounded-lg border border-sky-300/30 bg-sky-300/10 px-4 py-2 text-center text-sm text-sky-100">{s.slow}</p>}
       <ol className="card mt-8 space-y-3 p-6">
         {s.steps.map((label, i) => { const st = i < step ? "done" : i === step ? "active" : "wait"; return (
           <li key={label} className={`flex items-center gap-3 ${st === "wait" ? "text-slate-400" : "text-white"}`}>
