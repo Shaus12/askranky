@@ -19,13 +19,14 @@ export function inlineScriptHashes(file) {
 }
 const policy = d => Object.entries(d).map(([k, v]) => [k, ...v].join(' ')).join('; ');
 // opts: sumit (bool: provider is sumit), turnstile (bool), scriptSources (extra script-src tokens: hashes/nonces), styleSources, extraConnect.
-export function checkoutCsp({ sumit = false, turnstile = false, scriptSources = [], styleSources = ["'unsafe-inline'"] } = {}) {
+// fonts: the site loads its web fonts from Google Fonts (CSS from fonts.googleapis.com, files from fonts.gstatic.com), also on the checkout page.
+export function checkoutCsp({ sumit = false, turnstile = false, fonts = true, scriptSources = [], styleSources = ["'unsafe-inline'"] } = {}) {
   return policy({
     'default-src': ["'none'"],
     'script-src': ["'self'", ...scriptSources, ...(sumit ? [SUMIT_SCRIPT_ORIGIN] : []), ...(turnstile ? [TURNSTILE_ORIGIN] : [])],
     'connect-src': ["'self'", ...(sumit ? [SUMIT_API_ORIGIN] : []), ...(turnstile ? [TURNSTILE_ORIGIN] : [])],
     'frame-src': turnstile ? [TURNSTILE_ORIGIN] : ["'none'"],
-    'img-src': ["'self'", 'data:'], 'font-src': ["'self'", 'data:'], 'style-src': ["'self'", ...styleSources], 'manifest-src': ["'self'"],
+    'img-src': ["'self'", 'data:'], 'font-src': ["'self'", 'data:', ...(fonts ? ['https://fonts.gstatic.com'] : [])], 'style-src': ["'self'", ...styleSources, ...(fonts ? ['https://fonts.googleapis.com'] : [])], 'manifest-src': ["'self'"],
     'form-action': ["'self'"], 'base-uri': ["'self'"], 'object-src': ["'none'"], 'frame-ancestors': ["'none'"],
   });
 }

@@ -150,7 +150,7 @@ catch(e){out.textContent=String(e&&e.message||e)}finally{wipe();busy=false;$('go
 $('lk').onclick=async()=>{out.textContent='...';try{const k=await call('/api/admin/test-checkout/login-link',{email:$('e').value});if(!k.j.ok){out.textContent='נכשל ('+k.status+')';return}out.textContent='';const a=document.createElement('a');a.href=k.j.link;a.textContent='פתח דשבורד (תקף 15 דקות, שימוש אחד)';out.appendChild(a)}catch(e){out.textContent='שגיאת רשת'}};
 </script></body></html>`;
 app.get('/admin/test-checkout', (q, r, next) => { if (!realTestEnabled()) return next(); const nonce = adminNonce();
-  r.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': checkoutCsp({ sumit: true, scriptSources: [`'nonce-${nonce}'`], styleSources: [`'nonce-${nonce}'`] }) }).type('html').send(adminPage(nonce)); });
+  r.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': checkoutCsp({ sumit: true, fonts: false, scriptSources: [`'nonce-${nonce}'`], styleSources: [`'nonce-${nonce}'`] }) }).type('html').send(adminPage(nonce)); });
 app.get('/llms.txt', (q, r) => r.type('text/plain; charset=utf-8').send(llmsTxt()));
 app.get('/robots.txt', (q, r) => r.type('text/plain').send(robotsTxt()));
 app.get('/sitemap.xml', (q, r) => r.type('application/xml').send(sitemapXml()));
@@ -381,7 +381,7 @@ app.get('/:lang/dashboard/:id', (q, r, next) => LANGS.includes(q.params.lang) ? 
 // The checkout page is the only static page with a CSP (card entry): own origin + Turnstile, and the SUMIT script/API origins only while PAYMENTS_PROVIDER=sumit.
 const checkoutCspFor = lang => checkoutCsp({ sumit: getPayments().id === 'sumit', turnstile: true, scriptSources: inlineScriptHashes(path.join(OUT, `${lang}/checkout.html`)) });
 app.get('/:lang/:page', (q, r, next) => { if (!(LANGS.includes(q.params.lang) && ['scan', 'report', 'login', 'dashboard', 'checkout'].includes(q.params.page))) return next();
-  if (q.params.page === 'checkout') { r.set('Content-Security-Policy', checkoutCspFor(q.params.lang)); r.set('Referrer-Policy', 'no-referrer'); } return page(r, q.params.lang, q.params.page); });
+  if (q.params.page === 'checkout') { r.set('Content-Security-Policy', checkoutCspFor(q.params.lang)); } return page(r, q.params.lang, q.params.page); });
 app.get(['/he.txt', '/en.txt', '/:lang/:page.txt'], (q, r) => { const f = path.join(OUT, q.path); return LANGS.some(l => q.path.startsWith('/' + l)) && fs.existsSync(f) && !q.path.includes('..') ? r.sendFile(f) : r.sendStatus(404); });
 // Branded bilingual 404 (RTL Hebrew + English, order follows the URL language or preference). JSON for /api.
 app.use((q, r) => { if (wantsJson(q)) return r.status(404).json({ error: 'not found' }); const m = /^\/(he|en)(\/|$)/.exec(q.path); r.status(404).type('html').send(notFoundPage(m ? m[1] : prefLang(q))); });
