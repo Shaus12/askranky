@@ -9,7 +9,7 @@ import { isPrelaunch } from './src/prelaunch.js'; import { billingPage, notFound
 import { renderTx } from './src/email/templates.js'; import { setConsent, verifyUnsubToken, unsubUrl, unsubHeaders } from './src/consent.js'; import { unsubscribePage } from './src/pages.js';
 import { TEST_PLAN, TEST_BILLING, TEST_CHECKOUT_TTL_MS, TEST_ACCESS_MS } from './src/payments/test-plan.js';
 import { validSingleUseToken, looksLikeCardNumber } from './src/payments/sumit.js'; import { checkoutCsp, inlineScriptHashes, adminNonce, JQUERY_PATH, SUMIT_SCRIPT_URL } from './src/security/csp.js';
-import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js';
+import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { buildStatus, recordSync } from './src/status.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js';
 
 const app = express(); app.disable('x-powered-by'); if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY); app.use(express.urlencoded({ extended: false })); app.use(express.json()); // noindex on private pages (meta robots is also in the HTML; the header covers redirects and server-rendered pages).
 // Which paths: NOINDEX_PATH in src/seo.js (the single source for robots.txt and these headers).
@@ -77,9 +77,23 @@ app.post('/api/internal/cron/sync', async (q, r) => {
   if (!safeEqual(String(q.get('x-cron-secret') || ''), secret)) return cronFailLimiter(q, r, () => r.status(401).json({ ok: false }));
   if (cronRunning) return r.status(202).json({ ok: true, running: true });
   cronRunning = true;
-  try { await cronHooks.sync(); console.log('[cron] billing sync done'); return r.json({ ok: true, ranAt: new Date().toISOString() }); }
-  catch (e) { console.error(`[cron] billing sync failed (${e?.name || 'Error'})`); return r.status(500).json({ ok: false }); }
+  try { await cronHooks.sync(); recordSync(true); console.log('[cron] billing sync done'); return r.json({ ok: true, ranAt: new Date().toISOString() }); }
+  catch (e) { recordSync(false, e); console.error(`[cron] billing sync failed (${e?.name || 'Error'})`); return r.status(500).json({ ok: false }); }
   finally { cronRunning = false; }
+});
+// Read-only ops status (aggregate numbers, no PII / SUMIT data): GET /api/internal/status with header X-Status-Token (env STATUS_TOKEN, >= 24 chars).
+// Disabled, missing or wrong token: the request falls through to the normal unknown-route 404 (same status, body and headers as any other
+// unknown /api/ path: no 401/403, no hint that it exists). The token is only ever read from the header (never URL/body), compared timing-safe
+// (sha256 + timingSafeEqual), never logged. Every request that is not (yet) authenticated counts against a per-IP limit (STATUS_FAIL_MAX, default 10 per
+// 15 min; a valid token refunds its hit); a limited IP also just gets the 404, with the token not even checked. Errors -> 500 {ok:false}, no details.
+export const statusFailLimiter = createRateLimiter({ max: Number(process.env.STATUS_FAIL_MAX || 10), windowMs: 15 * 60 * 1000, onLimit: (q, r, retry, next) => { r.removeHeader('Retry-After'); q.statusLimited(); } });
+app.get('/api/internal/status', (q, r, next) => {
+  const secret = process.env.STATUS_TOKEN || ''; if (secret.length < 24) return next();
+  q.statusLimited = () => next(); statusFailLimiter(q, r, () => {
+    if (!safeEqual(String(q.get('x-status-token') || ''), secret)) return next();
+    statusFailLimiter.refund(q); r.set('Cache-Control', 'no-store'); r.set('X-Robots-Tag', 'noindex, nofollow');
+    try { return r.json(buildStatus({ running: cronRunning })); } catch (e) { console.error(`[status] failed (${e?.name || 'Error'})`); return r.status(500).json({ ok: false }); }
+  });
 });
 // ---------- Card data guard (checkout / charge / admin routes) ----------
 // Card numbers must never reach this server: payments.js sends them straight to SUMIT and we only ever receive a SingleUseToken.
@@ -444,6 +458,6 @@ app.use((err, q, r, next) => { if (r.headersSent) return next(err); const st = N
   console.error(`[http] ${q.method} ${q.path} -> ${st} (${err?.type || err?.name || 'Error'})`); r.status(st).json({ error: st === 400 ? 'bad_request' : 'server_error' }); });
 const port = process.env.PORT || 3000;
 if (process.argv[1]?.endsWith('server.js')) { const cfg = (await import('./src/config-check.js')).logConfig(); if (cfg.fatal.length) { console.error('[config] FATAL: ' + cfg.fatal.join('; ')); process.exit(1); } if (!cfg.ok && process.env.CONFIG_STRICT === '1') process.exit(1); }
-if (process.argv[1]?.endsWith('server.js') && process.env.BILLING_SYNC_CRON === '1') { startBillingCron(); console.log('billing sync: in-process daily scheduler on'); }
+if (process.argv[1]?.endsWith('server.js') && process.env.BILLING_SYNC_CRON === '1') { startBillingCron({ run: async () => { try { const x = await syncAll(); recordSync(true); return x; } catch (e) { recordSync(false, e); throw e; } } }); console.log('billing sync: in-process daily scheduler on'); }
 if (process.argv[1]?.endsWith('server.js')) app.listen(port, process.env.HOST || '0.0.0.0', () => console.log(`${BRAND.name} on http://localhost:${port} (scans: ${isMockMode() ? 'MOCK' : 'LIVE'}, payments: ${getPayments().id})`));
 export default app;

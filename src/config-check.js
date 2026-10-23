@@ -41,6 +41,7 @@ export function checkConfig(env = process.env) {
     if (!E('SUMIT_WEBHOOK_SECRET')) warnings.push('SUMIT_WEBHOOK_SECRET not set: all billing webhooks are rejected (401)');
     if (mail === 'mock') warnings.push('EMAIL_MODE=mock in production: magic links and reports are not delivered');
   }
+  if (E('STATUS_TOKEN') && V('STATUS_TOKEN').length < 24) warnings.push('STATUS_TOKEN is shorter than 24 characters: GET /api/internal/status stays disabled (404)');
   const cap = Number(V('DAILY_SPEND_CAP_USD') || 10); if (!Number.isFinite(cap) || cap < 0) errors.push('DAILY_SPEND_CAP_USD must be a non-negative number'); modes.DAILY_SPEND_CAP_USD = cap;
   return { ok: !errors.length, errors, warnings, fatal, modes };
 }
