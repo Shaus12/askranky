@@ -80,6 +80,12 @@ The free plan has no cron jobs and the service sleeps after ~15 min idle, so the
   starts a **mock** checkout (never with `PAYMENTS_PROVIDER=sumit`); the account is flagged `adminTest: true`. Compared
   timing-safe. Leave unset to disable. Remove at launch.
 
+## 3d. Hidden admin-only REAL 1 ILS test checkout (SUMIT)
+- Only exists when `PAYMENTS_PROVIDER=sumit` **and** `ADMIN_TEST_TOKEN` (>= 16 chars) is set; otherwise 404. Page `GET /admin/test-checkout` (noindex, not linked, not in sitemap/robots), API `POST /api/admin/test-checkout {email}` -> `{redirectUrl}` and `POST /api/admin/test-checkout/login-link {email}` (test accounts only). Token only in the `x-admin-test-token` header, timing-safe, wrong tokens rate limited (`ADMIN_FAIL_MAX`, default 10 per 15 min).
+- Uses the internal plan in `src/payments/test-plan.js` (1 ILS, ILS only, `Recurrence: 1` = one payment), which is NOT in `PLANS`: public prices and `/api/checkout` are unchanged. Same real path as production (hosted card page, `/billing/return`, `recurring/charge`, DocumentType 2 receipt, NoVAT true). Works while PRELAUNCH is on; a start expires after 30 min; a real customer's active subscription is never touched.
+- The account gets `testSubscription: true`, plan `starter` for 24h. The daily sync never renews it or sends billing emails; 24h after the charge it confirms the standing order is inactive (cancels it if not) and ends access. Cancel works through the normal dashboard flow.
+- Logs: only `[admin-test] checkout started|charge ok doc=<id>|charge failed`. Procedure and refund notes: `TEST-CHECKOUT.he.md`. Tests: `test/admintest.js`.
+
 ## 3c. SEO
 - JSON-LD (Organization, WebSite, SoftwareApplication, FAQPage) is in the static build. Paid `Offer`s are published only
   when the web build runs with `NEXT_PUBLIC_CHECKOUT_LIVE=1` (set it in the Render build env at launch, then rebuild).

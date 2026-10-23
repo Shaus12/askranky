@@ -17,6 +17,16 @@ export async function syncAll({ payments = getPayments(), now = new Date() } = {
     if (!a.subscriptionRef || a.plan === 'free') continue; out.checked++;
     const plan = PLANS[a.plan]; const lang = a.lang || a.pendingLang || 'en'; const billing = a.billing || {};
     if (a.status === 'cancelled') { if (a.paidThrough && now > new Date(a.paidThrough)) { downgrade(db, a, now, 'cancel-period-ended'); out.downgraded++; } continue; }
+    // Admin 1 ILS test subscription (src/payments/test-plan.js): never renewed, no receipt/failed-payment emails, never past_due.
+    // The SUMIT standing order is created for exactly one payment; 24h after the charge we make sure it is not active (cancel it
+    // if it somehow still is) and end the access. A failed check is retried on the next run.
+    if (a.testSubscription) {
+      if (a.paidThrough && now > new Date(a.paidThrough)) {
+        try { const st = await payments.sync(a); if (st.active) await payments.cancel(a); } catch (e) { out.errors++; db.events.push({ at: now.toISOString(), type: 'billing.sync_error', account: a.id, error: 'test subscription check failed' }); continue; }
+        a.cancelledAt ||= now.toISOString(); downgrade(db, a, now, 'cancel-period-ended'); out.downgraded++;
+      }
+      continue;
+    }
     let res; try { res = await payments.sync(a); } catch (e) { out.errors++; db.events.push({ at: now.toISOString(), type: 'billing.sync_error', account: a.id, error: String(e.message).slice(0, 200) }); continue; }
     if (res.active) {
       out.active++; if (a.status === 'past_due') db.events.push({ at: now.toISOString(), type: 'billing.recovered', account: a.id });

@@ -7,6 +7,7 @@ import { token, safeEqual, issueMagicLink, consumeMagic } from './src/security/t
 import { verifyTurnstile, turnstileSiteKey } from './src/security/turnstile.js'; import { esc } from './src/security/html.js';
 import { isPrelaunch } from './src/prelaunch.js'; import { billingPage, notFoundPage, langOf } from './src/pages.js'; import { robotsTxt, sitemapXml, llmsTxt, NOINDEX_PATH } from './src/seo.js';
 import { renderTx } from './src/email/templates.js'; import { setConsent, verifyUnsubToken, unsubUrl, unsubHeaders } from './src/consent.js'; import { unsubscribePage } from './src/pages.js';
+import { TEST_PLAN, TEST_BILLING, TEST_CHECKOUT_TTL_MS, TEST_ACCESS_MS } from './src/payments/test-plan.js';
 import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js';
 
 const app = express(); app.disable('x-powered-by'); if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY); app.use(express.urlencoded({ extended: false })); app.use(express.json()); // noindex on private pages (meta robots is also in the HTML; the header covers redirects and server-rendered pages).
@@ -79,6 +80,40 @@ app.post('/api/internal/cron/sync', async (q, r) => {
   catch (e) { console.error(`[cron] billing sync failed (${e?.name || 'Error'})`); return r.status(500).json({ ok: false }); }
   finally { cronRunning = false; }
 });
+// ---------- Hidden admin-only REAL 1 ILS test checkout (PAYMENTS_PROVIDER=sumit + ADMIN_TEST_TOKEN) ----------
+// Same real code path as production checkout (SUMIT hosted card page -> /billing/return -> recurring/charge with DocumentType 2
+// receipt, NoVAT true), but with the internal TEST_PLAN (1 ILS, exactly one payment) that is not part of PLANS. 404 for everyone when
+// the provider is not sumit or ADMIN_TEST_TOKEN (>= 16 chars) is unset. Token: header x-admin-test-token only (never a URL), compared
+// timing-safe; wrong tokens are rate limited. Not linked, not in the sitemap, noindex. Nothing from SUMIT is logged (ok/fail + document id).
+const realTestEnabled = () => getPayments().id === 'sumit' && (process.env.ADMIN_TEST_TOKEN || '').length >= 16;
+const adminTokenOk = q => safeEqual(String(q.get('x-admin-test-token') || ''), process.env.ADMIN_TEST_TOKEN || '');
+const adminFailLimiter = createRateLimiter({ max: Number(process.env.ADMIN_FAIL_MAX || 10), windowMs: 15 * 60 * 1000, onLimit: (q, r) => r.status(429).json({ ok: false }) });
+const adminTestGate = (q, r, next) => { r.set('Cache-Control', 'no-store'); r.set('X-Robots-Tag', 'noindex, nofollow'); r.set('Referrer-Policy', 'no-referrer');
+  if (!realTestEnabled()) return next('route'); if (!adminTokenOk(q)) return adminFailLimiter(q, r, () => r.status(401).json({ ok: false })); next(); };
+const adminEmail = q => { const e = String(q.body?.email || '').trim().toLowerCase(); return e.length <= 200 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) ? e : null; };
+app.post('/api/admin/test-checkout', adminTestGate, async (q, r) => {
+  const email = adminEmail(q); if (!email) return r.status(400).json({ ok: false, error: 'email' });
+  const ex = Object.values(getDb().accounts).find(x => x.email === email);
+  if (ex && ex.subscriptionRef && ex.plan !== 'free' && !ex.testSubscription) return r.status(409).json({ ok: false, error: 'real_subscription' }); // never touch a real customer's subscription
+  if (ex?.testSubscription && ex.status === 'active' && ex.paidThrough && Date.now() < Date.parse(ex.paidThrough)) return r.status(409).json({ ok: false, error: 'test_active_cancel_first' });
+  const account = findOrCreateAccount(email); const state = token(24);
+  Object.assign(account, { pendingTest: { at: new Date().toISOString() }, pendingPlan: 'starter', pendingBilling: { ...TEST_BILLING }, pendingLang: 'he', checkoutState: state }); delete account.pendingAdminTest; await save();
+  try { const { redirectUrl } = await getPayments().createCheckout({ account, plan: TEST_PLAN, billing: { ...TEST_BILLING }, state, returnUrl: `${BASE}/billing/return?lang=he` }); console.log('[admin-test] checkout started'); return r.json({ ok: true, redirectUrl }); }
+  catch { console.error('[admin-test] checkout start failed'); return r.status(502).json({ ok: false }); }
+});
+// One-time dashboard sign-in link for a TEST account only (so cancel can be tested even while EMAIL_MODE is not live). Never works for real customers.
+app.post('/api/admin/test-checkout/login-link', adminTestGate, async (q, r) => {
+  const email = adminEmail(q); const a = email && Object.values(getDb().accounts).find(x => x.email === email); if (!a || !a.testSubscription) return r.status(404).json({ ok: false });
+  const link = issueMagicLink(a, BASE); await save(); return r.json({ ok: true, link });
+});
+const ADMIN_TEST_PAGE = `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ranky admin test</title>
+<style>body{font:16px system-ui,sans-serif;background:#01061a;color:#e6ecff;max-width:30rem;margin:3rem auto;padding:0 1rem}input,button{display:block;width:100%;box-sizing:border-box;margin:.5rem 0;padding:.7rem;border-radius:8px;border:1px solid #3a4a7a;background:#0b1430;color:#fff;font-size:1rem}button{background:#2563eb;cursor:pointer}p{color:#9fb0d8}#out{word-break:break-all}</style></head><body>
+<h1>בדיקת סליקה: ₪1</h1><p>חיוב אמיתי של ₪1 (תשלום אחד). דורש טוקן אדמין.</p>
+<input id="e" type="email" placeholder="מייל" autocomplete="off"><input id="t" type="password" placeholder="טוקן אדמין" autocomplete="off">
+<button id="go">התחל חיוב ₪1</button><button id="lk" style="background:#334155">קבל קישור כניסה לדשבורד (אחרי החיוב)</button><p id="out"></p>
+<script>const $=i=>document.getElementById(i),out=$('out');async function call(p){out.textContent='...';try{const r=await fetch(p,{method:'POST',headers:{'content-type':'application/json','x-admin-test-token':$('t').value},body:JSON.stringify({email:$('e').value})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok){out.textContent='נכשל ('+r.status+(j.error?': '+j.error:'')+')';return null}return j}catch(e){out.textContent='שגיאת רשת';return null}}
+$('go').onclick=async()=>{const j=await call('/api/admin/test-checkout');if(j&&j.redirectUrl)location.href=j.redirectUrl};$('lk').onclick=async()=>{const j=await call('/api/admin/test-checkout/login-link');if(j&&j.link){out.textContent='';const a=document.createElement('a');a.href=j.link;a.textContent='פתח דשבורד (תקף 15 דקות, שימוש אחד)';a.style.color='#7dd3fc';out.appendChild(a)}}</script></body></html>`;
+app.get('/admin/test-checkout', (q, r, next) => { if (!realTestEnabled()) return next(); r.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' }).type('html').send(ADMIN_TEST_PAGE); });
 app.get('/llms.txt', (q, r) => r.type('text/plain; charset=utf-8').send(llmsTxt()));
 app.get('/robots.txt', (q, r) => r.type('text/plain').send(robotsTxt()));
 app.get('/sitemap.xml', (q, r) => r.type('application/xml').send(sitemapXml()));
@@ -114,27 +149,30 @@ async function startCheckout(q) {
   const adminTest = isPrelaunch() && adminTestOk(q); if (isPrelaunch() && !adminTest) return { prelaunch: true };
   const plan = Object.hasOwn(PLANS, q.body?.plan) ? PLANS[q.body.plan] : null; if (!isPaid(plan) || !q.body?.email) return null;
   const billing = billingFor(plan, displayCurrencyFor(q));
-  const account = findOrCreateAccount(q.body.email); account.pendingPlan = plan.id; account.pendingBilling = billing; account.pendingLang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : langOf(q); const state = account.checkoutState = token(24); if (adminTest) account.pendingAdminTest = true; else delete account.pendingAdminTest; save();
+  const account = findOrCreateAccount(q.body.email); account.pendingPlan = plan.id; account.pendingBilling = billing; account.pendingLang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : langOf(q); const state = account.checkoutState = token(24); if (adminTest) account.pendingAdminTest = true; else delete account.pendingAdminTest; delete account.pendingTest; save();
   const { redirectUrl } = await getPayments().createCheckout({ account, plan, billing, state, returnUrl: `${BASE}/billing/return?lang=${account.pendingLang}` }); return { redirectUrl, billing };
 }
 app.post('/checkout', captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).send(billingPage('prelaunch', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (!c) return r.status(400).send('bad plan'); r.redirect(c.redirectUrl); });
 app.get('/billing/return', async (q, r) => {
   const db = getDb(); const [accId, state] = String(q.query.Identifier || '').split('.'); const account = Object.hasOwn(db.accounts, accId) ? db.accounts[accId] : null;
-  if (isPrelaunch() && !(account?.pendingAdminTest && getPayments().id === 'mock')) return r.status(403).send(billingPage('prelaunch', langOf(q)));
-  if (!account || !account.checkoutState || !safeEqual(state, account.checkoutState)) return r.status(400).send(billingPage('invalid', langOf(q)));
-  const plan = PLANS[account.pendingPlan || 'starter']; const lang = q.query.lang === 'he' || q.query.lang === 'en' ? q.query.lang : account.pendingLang || langOf(q);
+  // The hidden admin 1 ILS test (account.pendingTest, set only by POST /api/admin/test-checkout) is the one thing allowed through while pre-launch, and only with the real provider.
+  const isTest = !!account?.pendingTest && realTestEnabled();
+  if (isPrelaunch() && !(account?.pendingAdminTest && getPayments().id === 'mock') && !isTest) return r.status(403).send(billingPage('prelaunch', langOf(q)));
+  if (!account || !account.checkoutState || !safeEqual(state, account.checkoutState) || (account.pendingTest && (!isTest || !(Date.now() - Date.parse(account.pendingTest.at) < TEST_CHECKOUT_TTL_MS)))) return r.status(400).send(billingPage('invalid', langOf(q)));
+  const plan = isTest ? TEST_PLAN : PLANS[account.pendingPlan || 'starter']; const lang = q.query.lang === 'he' || q.query.lang === 'en' ? q.query.lang : account.pendingLang || langOf(q);
   // Re-derive from PLANS (never trust stored/client amounts); keeps the currency chosen at checkout start.
-  const billing = billingFor(plan, account.pendingBilling?.displayCurrency || 'ILS');
+  const billing = isTest ? { ...TEST_BILLING } : billingFor(plan, account.pendingBilling?.displayCurrency || 'ILS');
   try {
     const res = await getPayments().handleReturn(q.query, account, plan, billing);
+    if (isTest) console.log(res.ok ? `[admin-test] charge ok${res.documentId ? ` doc=${Number(res.documentId) || ''}` : ''}` : '[admin-test] charge failed');
     if (!res.ok) return r.send(billingPage('failed', lang, res.error));
-    Object.assign(account, { plan: plan.id, subscriptionRef: res.subscriptionRef, paidAt: new Date().toISOString(), billing: { currency: billing.currency, amount: billing.amount }, status: 'active', lang, paidThrough: addMonth(new Date()).toISOString(), ...(account.pendingAdminTest ? { adminTest: true } : {}) }); delete account.cancelledAt; delete account.pendingAdminTest; delete account.pendingPlan; delete account.pendingBilling; delete account.checkoutState; delete account.pendingLang; save();
-    db.events.push({ at: new Date().toISOString(), type: 'subscription.activated', account: account.id, plan: plan.id, currency: billing.currency, amount: billing.amount }); save();
+    Object.assign(account, { plan: isTest ? 'starter' : plan.id, subscriptionRef: res.subscriptionRef, paidAt: new Date().toISOString(), billing: { currency: billing.currency, amount: billing.amount }, status: 'active', lang, paidThrough: isTest ? new Date(Date.now() + TEST_ACCESS_MS).toISOString() : addMonth(new Date()).toISOString(), ...(account.pendingAdminTest ? { adminTest: true } : {}), ...(isTest ? { testSubscription: true, adminTest: true } : {}) }); delete account.cancelledAt; delete account.pendingAdminTest; delete account.pendingTest; delete account.pendingPlan; delete account.pendingBilling; delete account.checkoutState; delete account.pendingLang; save();
+    db.events.push({ at: new Date().toISOString(), type: 'subscription.activated', account: account.id, plan: plan.id, currency: billing.currency, amount: billing.amount, ...(isTest ? { test: true, documentId: Number(res.documentId) || null } : {}) }); save();
     // Don't hand the dashboard key to whoever holds this URL: email a single-use magic link instead.
     await emailMagicLink(account);
     await sendEmail({ to: account.email, ...renderTx('receipt', lang, { planName: plan.name, amount: billing.amount, currency: billing.currency, paidThrough: ymd(account.paidThrough), receiptUrl: res.receiptUrl }) });
     r.send(billingPage('ok', lang));
-  } catch (e) { r.status(502).send(billingPage('error', lang, e.message)); }
+  } catch (e) { if (isTest) console.error('[admin-test] charge failed'); r.status(502).send(billingPage('error', lang, e.message)); }
 });
 // Webhooks are rejected unless SUMIT_WEBHOOK_SECRET is set AND the request carries it (x-webhook-secret header or
 // ?secret= in the trigger URL), compared timing-safe. Applies to every provider, mock included.
