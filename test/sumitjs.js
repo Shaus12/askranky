@@ -123,6 +123,16 @@ try {
   assert.deepEqual([...form.matchAll(/\bapi\(\s*"([^"]+)"/g)].map(m => m[1]), ['/api/checkout/charge']); assert.ok(form.includes('https://app.sumit.co.il/scripts/payments.js') && SUMIT_SCRIPT_URL === 'https://app.sumit.co.il/scripts/payments.js'); assert.ok(!/\.val\(|data-og.*value=/.test(form));
   for (const a of ['cardnumber', 'expirationmonth', 'expirationyear', 'cvv', 'citizenid']) assert.ok(form.includes(`data-og="${a}"`), a);
   assert.ok(fs.readFileSync('server.js', 'utf8').includes("data-og=\"cardnumber\"")); ok('frontend: card inputs use SUMIT data-og attributes, have no name, are never in React state, only /api/checkout/charge is called; no private key in web sources');
+  // ---- card form polish guards (visual changes must not weaken anything) ----
+  const inputs = [...form.matchAll(/<input\b[^>]*data-og="[a-z]+"[^>]*\/>/g)].map(m => m[0]); assert.equal(inputs.length, 5, 'five card inputs (number, month, year, cvv, id)');
+  for (const [a, ac] of [['cardnumber', 'cc-number'], ['expirationmonth', 'cc-exp-month'], ['expirationyear', 'cc-exp-year'], ['cvv', 'cc-csc']]) { const i = inputs.find(x => x.includes(`data-og="${a}"`)); assert.ok(i && i.includes(`autoComplete="${ac}"`), 'autocomplete ' + a); }
+  assert.ok(/inputMode: "numeric"/.test(form) && /dir: "ltr"/.test(form) && /readOnly: busy/.test(form) && !/disabled=\{busy\}.*input/.test(form), 'numeric LTR inputs, read-only (not disabled) while busy');
+  assert.ok(/aria-live="assertive"/.test(form) && /role="alert"/.test(form) && /htmlFor="cf-number"/.test(form) && /lock\.current/.test(form) && /disabled=\{!ready \|\| busy\}/.test(form), 'aria-live errors, labels, double-submit lock, disabled while loading/busy');
+  assert.ok(!/<(style|script)\b/.test(form) && !/\bstyle=\{/.test(form) && !/dangerouslySetInnerHTML/.test(form + co), 'no inline style/script in React card form (CSP stays strict)');
+  assert.ok(!/\.value\b|getElementById|FormData/.test(form.replace(/i\.value = ""/g, '')), 'card form code never reads field values (only wipes them)');
+  const adm2 = await (await fetch(B + '/admin/test-checkout')).text(); assert.ok(adm2.includes('TEST ₪1') && /class="warn"/.test(adm2), 'admin page: TEST banner'); assert.ok(!/\sstyle="/.test(adm2), 'admin page: no inline style attributes (style-src is nonce-only)'); assert.equal((adm2.match(/<style\b[^>]*nonce=/g) || []).length, 1);
+  for (const ac of ['cc-number', 'cc-exp-month', 'cc-exp-year', 'cc-csc']) assert.ok(adm2.includes(`autocomplete="${ac}"`), 'admin ' + ac); assert.equal((adm2.match(/data-og="/g) || []).length, 5); assert.ok(!/<input[^>]*\bname=/.test(adm2));
+  ok('card form polish: autocomplete cc-* + numeric LTR inputs, aria-live errors, double-submit lock, no inline style/script, form code never reads values; admin page marked TEST ₪1 with warning, no inline style attrs');
   assert.equal(outbound, 0); Object.assign(console, orig); console.log(`ALL SUMIT PAYMENTS JS TESTS PASSED (${n})`);
 } finally { Object.assign(console, orig); globalThis.fetch = realFetch; srv.close(); await flush(); TD.done(); }
 process.exit(0);

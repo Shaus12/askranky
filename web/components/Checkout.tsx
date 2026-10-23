@@ -9,6 +9,24 @@ import { fmt, type Billing, type Pricing } from "@/lib/prices";
 type CheckoutRes = { redirectUrl?: string, embedded?: Embedded };
 // ?plan=starter → email form → POST /api/checkout → mock: redirect to the stand-in page; SUMIT: embedded card form (CardForm) on this page.
 // ?account=… → mock payment page (stands in for the SUMIT hosted page while PAYMENTS_PROVIDER=mock).
+// Order summary shown above both the email step and the card form: plan, price, cadence, what is actually charged (display only; the server re-prices).
+function Summary({ t, lang, name, bill }: { t: Dict; lang: Locale; name: string; bill: Billing | null }) {
+  const c = t.checkout, tt = payText[lang]; const differs = !!bill && (bill.fallback || bill.currency !== bill.displayCurrency);
+  return (
+    <section className="card pay-panel" aria-labelledby="pay-plan" data-billing={bill?.currency}>
+      <p className="pay-eyebrow">{tt.orderTitle}</p>
+      <div className="mt-2 flex items-end justify-between gap-4">
+        <div className="min-w-0"><h1 id="pay-plan" className="font-head text-2xl font-bold text-white">{name}</h1><p className="mt-1 text-sm text-slate-400">{tt.cadence}</p></div>
+        {bill && <p className="shrink-0 text-end"><span dir="ltr" className="font-head text-3xl font-extrabold text-white">{fmt(bill.displayAmount, bill.displayCurrency)}</span><span className="text-sm text-slate-400">{t.pricing.mo}</span></p>}
+      </div>
+      <div className="pay-rows">
+        {differs && bill && <div className="pay-row"><span>{c.charged}</span><b dir="ltr" className="text-white">{fmt(bill.amount, bill.currency)}{t.pricing.mo}</b></div>}
+        {bill?.fallback && <p className="text-amber-100">{c.fallback}</p>}
+        <p>{c.noVat}</p>
+      </div>
+      <p className="mt-3 text-xs leading-relaxed text-slate-400" data-disclosure>{c.renew} {t.footer.seller}</p>
+    </section>);
+}
 export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
   const [q, setQ] = useState<URLSearchParams | null>(null); const [err, setErr] = useState(""); const [bill, setBill] = useState<Billing | null>(null);
   const [pre, setPre] = useState<boolean | null>(null); const [joined, setJoined] = useState(false);
@@ -51,27 +69,23 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
     catch (x: any) { if (x.data?.prelaunch) setPre(true); else { setErr(errMessage(x, t)); setRk((n) => n + 1); } }
   }
   const p = t.pricing.plans.find((x) => x.id === plan) || t.pricing.plans[1];
-  if (paid) return (<main className="mx-auto max-w-md px-5 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center" data-paid><div className="card space-y-3 p-8"><h1 className="font-head vx-h3 !text-3xl">{payText[lang].paidTitle}</h1><p role="status" className="text-slate-300">{payText[lang].paidSub}</p></div></main>);
+  if (paid) return (<main className="mx-auto max-w-lg px-4 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center sm:px-5" data-paid><div className="card pay-panel space-y-3 !p-8"><span aria-hidden="true" className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-emerald-300/30 bg-emerald-400/10 text-xl text-emerald-200">✓</span><h1 className="font-head vx-h3 !text-3xl">{payText[lang].paidTitle}</h1><p role="status" className="text-slate-300">{payText[lang].paidSub}</p></div></main>);
+  const summary = <Summary t={t} lang={lang} name={p.name} bill={bill} />;
   if (emb) return (
-    <main className="mx-auto max-w-md px-5 py-[clamp(3rem,calc(var(--u)*96),6rem)]"><div className="card space-y-4 p-8" data-embedded-checkout>
-      <h1 className="font-head text-2xl font-bold">{p.name}{bill && <> · <span dir="ltr">{fmt(bill.displayAmount, bill.displayCurrency)}</span>{t.pricing.mo}</>}</h1>
-      {bill && <div className="vx-copy p-3 text-sm text-slate-300" data-billing={bill.currency}>
-        <p>{c.charged}: <b dir="ltr" className="text-white">{fmt(bill.amount, bill.currency)}</b>{t.pricing.mo}</p>
-        {bill.fallback && <p className="mt-1 text-amber-100">{c.fallback}</p>}<p className="mt-1 text-slate-400">{c.noVat}</p></div>}
-      <p className="text-xs text-slate-400" data-disclosure>{c.renew} {t.footer.seller}</p>
-      <CardForm embedded={emb} lang={lang} onPaid={() => setPaid(true)} />
-    </div></main>);
+    <main className="mx-auto max-w-lg space-y-4 px-4 py-[clamp(2.5rem,calc(var(--u)*96),6rem)] sm:px-5" data-embedded-checkout>
+      {summary}
+      <CardForm embedded={emb} lang={lang} onPaid={() => setPaid(true)} amount={bill ? fmt(bill.amount, bill.currency) : undefined} />
+    </main>);
   return (
-    <main className="mx-auto max-w-md px-5 py-[clamp(3rem,calc(var(--u)*96),6rem)]"><form onSubmit={submit} className="card space-y-4 p-8">
-      <h1 className="font-head text-2xl font-bold">{p.name}{bill && <> · <span dir="ltr">{fmt(bill.displayAmount, bill.displayCurrency)}</span>{t.pricing.mo}</>}</h1>
-      {bill && <div className="vx-copy p-3 text-sm text-slate-300" data-billing={bill.currency}>
-        <p>{c.charged}: <b dir="ltr" className="text-white">{fmt(bill.amount, bill.currency)}</b>{t.pricing.mo}</p>
-        {bill.fallback && <p className="mt-1 text-amber-100">{c.fallback}</p>}<p className="mt-1 text-slate-400">{c.noVat}</p></div>}
-      <p className="text-xs text-slate-400" data-disclosure>{c.renew} {t.footer.seller}</p>
-      <label className="vx-label">{c.email}<input name="email" type="email" required dir="ltr" className="vx-input" /></label>
-      <Turnstile siteKey={siteKey} lang={lang} resetKey={rk} />
-      {err && <p role="alert" className="text-sm text-red-200">{err}</p>}
-      <button className="btn-cta w-full">{c.start}</button>
-    </form></main>
+    <main className="mx-auto max-w-lg space-y-4 px-4 py-[clamp(2.5rem,calc(var(--u)*96),6rem)] sm:px-5">
+      {summary}
+      <form onSubmit={submit} className="card pay-panel space-y-4" noValidate>
+        <div className="pay-field"><label htmlFor="co-email" className="pay-label">{c.email}</label><input id="co-email" name="email" type="email" required dir="ltr" autoComplete="email" placeholder="you@business.com" className="pay-input" /></div>
+        <Turnstile siteKey={siteKey} lang={lang} resetKey={rk} />
+        <div role="alert" aria-live="assertive">{err && <p className="pay-error"><span>{err}</span></p>}</div>
+        <button className="btn-cta pay-submit">{c.start}</button>
+        <p className="flex items-center justify-center gap-1.5 text-center text-xs text-slate-400">{payText[lang].secure}</p>
+      </form>
+    </main>
   );
 }
