@@ -24,7 +24,12 @@ After the first deploy with `DATABASE_URL`: optionally import old JSON data once
 ## 1. Live scans
 - `SCAN_MODE=live`, `LIVE_ENGINES=chatgpt,gemini` (add `perplexity` once its key is approved)
 - `OPENAI_API_KEY`, `GEMINI_API_KEY` (top up Google AI Studio credit first: last test returned HTTP 402), `PERPLEXITY_API_KEY`
-- `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` (the widget is already in the scan form)
+- `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`: CAPTCHA on scan, login, waitlist and checkout (widget in each form, HE/EN).
+  **Both are required in live mode** (production with pre-launch off): the server refuses to start (exit 1) without them. In pre-launch it only warns; setting just one also warns.
+  Errors come back as `{error:'captcha_required'|'captcha_failed'|'captcha_unavailable'}` and the UI shows the localized text. siteverify has a 5s timeout and fails closed.
+- `TURNSTILE_HOSTNAMES` (optional, comma-separated, default `askranky.com,www.askranky.com`): hostnames a token may be issued for. Checked in production; add a staging host here if needed.
+  Make sure the Turnstile widget in Cloudflare lists the same domains.
+- `TRUST_PROXY=1` **must be set on Render** (behind its proxy): otherwise rate limits and the CAPTCHA `remoteip` see the proxy IP.
 - Optional: `OPENAI_MODEL`, `GEMINI_MODEL`, `PERPLEXITY_MODEL`, `SCAN_RATE_MAX`, `SCAN_RATE_WINDOW_MS`
 
 ## 2. Email

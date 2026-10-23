@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Dict, Locale } from "@/lib/i18n";
 import { reducedMotion } from "@/lib/motion";
-import { api, getConfig } from "@/lib/api";
+import { api, errMessage, getConfig } from "@/lib/api";
 import ScanForm, { PENDING } from "./ScanForm";
 import Reveal from "./Reveal";
 import MaskHeading from "./MaskHeading";
@@ -30,7 +30,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
     const p: Pending = JSON.parse(raw); setBiz(p); setMode("run");
     api<{ reportId: string }>("/api/scan", { body: { ...p, lang } })
       .then((j) => { sessionStorage.removeItem(PENDING); setReportId(j.reportId); })
-      .catch((e) => { sessionStorage.removeItem(PENDING); setError(e.message); });
+      .catch((e) => { sessionStorage.removeItem(PENDING); setError(errMessage(e, t)); });
   }, [lang, n]);
   // Animate up to the last step; only finish once the server answered.
   useEffect(() => {

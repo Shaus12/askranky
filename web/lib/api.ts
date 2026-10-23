@@ -1,12 +1,14 @@
-import type { Locale } from "./i18n";
+import type { Dict, Locale } from "./i18n";
 import { mockReport } from "./mock";
 export type ReportData = ReturnType<typeof mockReport> & { mock?: boolean; live?: boolean; id?: string; date?: string };
 export async function api<T = any>(path: string, opts: { method?: string; body?: unknown; headers?: Record<string, string> } = {}): Promise<T> {
   const r = await fetch(path, { method: opts.method || (opts.body ? "POST" : "GET"), headers: { "Content-Type": "application/json", ...(opts.headers || {}) }, body: opts.body ? JSON.stringify(opts.body) : undefined });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(new Error(j.error || `Request failed (${r.status})`), { status: r.status });
+  if (!r.ok) throw Object.assign(new Error(j.message || j.error || `Request failed (${r.status})`), { status: r.status, code: typeof j.error === "string" ? j.error : undefined, data: j });
   return j as T;
 }
+// Server CAPTCHA errors carry a stable code in `error`; show the localized string instead of the English message.
+export const errMessage = (x: any, t: Dict): string => x?.code === "captcha_required" ? t.form.captcha : x?.code === "captcha_failed" ? t.form.captchaFailed : x?.code === "captcha_unavailable" ? t.form.captchaUnavailable : x?.message || String(x);
 export type Config = { turnstileSiteKey: string | null; mock: boolean; prelaunch?: boolean; brand: { name: string; domain: string } };
 let cfg: Promise<Config> | null = null;
 export const getConfig = () => (cfg ||= api<Config>("/api/config").catch(() => ({ turnstileSiteKey: null, mock: true, prelaunch: true, brand: { name: "Ranky", domain: "askranky.com" } })));

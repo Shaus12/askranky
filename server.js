@@ -20,10 +20,11 @@ const wantsJson = q => q.path.startsWith('/api/');
 // Burst limiter on scan endpoints (in addition to the 3-free-scans-per-IP rule). Env: SCAN_RATE_MAX, SCAN_RATE_WINDOW_MS.
 export const scanLimiter = createRateLimiter({ max: Number(process.env.SCAN_RATE_MAX || 5), windowMs: Number(process.env.SCAN_RATE_WINDOW_MS || 10 * 60 * 1000),
   onLimit: (q, r, retry) => wantsJson(q) ? r.status(429).json({ error: `Too many scans. Try again in ${retry}s.` }) : r.status(429).send(V.landing(`Too many scans. Try again in ${retry}s.`)) });
-const loginLimiter = createRateLimiter({ max: 5, windowMs: 15 * 60 * 1000, onLimit: (q, r) => wantsJson(q) ? r.status(429).json({ error: 'Too many requests' }) : r.status(429).send('Too many requests') });
+export const loginLimiter = createRateLimiter({ max: 5, windowMs: 15 * 60 * 1000, onLimit: (q, r) => wantsJson(q) ? r.status(429).json({ error: 'Too many requests' }) : r.status(429).send('Too many requests') });
 async function captcha(q, r, next) {
   const v = await verifyTurnstile(q.body?.['cf-turnstile-response'] || q.body?.turnstileToken, q.ip); if (v.ok) return next();
-  return wantsJson(q) ? r.status(403).json({ error: v.error }) : r.status(403).send(V.landing(v.error));
+  // Stable code in `error`/`code` (clients localize it) + the English text in `message`.
+  return wantsJson(q) ? r.status(403).json({ error: v.code, code: v.code, message: v.error }) : r.status(403).send(V.landing(v.error));
 }
 const dashUrl = a => `/dashboard/${encodeURIComponent(a.id)}?key=${encodeURIComponent(a.key)}`;
 async function emailMagicLink(a) {
@@ -56,7 +57,7 @@ app.get('/llms.txt', (q, r) => r.type('text/plain; charset=utf-8').send(llmsTxt(
 app.get('/robots.txt', (q, r) => r.type('text/plain').send(robotsTxt()));
 app.get('/sitemap.xml', (q, r) => r.type('application/xml').send(sitemapXml()));
 // Pre-launch waitlist: stores an email + language, never starts a payment.
-app.post('/api/waitlist', loginLimiter, (q, r) => { const email = String(q.body?.email || '').trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 200) return r.status(400).json({ error: 'Enter a valid email.' });
+app.post('/api/waitlist', loginLimiter, captcha, (q, r) => { const email = String(q.body?.email || '').trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 200) return r.status(400).json({ error: 'Enter a valid email.' });
   const db = getDb(); db.waitlist ||= []; if (!db.waitlist.some(w => w.email === email)) { db.waitlist.push({ email, lang: q.body?.lang === 'he' ? 'he' : 'en', plan: Object.hasOwn(PLANS, q.body?.plan) ? q.body.plan : null, at: new Date().toISOString() }); save(); }
   r.json({ ok: true }); });
 
@@ -81,6 +82,8 @@ app.post('/scan', scanLimiter, captcha, async (q, r) => {
 // Server-side price lookup only: the client may name a plan and a display currency (ILS|USD), never an amount.
 // The quote is frozen on the account at checkout start and re-checked against PLANS on return.
 const displayCurrencyFor = q => { const c = String(q.body?.currency || '').toUpperCase(); return CURRENCIES.includes(c) ? c : detectCurrency(q, q.body?.lang).currency; };
+// Pre-launch admin test checkouts (valid ADMIN_TEST_TOKEN, mock payments only) skip the CAPTCHA; everyone else is verified.
+const captchaUnlessAdminTest = (q, r, next) => (isPrelaunch() && adminTestOk(q) ? next() : captcha(q, r, next));
 async function startCheckout(q) {
   const adminTest = isPrelaunch() && adminTestOk(q); if (isPrelaunch() && !adminTest) return { prelaunch: true };
   const plan = Object.hasOwn(PLANS, q.body?.plan) ? PLANS[q.body.plan] : null; if (!isPaid(plan) || !q.body?.email) return null;
@@ -88,7 +91,7 @@ async function startCheckout(q) {
   const account = findOrCreateAccount(q.body.email); account.pendingPlan = plan.id; account.pendingBilling = billing; account.pendingLang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : langOf(q); const state = account.checkoutState = token(24); if (adminTest) account.pendingAdminTest = true; else delete account.pendingAdminTest; save();
   const { redirectUrl } = await getPayments().createCheckout({ account, plan, billing, state, returnUrl: `${BASE}/billing/return?lang=${account.pendingLang}` }); return { redirectUrl, billing };
 }
-app.post('/checkout', async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).send(billingPage('prelaunch', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (!c) return r.status(400).send('bad plan'); r.redirect(c.redirectUrl); });
+app.post('/checkout', captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).send(billingPage('prelaunch', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (!c) return r.status(400).send('bad plan'); r.redirect(c.redirectUrl); });
 app.get('/billing/return', async (q, r) => {
   const db = getDb(); const [accId, state] = String(q.query.Identifier || '').split('.'); const account = Object.hasOwn(db.accounts, accId) ? db.accounts[accId] : null;
   if (isPrelaunch() && !(account?.pendingAdminTest && getPayments().id === 'mock')) return r.status(403).send(billingPage('prelaunch', langOf(q)));
@@ -118,7 +121,7 @@ function auth(q, r) { const a = accountFor(q); if (!a) { r.status(403).send('for
 // Magic-link login: always answers the same way so it can't be used to probe which emails exist.
 async function login(q, r) { const email = String(q.body?.email || '').trim().toLowerCase(); const a = email && Object.values(getDb().accounts).find(x => x.email === email);
   if (a) await emailMagicLink(a); const msg = 'If that email has an account, we sent a sign-in link.'; return wantsJson(q) ? r.json({ ok: true, message: msg }) : r.send(V.message('Check your email', '', msg)); }
-app.post('/login', loginLimiter, login); app.post('/api/login', loginLimiter, login);
+app.post('/login', loginLimiter, captcha, login); app.post('/api/login', loginLimiter, captcha, login);
 app.get('/auth/magic', loginLimiter, (q, r) => { const db = getDb(); const a = Object.hasOwn(db.accounts, String(q.query.a)) ? db.accounts[q.query.a] : null;
   if (!a || !consumeMagic(a, q.query.t)) return r.status(403).send(V.message('Link expired', '', 'This sign-in link is invalid or already used. Request a new one.'));
   if (!a.key || a.key.length < 32) a.key = token(32); save(); r.set('Referrer-Policy', 'no-referrer'); r.redirect(dashUrl(a)); });
@@ -173,7 +176,7 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
 app.get('/api/report/:id', (q, r) => { const db = getDb(); const s = db.scans[q.params.id]; if (!s) return r.status(404).json({ error: 'not found' });
   const b = db.businesses[s.businessId]; const hist = (b.scanIds || []).map(i => db.scans[i]).filter(Boolean); const idx = hist.findIndex(x => x.id === s.id);
   r.json({ demo: !!s.mock || isPrelaunch(), business: { name: b.name, category: b.category, city: b.city, website: b.website }, scan: s, previousScore: idx > 0 ? hist[idx - 1].summary.score : null, history: hist.slice(0, idx + 1).map(x => x.summary.score) }); });
-app.post('/api/checkout', async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).json({ error: 'Pre-launch: checkout is not open yet. Join the waitlist.', prelaunch: true }); if (!c) return r.status(400).json({ error: 'Choose a plan and enter your email.' }); r.json(c); });
+app.post('/api/checkout', captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).json({ error: 'Pre-launch: checkout is not open yet. Join the waitlist.', prelaunch: true }); if (!c) return r.status(400).json({ error: 'Choose a plan and enter your email.' }); r.json(c); });
 // Pricing for the UI: detected display currency + server prices + what checkout will actually charge.
 app.get('/api/pricing', (q, r) => {
   const forced = String(q.query.currency || '').toUpperCase(); const d = CURRENCIES.includes(forced) ? { currency: forced, source: 'query' } : detectCurrency(q, q.query.lang);
@@ -238,7 +241,7 @@ app.get(['/he.txt', '/en.txt', '/:lang/:page.txt'], (q, r) => { const f = path.j
 app.use((q, r) => { if (wantsJson(q)) return r.status(404).json({ error: 'not found' }); const m = /^\/(he|en)(\/|$)/.exec(q.path); r.status(404).type('html').send(notFoundPage(m ? m[1] : prefLang(q))); });
 
 const port = process.env.PORT || 3000;
-if (process.argv[1]?.endsWith('server.js')) { const cfg = (await import('./src/config-check.js')).logConfig(); if (!cfg.ok && process.env.CONFIG_STRICT === '1') process.exit(1); }
+if (process.argv[1]?.endsWith('server.js')) { const cfg = (await import('./src/config-check.js')).logConfig(); if (cfg.fatal.length) { console.error('[config] FATAL: ' + cfg.fatal.join('; ')); process.exit(1); } if (!cfg.ok && process.env.CONFIG_STRICT === '1') process.exit(1); }
 if (process.argv[1]?.endsWith('server.js') && process.env.BILLING_SYNC_CRON === '1') { startBillingCron(); console.log('billing sync: in-process daily scheduler on'); }
 if (process.argv[1]?.endsWith('server.js')) app.listen(port, process.env.HOST || '0.0.0.0', () => console.log(`${BRAND.name} on http://localhost:${port} (scans: ${isMockMode() ? 'MOCK' : 'LIVE'}, payments: ${getPayments().id})`));
 export default app;
