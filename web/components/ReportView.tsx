@@ -9,8 +9,8 @@ import MaskHeading from "./MaskHeading";
 
 // /[lang]/r/<id> (served by Express from report.html) loads the real report; /[lang]/report shows the sample.
 export default function ReportView({ t, lang }: { t: Dict; lang: Locale }) {
-  const [r, setR] = useState<ReportData | null>(null); const [noEmail, setNoEmail] = useState(false);
-  useEffect(() => { getConfig().then((c) => setNoEmail(!!c.emailMock)); }, []); const [err, setErr] = useState("");
+  const [r, setR] = useState<ReportData | null>(null); const [existing, setExisting] = useState(false); const [noEmail, setNoEmail] = useState(false);
+  useEffect(() => { getConfig().then((c) => setNoEmail(!!c.emailMock)); setExisting(new URLSearchParams(location.search).get("existing") === "1"); }, []); const [err, setErr] = useState("");
   useEffect(() => {
     const id = idFromPath("r") || new URLSearchParams(location.search).get("id") || "";
     if (!id) { setR(sample(lang)); return; }
@@ -21,6 +21,7 @@ export default function ReportView({ t, lang }: { t: Dict; lang: Locale }) {
     <>
       <Reveal className="mx-auto max-w-6xl px-5 pb-12 pt-[clamp(2.5rem,calc(var(--u)*72),4.5rem)]">
         <p data-reveal className={`inline-block rounded-full border px-3 py-1 text-xs ${r.mock ? "border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100" : "border-score-high/30 bg-score-high/10 text-emerald-200"}`}>{r.mock ? t.report.mock : t.live.real}</p>
+        {r.live && existing && <p data-reveal data-existing-note role="note" className="mt-3 max-w-2xl text-sm text-sky-100">{t.existing.reportNote}</p>}
         {r.live && noEmail && <p data-reveal data-demo-note role="note" className="mt-3 max-w-2xl text-sm text-amber-100">{t.demo.reportNote}</p>}
         <p data-reveal className="vx-eyebrow mt-6">{t.report.title}</p>
         <div className="mt-3"><MaskHeading as="h1" className="vx-h2" text={r.business.name} grad center={false} /></div>

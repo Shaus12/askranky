@@ -19,7 +19,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   const s = t.scan; const n = s.steps.length; const router = useRouter();
   const [mode, setMode] = useState<"init" | "form" | "run" | "demo">("init");
   const [biz, setBiz] = useState<Pending | null>(null); const [mock, setMock] = useState(true); const [noEmail, setNoEmail] = useState(false);
-  const [step, setStep] = useState(0); const [reportId, setReportId] = useState(""); const [error, setError] = useState("");
+  const [step, setStep] = useState(0); const [reportId, setReportId] = useState(""); const [existing, setExisting] = useState(false); const [error, setError] = useState("");
   const started = useRef(false);
   useEffect(() => {
     getConfig().then((c) => { setMock(c.mock || !!c.prelaunch); setNoEmail(!!c.emailMock); });
@@ -31,9 +31,9 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   }, [lang, n]);
   // Starts the scan (from the stored pending form after /[lang] → /[lang]/scan, or directly from the form shown on this page).
   function run(p: Pending) {
-    setBiz(p); setStep(0); setReportId(""); setError(""); setMode("run");
-    api<{ reportId: string }>("/api/scan", { body: { ...p, lang } })
-      .then((j) => { sessionStorage.removeItem(PENDING); setReportId(j.reportId); })
+    setBiz(p); setStep(0); setReportId(""); setExisting(false); setError(""); setMode("run");
+    api<{ reportId: string; existing?: boolean }>("/api/scan", { body: { ...p, lang } })
+      .then((j) => { sessionStorage.removeItem(PENDING); setExisting(!!j.existing); setReportId(j.reportId); })
       .catch((e) => { sessionStorage.removeItem(PENDING); setError(errMessage(e, t)); });
   }
   // Animate up to the last step; only finish once the server answered.
@@ -43,7 +43,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
     const id = setInterval(() => setStep((x) => (x >= n - 1 ? (reportId ? n : x) : x + 1)), reportId ? 250 : STEP_MS);
     return () => clearInterval(id);
   }, [mode, reportId, n]);
-  useEffect(() => { if (mode === "run" && step >= n && reportId) { const id = setTimeout(() => location.assign(`/${lang}/r/${reportId}`), 900); return () => clearTimeout(id); } }, [mode, step, n, reportId, lang, router]);
+  useEffect(() => { if (mode === "run" && step >= n && reportId) { const id = setTimeout(() => location.assign(`/${lang}/r/${reportId}${existing ? "?existing=1" : ""}`), 900); return () => clearTimeout(id); } }, [mode, step, n, reportId, lang, router, existing]);
 
   if (mode === "init") return <main className="min-h-[60vh]" />;
   if (mode === "form") return (
@@ -60,6 +60,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   return (
     <main className="mx-auto max-w-2xl px-5 py-[clamp(3rem,calc(var(--u)*80),5rem)]">
       {mock && <p className="mx-auto w-fit rounded-full border border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100 px-4 py-1.5 text-center text-xs">{s.mock}</p>}
+      {existing && reportId && <p role="note" data-existing-note className="mx-auto mt-3 w-fit max-w-full rounded-lg border border-sky-300/30 bg-sky-300/10 px-4 py-2 text-center text-sm text-sky-100">{t.existing.runNote}</p>}
       {noEmail && <p role="note" data-demo-note className="mx-auto mt-3 w-fit max-w-full rounded-lg border border-[#e8b04b]/30 bg-[#e8b04b]/10 px-4 py-2 text-center text-sm text-amber-100">{t.demo.runNoEmail}</p>}
       <h1 className="font-head vx-h3 mt-8 text-center" aria-live="polite">{error ? t.scanErr.title : done ? s.done : s.title}</h1>
       {biz && <p className="mt-2 text-center text-slate-400">{[biz.name, biz.category, biz.city].join(" · ")}</p>}

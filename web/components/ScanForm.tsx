@@ -32,6 +32,7 @@ export default function ScanForm({ t, lang, onStart }: { t: Dict; lang: Locale; 
             list={f === "city" ? "il-cities" : undefined} autoComplete={f === "email" ? "email" : f === "city" ? "off" : undefined} required={f !== "website"}
             className="vx-input" />
         </label>))}
+      <p className="-mt-1 text-xs text-slate-400" data-existing-note>{t.existing.formNote}</p>
       <datalist id="il-cities">{ISRAELI_CITIES.map((c) => <option key={c.slug} value={c[lang]} />)}</datalist>
       <label className="flex items-start gap-2 text-sm text-slate-300">
         <input type="checkbox" name="marketingConsent" value="on" defaultChecked={false} className="mt-1 h-4 w-4 shrink-0 accent-emerald-500" data-consent />
