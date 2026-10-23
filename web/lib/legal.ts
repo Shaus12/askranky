@@ -1,7 +1,7 @@
 import type { Locale } from "./i18n";
 // Public legal documents. Each has its own static page at /{lang}/legal/{doc}; the server (src/legal.js) fills in the
 // document text from legal/*.md at request time. COMPLIANCE-NOTES is internal and intentionally not listed.
-export const LEGAL_DOCS = ["terms", "privacy", "refunds", "disclaimer", "accessibility"] as const;
+export const LEGAL_DOCS = ["terms", "privacy", "refunds", "disclaimer", "accessibility", "cookies"] as const;
 export type LegalDoc = (typeof LEGAL_DOCS)[number];
 export const isLegalDoc = (d: string): d is LegalDoc => (LEGAL_DOCS as readonly string[]).includes(d);
 export const LEGAL_META: Record<LegalDoc, Record<Locale, { title: string; desc: string }>> = {
@@ -15,4 +15,6 @@ export const LEGAL_META: Record<LegalDoc, Record<Locale, { title: string; desc: 
     he: { title: "הבהרה על תוצאות AI", desc: "למה תוצאות הנראות ב־AI של Ranky הן קירוב: מערכות AI של צדדים שלישיים משתנות בין הרצות, מיקומים וזמנים, ועשויות להיות שונות מהאפליקציות לצרכנים." } },
   accessibility: { en: { title: "Accessibility Statement", desc: "Ranky's accessibility commitment, the standard we aim for, known limitations, and how to contact the accessibility coordinator." },
     he: { title: "הצהרת נגישות", desc: "מחויבות הנגישות של Ranky, התקן שאליו אנחנו שואפים, מגבלות ידועות, ואיך לפנות לרכז הנגישות." } },
+  cookies: { en: { title: "Cookie and Local Storage Policy", desc: "The cookies and browser storage Ranky uses (only strictly necessary and functional, no analytics or advertising), who sets them, for how long, and how to control them." },
+    he: { title: "מדיניות עוגיות ואחסון מקומי", desc: "העוגיות והאחסון בדפדפן ש־Ranky משתמש בהם (הכרחיים ופונקציונליים בלבד, ללא אנליטיקה או פרסום), מי מציב אותם, לכמה זמן, ואיך שולטים בהם." } },
 };

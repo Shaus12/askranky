@@ -24,7 +24,7 @@ export function sitemapXml() {
       `<changefreq>weekly</changefreq><priority>${p ? '0.6' : '1.0'}</priority></url>`)).join('\n') + '\n</urlset>\n';
 }
 // llms.txt (seo-audit #4): plain summary + key pages for AI crawlers.
-const LEGAL_TITLES = { terms: 'Terms of Service', privacy: 'Privacy Policy', refunds: 'Refund and Cancellation Policy', disclaimer: 'AI Results Disclaimer', accessibility: 'Accessibility Statement' };
+const LEGAL_TITLES = { terms: 'Terms of Service', privacy: 'Privacy Policy', refunds: 'Refund and Cancellation Policy', disclaimer: 'AI Results Disclaimer', accessibility: 'Accessibility Statement', cookies: 'Cookie and Local Storage Policy' };
 export const llmsTxt = () => `# Ranky
 > Ranky (askranky.com) checks whether ChatGPT, Perplexity and Google's AI recommend a local business, shows who gets named instead and which sources are cited, and suggests 3 fixes. Free first scan. Markets: US (English) and Israel (Hebrew).
 

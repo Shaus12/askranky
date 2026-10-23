@@ -3,7 +3,7 @@
 // and is never served (explicit 404). The markdown renderer is deliberately tiny and escapes everything: no raw HTML passes.
 import fs from 'node:fs'; import path from 'node:path';
 import { BRAND } from './brand.js'; import { esc } from './security/html.js';
-export const LEGAL_DOCS = ['terms', 'privacy', 'refunds', 'disclaimer', 'accessibility'];
+export const LEGAL_DOCS = ['terms', 'privacy', 'refunds', 'disclaimer', 'accessibility', 'cookies'];
 export const LEGAL_MARKER = '<!--LEGAL_BODY-->'; // emitted by web/components/LegalDoc.tsx into the exported page shell
 const DIR = path.resolve('legal');
 export function legalDoc(doc, lang) {
