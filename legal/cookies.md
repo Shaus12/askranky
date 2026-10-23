@@ -1,5 +1,5 @@
 # Cookie and Local Storage Policy — Ranky
-Last updated: 2026-10-23 (version 1.0)
+Last updated: 2026-10-23 (version 1.1)
 The Hebrew version of this policy prevails over the English translation if they differ. This is a draft for information and is not legal advice.
 
 ## 1. Summary
