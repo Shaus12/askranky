@@ -1,7 +1,7 @@
 import express from 'express'; import fs from 'node:fs'; import path from 'node:path';
 import { BRAND } from './src/brand.js'; import { PLANS, isPaid, CURRENCIES } from './src/plans.js'; import { detectCurrency, billingFor, publicPlans, usdBillingEnabled } from './src/currency.js';
 import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan } from './src/scan.js';
-import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail } from './src/email/report.js'; import { sendEmail } from './src/email/send.js';
+import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail } from './src/email/report.js'; import { sendEmail, emailIsMock } from './src/email/send.js';
 import * as V from './src/views.js'; import { isMockMode } from './src/providers/index.js';
 import { token, safeEqual, issueMagicLink, consumeMagic } from './src/security/tokens.js'; import { createRateLimiter } from './src/security/ratelimit.js';
 import { verifyTurnstile, turnstileSiteKey } from './src/security/turnstile.js'; import { esc } from './src/security/html.js';
@@ -19,12 +19,17 @@ const freeScanIps = new Map();
 const wantsJson = q => q.path.startsWith('/api/');
 // Burst limiter on scan endpoints (in addition to the 3-free-scans-per-IP rule). Env: SCAN_RATE_MAX, SCAN_RATE_WINDOW_MS.
 export const scanLimiter = createRateLimiter({ max: Number(process.env.SCAN_RATE_MAX || 5), windowMs: Number(process.env.SCAN_RATE_WINDOW_MS || 10 * 60 * 1000),
-  onLimit: (q, r, retry) => wantsJson(q) ? r.status(429).json({ error: `Too many scans. Try again in ${retry}s.` }) : r.status(429).send(V.landing(`Too many scans. Try again in ${retry}s.`)) });
-export const loginLimiter = createRateLimiter({ max: 5, windowMs: 15 * 60 * 1000, onLimit: (q, r) => wantsJson(q) ? r.status(429).json({ error: 'Too many requests' }) : r.status(429).send('Too many requests') });
+  onLimit: (q, r, retry) => wantsJson(q) ? r.status(429).json({ error: 'rate_limited', code: 'rate_limited', retryAfter: retry, message: `Too many scans. Try again in ${retry}s.` }) : r.status(429).send(V.landing(`Too many scans. Try again in ${retry}s.`)) });
+export const loginLimiter = createRateLimiter({ max: 5, windowMs: 15 * 60 * 1000, onLimit: (q, r, retry) => wantsJson(q) ? r.status(429).json({ error: 'rate_limited', code: 'rate_limited', retryAfter: retry, message: 'Too many requests' }) : r.status(429).send('Too many requests') });
+// CAPTCHA failures are not counted against the scan/login limiters (the hit is refunded); instead they get their own looser
+// limit so a bot can't hammer siteverify. Env: CAPTCHA_FAIL_MAX (default 30) per 10 minutes per IP.
+export const captchaFailLimiter = createRateLimiter({ max: Number(process.env.CAPTCHA_FAIL_MAX || 30), windowMs: 10 * 60 * 1000,
+  onLimit: (q, r, retry) => wantsJson(q) ? r.status(429).json({ error: 'rate_limited', code: 'rate_limited', retryAfter: retry, message: `Too many attempts. Try again in ${retry}s.` }) : r.status(429).send(V.landing(`Too many attempts. Try again in ${retry}s.`)) });
 async function captcha(q, r, next) {
   const v = await verifyTurnstile(q.body?.['cf-turnstile-response'] || q.body?.turnstileToken, q.ip); if (v.ok) return next();
+  scanLimiter.refund(q); loginLimiter.refund(q);
   // Stable code in `error`/`code` (clients localize it) + the English text in `message`.
-  return wantsJson(q) ? r.status(403).json({ error: v.code, code: v.code, message: v.error }) : r.status(403).send(V.landing(v.error));
+  return captchaFailLimiter(q, r, () => wantsJson(q) ? r.status(403).json({ error: v.code, code: v.code, message: v.error }) : r.status(403).send(V.landing(v.error)));
 }
 const dashUrl = a => `/dashboard/${encodeURIComponent(a.id)}?key=${encodeURIComponent(a.key)}`;
 async function emailMagicLink(a) {
@@ -157,11 +162,11 @@ app.post('/unsubscribe', loginLimiter, (q, r) => { const t = q.query.t || q.body
 
 // ---------- JSON API for the Next.js frontend (web/) ----------
 const pub = a => ({ id: a.id, email: a.email, plan: a.plan, active: !!a.subscriptionRef && a.status !== 'cancelled', status: a.status || (a.subscriptionRef ? 'active' : null), paidThrough: a.paidThrough || null, cancelledAt: a.cancelledAt || null });
-app.get('/api/config', (q, r) => r.json({ brand: BRAND, plans: publicPlans(), usdBilling: usdBillingEnabled(), mock: isMockMode(), prelaunch: isPrelaunch(), turnstileSiteKey: turnstileSiteKey() }));
+app.get('/api/config', (q, r) => r.json({ brand: BRAND, plans: publicPlans(), usdBilling: usdBillingEnabled(), mock: isMockMode(), prelaunch: isPrelaunch(), emailMock: emailIsMock(), turnstileSiteKey: turnstileSiteKey() }));
 app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body || {};
   if (!name || !category || !city || !email) return r.status(400).json({ error: 'Please fill all required fields.' });
-  const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).json({ error: 'Free scan limit reached for today.' });
+  const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).json({ error: 'free_limit_reached', code: 'free_limit_reached', message: 'Free scan limit reached for today.' });
   const db = getDb(); const account = findOrCreateAccount(email); recordConsent(account, q.body);
   const existing = Object.values(db.businesses).find(b => b.accountId === account.id && b.scanIds?.length);
   if (account.plan === 'free' && existing) return r.json({ reportId: existing.scanIds.at(-1), existing: true });

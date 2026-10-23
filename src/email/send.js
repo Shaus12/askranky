@@ -4,10 +4,12 @@
 import fs from 'node:fs'; import path from 'node:path'; import { BRAND } from '../brand.js'; import { dataPath } from '../paths.js';
 export const emailFrom = () => process.env.EMAIL_FROM || `${BRAND.name} <reports@${BRAND.domain}>`;
 export const emailReplyTo = () => process.env.EMAIL_REPLY_TO || BRAND.supportEmail;
+// True when emails are only written to the local outbox (nothing is delivered). Exposed to the UI via /api/config.
+export const emailIsMock = () => !["live", "resend"].includes(process.env.EMAIL_MODE) || !process.env.RESEND_API_KEY;
 let seq = 0;
 export async function sendEmail({ to, subject, html, headers = {}, kind = 'transactional' }) {
   const msg = { from: emailFrom(), reply_to: emailReplyTo(), to, subject, html, headers };
-  if (!["live", "resend"].includes(process.env.EMAIL_MODE) || !process.env.RESEND_API_KEY) {
+  if (emailIsMock()) {
     const dir = dataPath('outbox'); fs.mkdirSync(dir, { recursive: true });
     const name =  `${Date.now()}-${String(++seq).padStart(4, '0')}-${to.replace(/[^a-z0-9]/gi, '_')}`;
     const meta = dataPath('outbox-meta'); fs.mkdirSync(meta, { recursive: true }); fs.writeFileSync(path.join(dir, name + '.html'), html); fs.writeFileSync(path.join(meta, name + '.json'), JSON.stringify({ from: msg.from, replyTo: msg.reply_to, to, subject, headers, kind }, null, 2));

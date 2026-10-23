@@ -8,10 +8,10 @@ export async function api<T = any>(path: string, opts: { method?: string; body?:
   return j as T;
 }
 // Server CAPTCHA errors carry a stable code in `error`; show the localized string instead of the English message.
-export const errMessage = (x: any, t: Dict): string => x?.code === "captcha_required" ? t.form.captcha : x?.code === "captcha_failed" ? t.form.captchaFailed : x?.code === "captcha_unavailable" ? t.form.captchaUnavailable : x?.message || String(x);
-export type Config = { turnstileSiteKey: string | null; mock: boolean; prelaunch?: boolean; brand: { name: string; domain: string } };
+export const errMessage = (x: any, t: Dict): string => x?.code === "captcha_required" ? t.form.captcha : x?.code === "captcha_failed" ? t.form.captchaFailed : x?.code === "captcha_unavailable" ? t.form.captchaUnavailable : x?.code === "rate_limited" ? t.form.rateLimited.replace("{m}", String(Math.max(1, Math.ceil((Number(x?.data?.retryAfter) || 60) / 60)))) : x?.code === "free_limit_reached" ? t.form.freeLimit : x?.message || String(x);
+export type Config = { turnstileSiteKey: string | null; mock: boolean; prelaunch?: boolean; emailMock?: boolean; brand: { name: string; domain: string } };
 let cfg: Promise<Config> | null = null;
-export const getConfig = () => (cfg ||= api<Config>("/api/config").catch(() => ({ turnstileSiteKey: null, mock: true, prelaunch: true, brand: { name: "Ranky", domain: "askranky.com" } })));
+export const getConfig = () => (cfg ||= api<Config>("/api/config").catch(() => ({ turnstileSiteKey: null, mock: true, prelaunch: true, emailMock: true, brand: { name: "Ranky", domain: "askranky.com" } })));
 const LABEL: Record<string, string> = { chatgpt: "ChatGPT", gemini: "Gemini", perplexity: "Perplexity" };
 // Map the Express /api/report/:id payload onto the shape ReportBody renders.
 export function toReport(j: any): ReportData {

@@ -9,13 +9,13 @@ import MaskHeading from "./MaskHeading";
 // Magic-link sign-in: POST /api/login always answers the same way (no account enumeration).
 export default function Login({ t, lang }: { t: Dict; lang: Locale }) {
   const [msg, setMsg] = useState(""); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
-  const [siteKey, setSiteKey] = useState<string | null>(null); const [rk, setRk] = useState(0);
-  useEffect(() => { getConfig().then((c) => setSiteKey(c.turnstileSiteKey)); }, []);
+  const [siteKey, setSiteKey] = useState<string | null>(null); const [rk, setRk] = useState(0); const [noEmail, setNoEmail] = useState(false);
+  useEffect(() => { getConfig().then((c) => { setSiteKey(c.turnstileSiteKey); setNoEmail(!!c.emailMock); }); }, []);
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); const fd = new FormData(e.currentTarget); const email = String(fd.get("email") || "").trim(); if (!email) return;
     const token = String(fd.get("cf-turnstile-response") || ""); if (siteKey && !token) return setErr(t.form.captcha);
     setBusy(true); setErr("");
-    try { await api("/api/login", { body: { email, "cf-turnstile-response": token || undefined } }); setMsg(t.login.sent); } catch (x: any) { setErr(errMessage(x, t)); setRk((n) => n + 1); } finally { setBusy(false); }
+    try { await api("/api/login", { body: { email, "cf-turnstile-response": token || undefined } }); setMsg(noEmail ? t.demo.loginSent : t.login.sent); } catch (x: any) { setErr(errMessage(x, t)); setRk((n) => n + 1); } finally { setBusy(false); }
   }
   return (
     <main><Reveal className="mx-auto max-w-md px-5 py-[clamp(3rem,calc(var(--u)*96),6rem)]">

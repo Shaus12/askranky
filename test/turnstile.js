@@ -55,6 +55,17 @@ try {
     assert.equal((await TS.verifyTurnstile('t', '1', async () => { throw new Error('net'); })).code, 'captcha_unavailable'); assert.equal((await TS.verifyTurnstile('t', '1', async () => ({ json: async () => { throw new Error('bad json'); } }))).ok, false);
     cf = () => Promise.reject(new Error('net')); const r = await post('/api/waitlist', { email: 'e@t.test', 'cf-turnstile-response': 'x' }); assert.equal(r.status, 403); assert.equal((await r.json()).error, 'captcha_unavailable'); ok('network/JSON error fails closed on the server too (403 captcha_unavailable)');
   } finally { console.warn = cw; }
+  // ---- CAPTCHA failures don't count against the rate limit; rate-limit / free-limit responses carry stable codes ----
+  cf = reply({ success: false, 'error-codes': ['invalid-input-response'] }); loginLimiter.reset(); { let codes = [];
+    for (let i = 0; i < 8; i++) codes.push((await realFetch(B + '/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'rl@t.test', 'cf-turnstile-response': i % 2 ? 'bad' : undefined }) })).status);
+    assert.deepEqual(codes, Array(8).fill(403)); cf = reply({ success: true, hostname: 'askranky.com' });
+    const good = []; for (let i = 0; i < 6; i++) { const r = await realFetch(B + '/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'rl@t.test', 'cf-turnstile-response': 'ok' }) }); good.push(r.status); if (r.status === 429) { const j = await r.json(); assert.equal(j.error, 'rate_limited'); assert.equal(j.code, 'rate_limited'); assert.ok(j.retryAfter > 0); assert.match(j.message, /Too many/); } }
+    assert.deepEqual(good, [200, 200, 200, 200, 200, 429]); ok('8 failed/missing CAPTCHAs did not use up the login limit (5 real attempts still pass, the 6th gets 429 {error:"rate_limited", retryAfter})'); }
+  { const { createRateLimiter } = await import('../src/security/ratelimit.js'); const lim = createRateLimiter({ max: 2, windowMs: 1000, now: () => 0 }); const q = { ip: '9' }; const run = qq => new Promise(res => lim(qq, { set() {}, status: c => ({ send: () => res(c) }) }, () => res(200)));
+    assert.equal(await run(q), 200); assert.equal(lim.refund(q), true); assert.equal(lim.refund(q), false); assert.equal(await run({ ip: '9' }), 200); assert.equal(await run({ ip: '9' }), 200); assert.equal(await run({ ip: '9' }), 429); ok('limiter.refund() gives back exactly the hit that request added'); }
+  delete process.env.DISABLE_IP_LIMIT; delete process.env.TURNSTILE_SECRET_KEY; delete process.env.TURNSTILE_SITE_KEY; { const sc = i => post('/api/scan', { name: 'F' + i, category: 'c', city: 'x', email: `free${i}@t.test` }); const st = [];
+    for (let i = 0; i < 4; i++) st.push((await sc(i)).status); assert.deepEqual(st, [200, 200, 200, 429]); const r = await sc(9); assert.equal(r.status, 429); const j = await r.json(); assert.equal(j.error, 'free_limit_reached'); assert.match(j.message, /Free scan limit/); ok('free-plan limit returns stable code free_limit_reached + English message'); }
+  process.env.DISABLE_IP_LIMIT = '1';
   // ---- no-key mode skips everything again ----
   delete process.env.TURNSTILE_SECRET_KEY; delete process.env.TURNSTILE_SITE_KEY; assert.deepEqual(await TS.verifyTurnstile(undefined, '1'), { ok: true, skipped: true });
   // ---- config check ----
@@ -71,7 +82,7 @@ try {
   const read = f => fs.readFileSync(f, 'utf8'); const login = read('web/components/Login.tsx'), co = read('web/components/Checkout.tsx'), sp = read('web/components/ScanProgress.tsx'), i18n = read('web/lib/i18n.ts'), api = read('web/lib/api.ts'), tsx = read('web/components/Turnstile.tsx');
   for (const [name, src] of [['Login', login], ['Checkout', co]]) { assert.match(src, /<Turnstile siteKey=\{siteKey\} lang=\{lang\} resetKey=\{rk\}/, name); assert.match(src, /cf-turnstile-response/, name); assert.match(src, /errMessage\(x, t\)/, name); assert.match(src, /setRk\(/, name); }
   assert.equal((co.match(/<Turnstile /g) || []).length, 2); assert.match(co, /\/api\/waitlist.*cf-turnstile-response/s); assert.match(sp, /errMessage\(e, t\)/); assert.match(api, /captcha_required.*captcha_failed.*captcha_unavailable/s); assert.match(tsx, /turnstile\?\.reset/); assert.match(tsx, /language: lang/);
-  assert.equal((i18n.match(/captchaFailed:/g) || []).length, 2); assert.equal((i18n.match(/captchaUnavailable:/g) || []).length, 2); assert.match(i18n, /captchaFailed: "אימות ה־CAPTCHA/); ok('Login, Checkout (checkout + waitlist) and ScanProgress wired: widget with locale + reset, localized HE/EN captcha strings');
+  assert.equal((i18n.match(/rateLimited:/g) || []).length, 2); assert.equal((i18n.match(/freeLimit:/g) || []).length, 2); assert.match(i18n, /rateLimited: "יותר מדי ניסיונות/); assert.match(api, /rate_limited.*free_limit_reached/s); assert.equal((i18n.match(/captchaFailed:/g) || []).length, 2); assert.equal((i18n.match(/captchaUnavailable:/g) || []).length, 2); assert.match(i18n, /captchaFailed: "אימות ה־CAPTCHA/); ok('Login, Checkout (checkout + waitlist) and ScanProgress wired: widget with locale + reset, localized HE/EN captcha strings');
   console.log(`ALL TURNSTILE TESTS PASSED (${n})`);
 } finally { globalThis.fetch = realFetch; srv.close(); TD.done(); }
 process.exit(0);

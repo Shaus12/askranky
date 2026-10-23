@@ -18,20 +18,24 @@ type Pending = { name: string; website?: string; category: string; city: string;
 export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   const s = t.scan; const n = s.steps.length; const router = useRouter();
   const [mode, setMode] = useState<"init" | "form" | "run" | "demo">("init");
-  const [biz, setBiz] = useState<Pending | null>(null); const [mock, setMock] = useState(true);
+  const [biz, setBiz] = useState<Pending | null>(null); const [mock, setMock] = useState(true); const [noEmail, setNoEmail] = useState(false);
   const [step, setStep] = useState(0); const [reportId, setReportId] = useState(""); const [error, setError] = useState("");
   const started = useRef(false);
   useEffect(() => {
-    getConfig().then((c) => setMock(c.mock || !!c.prelaunch));
+    getConfig().then((c) => { setMock(c.mock || !!c.prelaunch); setNoEmail(!!c.emailMock); });
     const q = new URLSearchParams(window.location.search);
     if (q.has("step")) { setMode("demo"); setBiz({ name: lang === "he" ? "אינסטלציה אקמה" : "Acme Plumbing", category: lang === "he" ? "אינסטלטור" : "Plumber", city: lang === "he" ? "תל אביב-יפו" : "Austin, TX", email: "" }); setStep(Math.min(Number(q.get("step")), n)); return; }
     const raw = sessionStorage.getItem(PENDING); if (!raw) { setMode("form"); return; }
     if (started.current) return; started.current = true;
-    const p: Pending = JSON.parse(raw); setBiz(p); setMode("run");
+    run(JSON.parse(raw));
+  }, [lang, n]);
+  // Starts the scan (from the stored pending form after /[lang] → /[lang]/scan, or directly from the form shown on this page).
+  function run(p: Pending) {
+    setBiz(p); setStep(0); setReportId(""); setError(""); setMode("run");
     api<{ reportId: string }>("/api/scan", { body: { ...p, lang } })
       .then((j) => { sessionStorage.removeItem(PENDING); setReportId(j.reportId); })
       .catch((e) => { sessionStorage.removeItem(PENDING); setError(errMessage(e, t)); });
-  }, [lang, n]);
+  }
   // Animate up to the last step; only finish once the server answered.
   useEffect(() => {
     if (mode !== "run") return;
@@ -46,7 +50,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
     <main><Reveal className="mx-auto max-w-xl px-5 py-[clamp(3rem,calc(var(--u)*80),5rem)]">
       <MaskHeading as="h1" className="vx-h3" text={t.hero.title} />
       <span data-hair className="hairline mx-auto my-8 block w-40" />
-      <div data-reveal><ScanForm t={t} lang={lang} /></div>
+      <div data-reveal><ScanForm t={t} lang={lang} onStart={(p) => run(p as unknown as Pending)} /></div>
     </Reveal></main>);
   const done = step >= n; const TOTAL = 15;
   const pct = Math.round((step / n) * 100);
@@ -56,6 +60,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   return (
     <main className="mx-auto max-w-2xl px-5 py-[clamp(3rem,calc(var(--u)*80),5rem)]">
       {mock && <p className="mx-auto w-fit rounded-full border border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100 px-4 py-1.5 text-center text-xs">{s.mock}</p>}
+      {noEmail && <p role="note" data-demo-note className="mx-auto mt-3 w-fit max-w-full rounded-lg border border-[#e8b04b]/30 bg-[#e8b04b]/10 px-4 py-2 text-center text-sm text-amber-100">{t.demo.runNoEmail}</p>}
       <h1 className="font-head vx-h3 mt-8 text-center" aria-live="polite">{error ? t.scanErr.title : done ? s.done : s.title}</h1>
       {biz && <p className="mt-2 text-center text-slate-400">{[biz.name, biz.category, biz.city].join(" · ")}</p>}
       {error ? (
