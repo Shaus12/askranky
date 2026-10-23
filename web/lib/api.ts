@@ -17,7 +17,7 @@ const LABEL: Record<string, string> = { chatgpt: "ChatGPT", gemini: "Gemini", pe
 export function toReport(j: any): ReportData {
   const s = j.scan.summary;
   return {
-    id: j.scan.id, mock: !!(j.scan.mock || j.demo), live: true, date: String(j.scan.at).slice(0, 10),
+    id: j.scan.id, mock: !!j.scan.mock, live: true, date: String(j.scan.at).slice(0, 10),
     business: { name: j.business.name, category: j.business.category, city: j.business.city },
     score: s.score, mentionRate: s.mentionRate, avgRank: s.avgRank || 0, checks: s.checks,
     byEngine: Object.entries(s.byEngine as Record<string, { checks: number; mentions: number }>).map(([e, v]) => ({ engine: LABEL[e] || e, rate: v.checks ? v.mentions / v.checks : 0 })),

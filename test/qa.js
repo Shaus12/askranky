@@ -42,7 +42,7 @@ try {
   assert.equal((await post('/api/waitlist', { email: 'nope' })).status, 400); ok('waitlist stores email once, validates input, no payment');
   process.env.DISABLE_IP_LIMIT = '1'; j = await (await post('/api/scan', { name: 'Demo Co', category: 'Plumber', city: 'Haifa', email: 'd@t.test' })).json();
   const rep = await (await fetch(`${B}/api/report/${j.reportId}`)).json(); assert.equal(rep.demo, true); ok('pre-launch: reports flagged demo:true');
-  const ck = fs.readFileSync('web/components/Checkout.tsx', 'utf8'); assert.match(ck, /if \(pre && !\(account && q\.get\("admintest"\) === "1"\)\)/); assert.match(ck, /\/api\/waitlist/); assert.match(fs.readFileSync('web/lib/api.ts', 'utf8'), /j\.scan\.mock \|\| j\.demo/); ok('UI: checkout shows waitlist in pre-launch; report badge uses demo flag');
+  const ck = fs.readFileSync('web/components/Checkout.tsx', 'utf8'); assert.match(ck, /if \(pre && !\(account && q\.get\("admintest"\) === "1"\)\)/); assert.match(ck, /\/api\/waitlist/); assert.match(fs.readFileSync('web/lib/api.ts', 'utf8'), /mock: !!j\.scan\.mock,/); ok('UI: checkout shows waitlist in pre-launch; report badge uses demo flag');
   delete process.env.PRELAUNCH;
   console.log(`ALL QA TESTS PASSED (${n})`);
 } finally { srv.close(); TD.done(); }

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Dict, Locale } from "@/lib/i18n";
 import { reducedMotion } from "@/lib/motion";
-import { api, errMessage, getConfig } from "@/lib/api";
+import { api, errMessage, getConfig, type Config } from "@/lib/api";
+import { demoNotices } from "@/lib/notices";
 import ScanForm, { PENDING } from "./ScanForm";
 import Reveal from "./Reveal";
 import MaskHeading from "./MaskHeading";
@@ -18,11 +19,11 @@ type Pending = { name: string; website?: string; category: string; city: string;
 export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   const s = t.scan; const n = s.steps.length; const router = useRouter();
   const [mode, setMode] = useState<"init" | "form" | "run" | "demo">("init");
-  const [biz, setBiz] = useState<Pending | null>(null); const [mock, setMock] = useState(true); const [noEmail, setNoEmail] = useState(false);
+  const [biz, setBiz] = useState<Pending | null>(null); const [cfg, setCfg] = useState<Config | null>(null); const nt = demoNotices(cfg, t);
   const [step, setStep] = useState(0); const [reportId, setReportId] = useState(""); const [existing, setExisting] = useState(false); const [error, setError] = useState("");
   const started = useRef(false);
   useEffect(() => {
-    getConfig().then((c) => { setMock(c.mock || !!c.prelaunch); setNoEmail(!!c.emailMock); });
+    getConfig().then(setCfg);
     const q = new URLSearchParams(window.location.search);
     if (q.has("step")) { setMode("demo"); setBiz({ name: lang === "he" ? "אינסטלציה אקמה" : "Acme Plumbing", category: lang === "he" ? "אינסטלטור" : "Plumber", city: lang === "he" ? "תל אביב-יפו" : "Austin, TX", email: "" }); setStep(Math.min(Number(q.get("step")), n)); return; }
     const raw = sessionStorage.getItem(PENDING); if (!raw) { setMode("form"); return; }
@@ -59,9 +60,9 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   const link = mode === "demo" ? `/${lang}/report` : `/${lang}/r/${reportId}`;
   return (
     <main className="mx-auto max-w-2xl px-5 py-[clamp(3rem,calc(var(--u)*80),5rem)]">
-      {mock && <p className="mx-auto w-fit rounded-full border border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100 px-4 py-1.5 text-center text-xs">{s.mock}</p>}
+      {nt.progressMock && <p data-mock-note className="mx-auto w-fit rounded-full border border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100 px-4 py-1.5 text-center text-xs">{nt.progressMock}</p>}
       {existing && reportId && <p role="note" data-existing-note className="mx-auto mt-3 w-fit max-w-full rounded-lg border border-sky-300/30 bg-sky-300/10 px-4 py-2 text-center text-sm text-sky-100">{t.existing.runNote}</p>}
-      {noEmail && <p role="note" data-demo-note className="mx-auto mt-3 w-fit max-w-full rounded-lg border border-[#e8b04b]/30 bg-[#e8b04b]/10 px-4 py-2 text-center text-sm text-amber-100">{t.demo.runNoEmail}</p>}
+      {nt.runNote && <p role="note" data-demo-note className="mx-auto mt-3 w-fit max-w-full rounded-lg border border-[#e8b04b]/30 bg-[#e8b04b]/10 px-4 py-2 text-center text-sm text-amber-100">{nt.runNote}</p>}
       <h1 className="font-head vx-h3 mt-8 text-center" aria-live="polite">{error ? t.scanErr.title : done ? s.done : s.title}</h1>
       {biz && <p className="mt-2 text-center text-slate-400">{[biz.name, biz.category, biz.city].join(" · ")}</p>}
       {error ? (

@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Dict, Locale } from "@/lib/i18n";
-import { api, getConfig, idFromPath, sample, toReport, type ReportData } from "@/lib/api";
+import { api, getConfig, idFromPath, sample, toReport, type Config, type ReportData } from "@/lib/api";
+import { demoNotices } from "@/lib/notices";
 import ReportBody from "./ReportBody";
 import Reveal from "./Reveal";
 import MaskHeading from "./MaskHeading";
@@ -10,8 +11,8 @@ import MaskHeading from "./MaskHeading";
 const ENG = { chatgpt: "ChatGPT", gemini: "Gemini", perplexity: "Perplexity" } as Record<string, string>;
 // /[lang]/r/<id> (served by Express from report.html) loads the real report; /[lang]/report shows the sample.
 export default function ReportView({ t, lang }: { t: Dict; lang: Locale }) {
-  const [r, setR] = useState<ReportData | null>(null); const [existing, setExisting] = useState(false); const [noEmail, setNoEmail] = useState(false);
-  useEffect(() => { getConfig().then((c) => setNoEmail(!!c.emailMock)); setExisting(new URLSearchParams(location.search).get("existing") === "1"); }, []); const [err, setErr] = useState("");
+  const [r, setR] = useState<ReportData | null>(null); const [existing, setExisting] = useState(false); const [cfg, setCfg] = useState<Config | null>(null); const nt = demoNotices(cfg, t);
+  useEffect(() => { getConfig().then(setCfg); setExisting(new URLSearchParams(location.search).get("existing") === "1"); }, []); const [err, setErr] = useState("");
   useEffect(() => {
     const id = idFromPath("r") || new URLSearchParams(location.search).get("id") || "";
     if (!id) { setR(sample(lang)); return; }
@@ -24,7 +25,7 @@ export default function ReportView({ t, lang }: { t: Dict; lang: Locale }) {
         <p data-reveal className={`inline-block rounded-full border px-3 py-1 text-xs ${r.mock ? "border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100" : "border-score-high/30 bg-score-high/10 text-emerald-200"}`}>{r.mock ? t.report.mock : t.live.real}</p>
         {r.engines && <p data-reveal data-engines-note role="note" className="mt-3 max-w-2xl text-sm text-slate-300">{t.enginesNote.ran} {r.engines.ran.map((e) => ENG[e] || e).join(", ") || t.enginesNote.none}.{r.engines.skipped.length > 0 && <> {t.enginesNote.skipped} {r.engines.skipped.map((x) => `${ENG[x.engine] || x.engine} (${(t.enginesNote as Record<string, string>)[x.reason] || x.reason})`).join(", ")}.</>}</p>}
         {r.live && existing && <p data-reveal data-existing-note role="note" className="mt-3 max-w-2xl text-sm text-sky-100">{t.existing.reportNote}</p>}
-        {r.live && noEmail && <p data-reveal data-demo-note role="note" className="mt-3 max-w-2xl text-sm text-amber-100">{t.demo.reportNote}</p>}
+        {r.live && nt.reportNote && <p data-reveal data-demo-note role="note" className="mt-3 max-w-2xl text-sm text-amber-100">{nt.reportNote}</p>}
         <p data-reveal className="vx-eyebrow mt-6">{t.report.title}</p>
         <div className="mt-3"><MaskHeading as="h1" className="vx-h2" text={r.business.name} grad center={false} /></div>
         <span data-hair className="hairline mt-6 block w-[min(80vw,calc(var(--u)*420))] origin-left rtl:origin-right" />
