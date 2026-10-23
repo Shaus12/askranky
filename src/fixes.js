@@ -1,12 +1,15 @@
 // Turn scan results into 3 concrete, prioritized fixes (Hebrew copy for Hebrew businesses).
 import { businessLang } from './questions.js';
+import { isOpaqueHost } from './extract.js';
+// Never recommend a redirector (e.g. Gemini's vertexaisearch.cloud.google.com grounding links; also covers scans stored before the fix).
+const realSource = r => r.topCitedHosts.find(h => !h.isOwnSite && !isOpaqueHost(h.host));
 export function buildFixes(scan, business) {
   if (businessLang(business) === 'he') return buildFixesHe(scan, business);
   const fixes = [];
   const r = scan.summary;
   if (r.mentionRate < 0.5) fixes.push({ title: 'Add a 60-word direct answer to your homepage', why: `AI engines mentioned you in only ${Math.round(r.mentionRate * 100)}% of answers. They lift short, self-contained answers.`,
     copy: `${business.name} is a ${business.category.toLowerCase()} in ${business.city} offering [top 3 services]. We are rated [X]/5 from [N] reviews, open [hours], and serve [neighborhoods]. Call [phone] for a free quote.` });
-  const topSource = r.topCitedHosts.find(h => !h.isOwnSite);
+  const topSource = realSource(r);
   if (topSource) fixes.push({ title: `Get listed on ${topSource.host}`, why: `${topSource.host} was cited ${topSource.count}x in answers about your category. AI copies from pages like this.`,
     copy: `Hi, I run ${business.name}, a ${business.category.toLowerCase()} in ${business.city}. I'd love to be considered for your "${business.category} in ${business.city}" list. Happy to share reviews, licences and photos.` });
   const comp = r.topCompetitors[0];
@@ -22,7 +25,7 @@ function buildFixesHe(scan, b) {
   const fixes = []; const r = scan.summary;
   if (r.mentionRate < 0.5) fixes.push({ title: 'הוסף לעמוד הבית תשובה ישירה של 60 מילה', why: `מנועי ה־AI הזכירו אותך רק ב־${Math.round(r.mentionRate * 100)}% מהתשובות. הם מעדיפים תשובות קצרות ועצמאיות.`,
     copy: `${b.name} הוא ${b.category} ב${b.city} שמציע [3 שירותים עיקריים]. דירוג [X]/5 מ־[N] ביקורות, פתוח [שעות], ומשרת את [שכונות]. התקשרו ל־[טלפון] להצעת מחיר חינם.` });
-  const topSource = r.topCitedHosts.find(h => !h.isOwnSite);
+  const topSource = realSource(r);
   if (topSource) fixes.push({ title: `היכנס לרשימות ב־${topSource.host}`, why: `${topSource.host} צוטט ${topSource.count} פעמים בתשובות על התחום שלך. ה־AI מעתיק מעמודים כאלה.`,
     copy: `שלום, אני מ${b.name}, ${b.category} ב${b.city}. אשמח להיכלל ברשימת "${b.category} ב${b.city}" שלכם. אשמח לשלוח ביקורות, רישיונות ותמונות.` });
   const comp = r.topCompetitors[0];
