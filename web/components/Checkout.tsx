@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import type { Dict, Locale } from "@/lib/i18n";
 import { api, errMessage, getConfig } from "@/lib/api";
+import { getUtm } from "@/lib/utm";
 import Turnstile from "./Turnstile";
 import CardForm, { type Embedded } from "./CardForm";
 import { payText } from "@/lib/i18n-pay";
@@ -42,7 +43,7 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
   if (pre && !(account && q.get("admintest") === "1")) {
     const join = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); setErr(""); const fd = new FormData(e.currentTarget); const token = String(fd.get("cf-turnstile-response") || "");
       if (siteKey && !token) return setErr(t.form.captcha);
-      try { await api("/api/waitlist", { body: { email: String(fd.get("email") || ""), lang, plan: q.get("plan"), "cf-turnstile-response": token || undefined } }); setJoined(true); } catch (x: any) { setErr(errMessage(x, t)); setRk((n) => n + 1); } };
+      try { await api("/api/waitlist", { body: { email: String(fd.get("email") || ""), lang, plan: q.get("plan"), ...getUtm(), "cf-turnstile-response": token || undefined } }); setJoined(true); } catch (x: any) { setErr(errMessage(x, t)); setRk((n) => n + 1); } };
     return (
       <main className="mx-auto max-w-md px-5 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center" data-prelaunch><div className="card space-y-4 p-8">
         <span className="rounded-full border border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100 px-3 py-1 text-xs">{c.soon}</span>
@@ -65,7 +66,7 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); const fd = new FormData(e.currentTarget); const email = String(fd.get("email") || ""); const token = String(fd.get("cf-turnstile-response") || "");
     if (siteKey && !token) return setErr(t.form.captcha); setErr("");
-    try { const j = await api<CheckoutRes>("/api/checkout", { body: { plan, email, lang, currency: bill?.displayCurrency, "cf-turnstile-response": token || undefined } }); if (j.embedded) setEmb(j.embedded); else if (j.redirectUrl) location.href = j.redirectUrl; }
+    try { const j = await api<CheckoutRes>("/api/checkout", { body: { plan, email, lang, currency: bill?.displayCurrency, ...getUtm(), "cf-turnstile-response": token || undefined } }); if (j.embedded) setEmb(j.embedded); else if (j.redirectUrl) location.href = j.redirectUrl; }
     catch (x: any) { if (x.data?.prelaunch) setPre(true); else { setErr(errMessage(x, t)); setRk((n) => n + 1); } }
   }
   const p = t.pricing.plans.find((x) => x.id === plan) || t.pricing.plans[1];

@@ -1,6 +1,6 @@
 import express from 'express'; import fs from 'node:fs'; import path from 'node:path';
 import { BRAND } from './src/brand.js'; import { PLANS, isPaid, CURRENCIES } from './src/plans.js'; import { detectCurrency, billingFor, publicPlans, usdBillingEnabled } from './src/currency.js';
-import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan } from './src/scan.js';
+import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan } from './src/scan.js'; import { utmFrom, applyUtm } from './src/utm.js';
 import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail } from './src/email/report.js'; import { sendEmail, sendEmailSoft, emailIsMock } from './src/email/send.js';
 import * as V from './src/views.js'; import { isMockMode } from './src/providers/index.js';
 import { token, safeEqual, issueMagicLink, consumeMagic } from './src/security/tokens.js'; import { createRateLimiter } from './src/security/ratelimit.js';
@@ -194,7 +194,7 @@ app.get('/robots.txt', (q, r) => r.type('text/plain').send(robotsTxt()));
 app.get('/sitemap.xml', (q, r) => r.type('application/xml').send(sitemapXml()));
 // Pre-launch waitlist: stores an email + language, never starts a payment.
 app.post('/api/waitlist', loginLimiter, captcha, (q, r) => { const email = String(q.body?.email || '').trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 200) return r.status(400).json({ error: 'Enter a valid email.' });
-  const db = getDb(); db.waitlist ||= []; if (!db.waitlist.some(w => w.email === email)) { db.waitlist.push({ email, lang: q.body?.lang === 'he' ? 'he' : 'en', plan: Object.hasOwn(PLANS, q.body?.plan) ? q.body.plan : null, at: new Date().toISOString() }); save(); }
+  const db = getDb(); db.waitlist ||= []; if (!db.waitlist.some(w => w.email === email)) { db.waitlist.push({ email, lang: q.body?.lang === 'he' ? 'he' : 'en', plan: Object.hasOwn(PLANS, q.body?.plan) ? q.body.plan : null, ...(utmFrom(q.body) ? { utm: utmFrom(q.body) } : {}), at: new Date().toISOString() }); save(); }
   r.json({ ok: true }); });
 
 // Free plan = one scan per email. Looked up BEFORE any engine call or spend, from the account's own stored businesses (email-based account).
@@ -214,14 +214,14 @@ app.post('/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body;
   if (!name || !category || !city || !email) return r.status(400).send(V.landing('Please fill all required fields.'));
   const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).send(V.landing('Free scan limit reached for today.'));
-  const db = getDb(); const account = findOrCreateAccount(email); recordConsent(account, q.body);
+  const db = getDb(); const account = findOrCreateAccount(email); recordConsent(account, q.body); if (applyUtm(account, q.body)) save();
   const hit = freeScanLookup(db, account, q.body);
   if (hit && hit.same) return r.redirect(`/r/${hit.reportId}`);
   if (hit) return r.status(409).send(V.landing(`${FREE_USED_MSG} Your existing report: ${BASE}/r/${hit.reportId}`));
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim() };
   db.businesses[business.id] = business; save();
   try {
-    const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1);
+    const scan = await runScan(account, business, { utm: utmFrom(q.body) }); freeScanIps.set(q.ip, ipCount + 1);
     await sendReportEmail(account, business, scan, q.body?.lang);
     r.redirect(`/r/${scan.id}`);
   } catch (e) { r.status(e.code === 'CAP' ? 429 : e.code === 'NO_ENGINE' ? 503 : 500).send(V.landing(e.message)); }
@@ -237,7 +237,7 @@ async function startCheckout(q) {
   const adminTest = isPrelaunch() && adminTestOk(q); if (isPrelaunch() && !adminTest) return { prelaunch: true };
   const plan = Object.hasOwn(PLANS, q.body?.plan) ? PLANS[q.body.plan] : null; if (!isPaid(plan) || !q.body?.email) return null;
   const billing = billingFor(plan, displayCurrencyFor(q));
-  const account = findOrCreateAccount(q.body.email); account.pendingPlan = plan.id; account.pendingBilling = billing; account.pendingLang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : langOf(q); const state = account.checkoutState = token(24); if (adminTest) account.pendingAdminTest = true; else delete account.pendingAdminTest; delete account.pendingTest; save();
+  const account = findOrCreateAccount(q.body.email); applyUtm(account, q.body); account.pendingPlan = plan.id; account.pendingBilling = billing; account.pendingLang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : langOf(q); const state = account.checkoutState = token(24); if (adminTest) account.pendingAdminTest = true; else delete account.pendingAdminTest; delete account.pendingTest; save();
   // Mock provider: { redirectUrl } (stand-in card page). SUMIT: { embedded: {companyId, publicKey, identifier} } for the on-page Payments JS card form.
   const co = await getPayments().createCheckout({ account, plan, billing, state, returnUrl: `${BASE}/billing/return?lang=${account.pendingLang}` }); return { ...co, billing, lang: account.pendingLang, plan: plan.id };
 }
@@ -349,21 +349,21 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body || {};
   if (!name || !category || !city || !email) return r.status(400).json({ error: 'Please fill all required fields.' });
   const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).json({ error: 'free_limit_reached', code: 'free_limit_reached', message: 'Free scan limit reached for today.' });
-  const db = getDb(); const account = findOrCreateAccount(email); recordConsent(account, q.body);
+  const db = getDb(); const account = findOrCreateAccount(email); recordConsent(account, q.body); if (applyUtm(account, q.body)) save();
   const hit = freeScanLookup(db, account, q.body);
   if (hit && hit.same) return r.json({ reportId: hit.reportId, existing: true });
   if (hit) return r.status(409).json(freeUsedBody(hit, q.body?.lang));
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim() };
   db.businesses[business.id] = business; save();
   try {
-    const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1);
+    const scan = await runScan(account, business, { utm: utmFrom(q.body) }); freeScanIps.set(q.ip, ipCount + 1);
     await sendReportEmail(account, business, scan, q.body?.lang);
     r.json({ reportId: scan.id });
   } catch (e) { if (e.code === 'NO_ENGINE') return r.status(503).json({ error: 'scan_unavailable', code: 'scan_unavailable', message: e.message }); r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }
 });
 app.get('/api/report/:id', (q, r) => { const db = getDb(); const s = db.scans[q.params.id]; if (!s) return r.status(404).json({ error: 'not found' });
   const b = db.businesses[s.businessId]; const hist = (b.scanIds || []).map(i => db.scans[i]).filter(Boolean); const idx = hist.findIndex(x => x.id === s.id);
-  r.json({ demo: !!s.mock, business: { name: b.name, category: b.category, city: b.city, website: b.website }, scan: s, previousScore: idx > 0 ? hist[idx - 1].summary.score : null, history: hist.slice(0, idx + 1).map(x => x.summary.score) }); });
+  r.json({ demo: !!s.mock, business: { name: b.name, category: b.category, city: b.city, website: b.website }, scan: (({ utm, ...pubScan }) => pubScan)(s), previousScore: idx > 0 ? hist[idx - 1].summary.score : null, history: hist.slice(0, idx + 1).map(x => x.summary.score) }); });
 app.post('/api/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).json({ error: 'Pre-launch: checkout is not open yet. Join the waitlist.', prelaunch: true }); if (!c) return r.status(400).json({ error: 'Choose a plan and enter your email.' }); r.json(c); });
 // Pricing for the UI: detected display currency + server prices + what checkout will actually charge.
 app.get('/api/pricing', (q, r) => {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Dict, Locale } from "@/lib/i18n";
 import { reducedMotion } from "@/lib/motion";
 import { api, errMessage, getConfig, type Config } from "@/lib/api";
+import { getUtm } from "@/lib/utm";
 import { demoNotices } from "@/lib/notices";
 import { creepPct, stepForPct, isSlow } from "@/lib/progress";
 import ScanForm, { PENDING } from "./ScanForm";
@@ -35,7 +36,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   // Starts the scan (from the stored pending form after /[lang] → /[lang]/scan, or directly from the form shown on this page).
   function run(p: Pending) {
     t0.current = Date.now(); maxPct.current = 0; setElapsed(0); setBiz(p); setStep(0); setReportId(""); setExisting(false); setError(""); setUsed(null); setMode("run");
-    api<{ reportId: string; existing?: boolean }>("/api/scan", { body: { ...p, lang } })
+    api<{ reportId: string; existing?: boolean }>("/api/scan", { body: { ...p, lang, ...getUtm() } })
       .then((j) => { sessionStorage.removeItem(PENDING); setExisting(!!j.existing); setReportId(j.reportId); })
       .catch((e) => { sessionStorage.removeItem(PENDING); if (e?.code === "free_scan_used") setUsed({ reportId: typeof e.data?.reportId === "string" ? e.data.reportId : undefined }); else setError(errMessage(e, t)); });
   }
