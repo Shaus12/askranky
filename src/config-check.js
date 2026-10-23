@@ -1,3 +1,4 @@
+import { parseFrom } from './email/send.js';
 // Startup config check: reports which env vars a mode needs and which are missing or inconsistent. It only ever reports
 // variable NAMES and booleans, never values.
 export function checkConfig(env = process.env) {
@@ -19,7 +20,10 @@ export function checkConfig(env = process.env) {
   if (usd && pay === 'sumit' && V('SUMIT_USD_VERIFIED') !== '1') errors.push('ENABLE_USD_BILLING must be false: USD standing orders via SUMIT are unverified (ILS-only billing enforced)');
   const mail = V('EMAIL_MODE') || 'mock'; modes.EMAIL_MODE = mail;
   if (!['mock', 'live', 'resend'].includes(mail)) errors.push('EMAIL_MODE must be "mock" or "resend"');
-  if (mail !== 'mock') { if (!E('RESEND_API_KEY')) errors.push('RESEND_API_KEY missing (needed for EMAIL_MODE=resend)'); if (!E('EMAIL_FROM')) warnings.push('EMAIL_FROM not set (default sender used)'); if (!E('UNSUBSCRIBE_SECRET')) errors.push('UNSUBSCRIBE_SECRET missing (signs unsubscribe links; needed for EMAIL_MODE=resend)'); }
+  if (mail !== 'mock') { if (!E('RESEND_API_KEY')) errors.push('RESEND_API_KEY missing (needed for EMAIL_MODE=resend)'); if (!E('EMAIL_FROM')) warnings.push('EMAIL_FROM not set (default sender "Ranky <hello@askranky.com>" used; its domain must be verified in Resend)');
+    else { const f = parseFrom(V('EMAIL_FROM')); const dom = (V('BRAND_DOMAIN') || 'askranky.com').toLowerCase();
+      if (!f) errors.push('EMAIL_FROM must be an address ("hello@askranky.com") or a name plus address ("Ranky <hello@askranky.com>")');
+      else if (f.domain !== dom && !f.domain.endsWith('.' + dom)) warnings.push(`EMAIL_FROM domain is not ${dom}: it must be a domain verified in Resend (recommended: hello@${dom}, the root domain)`); } if (!E('UNSUBSCRIBE_SECRET')) errors.push('UNSUBSCRIBE_SECRET missing (signs unsubscribe links; needed for EMAIL_MODE=resend)'); }
   if (!E('EMAIL_REPLY_TO')) warnings.push('EMAIL_REPLY_TO not set (replies go to SUPPORT_EMAIL)');
   const prod = V('NODE_ENV') === 'production'; modes.NODE_ENV = V('NODE_ENV') || 'development'; modes.DATABASE = E('DATABASE_URL') && V('STORE') !== 'json' && !E('FORCE_JSON_STORE') && (V('STORE') === 'postgres' || prod) ? 'postgres' : 'json';
   if (prod) {

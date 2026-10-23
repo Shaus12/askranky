@@ -102,3 +102,28 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [role="radio"]:foc
 .legal-body table { border-collapse: collapse; width: 100%; font-size: .9rem; }
 .legal-body th, .legal-body td { border: 1px solid rgba(148,163,184,.2); padding: .5rem .65rem; text-align: start; vertical-align: top; }
 .legal-body th { background: rgba(255,255,255,.06); color: #fff; }
+
+/* ---- Checkout / embedded SUMIT card form (components: Checkout.tsx, CardForm.tsx). Plain CSS file: no inline styles needed, CSP unchanged. ---- */
+.pay-panel { padding: 1.25rem; }
+@media (min-width: 480px) { .pay-panel { padding: 1.75rem; } }
+.pay-eyebrow { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: #93c5fd; font-weight: 600; }
+.pay-rows { display: grid; gap: .45rem; margin-top: 1rem; padding-top: .9rem; border-top: 1px solid var(--line); font-size: .875rem; line-height: 1.5; color: #cbd5e1; }
+.pay-row { display: flex; justify-content: space-between; gap: 1rem; }
+.pay-secure { display: inline-flex; align-items: center; gap: .35rem; border-radius: 9999px; border: 1px solid rgba(63,191,138,.35); background: rgba(63,191,138,.1); padding: .2rem .65rem; font-size: .75rem; color: #a7f3d0; white-space: nowrap; }
+.pay-field { display: block; min-width: 0; }
+.pay-label { display: block; margin-bottom: .35rem; font-size: .875rem; font-weight: 500; color: #e2e8f0; }
+.pay-input { display: block; width: 100%; min-height: 2.75rem; border-radius: .85rem; border: 1px solid rgba(148,163,184,.28); background: rgba(1,6,26,.55); padding: .6rem .9rem; color: #fff; font-size: 1rem; line-height: 1.4; text-align: left; font-variant-numeric: tabular-nums; transition: border-color .2s, box-shadow .2s, background .2s; }
+.pay-input[dir="ltr"] { letter-spacing: .04em; }
+.pay-input::placeholder { color: #64748b; letter-spacing: .02em; }
+.pay-input:hover { border-color: rgba(148,163,184,.5); }
+.pay-input:focus, .pay-input:focus-visible { outline: none; border-color: #60a5fa; background: rgba(1,6,26,.8); box-shadow: 0 0 0 3px rgba(37,99,235,.35); }
+.pay-input[aria-invalid="true"] { border-color: rgba(233,122,111,.7); box-shadow: 0 0 0 3px rgba(233,122,111,.15); }
+.pay-input[readonly] { opacity: .65; cursor: progress; }
+.pay-input[type="email"] { letter-spacing: 0; }
+.pay-grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
+.pay-hint { margin-top: .4rem; font-size: .75rem; line-height: 1.5; color: #94a3b8; }
+.pay-error { display: flex; align-items: flex-start; gap: .55rem; border-radius: .85rem; border: 1px solid rgba(233,122,111,.4); background: rgba(233,122,111,.1); padding: .7rem .9rem; font-size: .875rem; line-height: 1.55; color: #fecaca; }
+.pay-submit { width: 100%; min-height: 3rem; font-size: 1rem; }
+.btn-cta:disabled { opacity: .65; cursor: not-allowed; transform: none; box-shadow: none !important; }
+.pay-spin { width: 1.1rem; height: 1.1rem; flex: none; border-radius: 9999px; border: 2px solid rgba(3,32,15,.25); border-top-color: #03200f; animation: pay-spin .8s linear infinite; }
+@keyframes pay-spin { to { transform: rotate(360deg); } }

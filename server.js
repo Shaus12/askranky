@@ -1,7 +1,7 @@
 import express from 'express'; import fs from 'node:fs'; import path from 'node:path';
 import { BRAND } from './src/brand.js'; import { PLANS, isPaid, CURRENCIES } from './src/plans.js'; import { detectCurrency, billingFor, publicPlans, usdBillingEnabled } from './src/currency.js';
 import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan } from './src/scan.js';
-import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail } from './src/email/report.js'; import { sendEmail, emailIsMock } from './src/email/send.js';
+import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail } from './src/email/report.js'; import { sendEmail, sendEmailSoft, emailIsMock } from './src/email/send.js';
 import * as V from './src/views.js'; import { isMockMode } from './src/providers/index.js';
 import { token, safeEqual, issueMagicLink, consumeMagic } from './src/security/tokens.js'; import { createRateLimiter } from './src/security/ratelimit.js';
 import { verifyTurnstile, turnstileSiteKey } from './src/security/turnstile.js'; import { esc } from './src/security/html.js';
@@ -51,7 +51,7 @@ function recordConsent(a, body) {
   getDb().events.push({ at: a.marketingConsent.at, type: 'consent.marketing', account: a.id, version: CONSENT_VERSION }); save();
 }
 async function sendReportEmail(account, business, scan, lang) { const u = unsubUrl(BASE, account, 'all', lang === 'he' ? 'he' : 'en');
-  await sendEmail({ to: account.email, headers: unsubHeaders(u), subject: `Your ${BRAND.name} report: ${business.name} scored ${scan.summary.score}/100`, html: renderWeeklyEmail({ business, scan, reportUrl: `${BASE}/r/${scan.id}`, unsubscribeUrl: u }) }); }
+  await sendEmailSoft({ to: account.email, headers: unsubHeaders(u), subject: `Your ${BRAND.name} report: ${business.name} scored ${scan.summary.score}/100`, html: renderWeeklyEmail({ business, scan, reportUrl: `${BASE}/r/${scan.id}`, unsubscribeUrl: u }) }); }
 // Admin-only test checkout while pre-launch: ADMIN_TEST_TOKEN via x-admin-test-token header (or ?admin_token=), compared
 // timing-safe. Only ever with the mock payments provider, so no real card can be charged before launch.
 export const adminTestOk = q => { const t = process.env.ADMIN_TEST_TOKEN; if (!t || t.length < 16 || getPayments().id !== 'mock') return false;
@@ -123,31 +123,69 @@ app.post('/api/admin/test-checkout/login-link', adminTestGate, async (q, r) => {
 // The page is plain HTML with ONE inline script + ONE inline style, both allowed by a per-response CSP nonce. Card inputs have no `name`
 // (a native submit could never send them) and are read only by SUMIT's payments.js from the DOM; our script never reads their values.
 const adminPage = nonce => `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ranky admin test</title>
-<style nonce="${nonce}">body{font:16px system-ui,sans-serif;background:#01061a;color:#e6ecff;max-width:30rem;margin:3rem auto;padding:0 1rem}input,button{display:block;width:100%;box-sizing:border-box;margin:.5rem 0;padding:.7rem;border-radius:8px;border:1px solid #3a4a7a;background:#0b1430;color:#fff;font-size:1rem}.row{display:flex;gap:.5rem}button{background:#2563eb;cursor:pointer}button.alt{background:#334155}p{color:#9fb0d8}#out{word-break:break-all}#out a{color:#7dd3fc}</style></head><body>
-<h1>בדיקת סליקה: ₪1</h1><p>חיוב אמיתי של ₪1 (תשלום אחד). דורש טוקן אדמין. פרטי הכרטיס נשלחים ישירות ל־SUMIT ולא עוברים בשרת שלנו.</p>
+<style nonce="${nonce}">
+*{box-sizing:border-box}body{margin:0;min-height:100vh;font:16px/1.5 Heebo,"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color:#e2e8f0;background:radial-gradient(70% 40% at 50% 0%,rgba(37,99,235,.22),transparent 70%),linear-gradient(180deg,#01061a,#031035 60%,#01061a);-webkit-font-smoothing:antialiased}
+main{max-width:30rem;margin:0 auto;padding:1.5rem 1rem 3rem}
+.badge{display:inline-block;border-radius:9999px;border:1px solid rgba(232,176,75,.5);background:rgba(232,176,75,.14);color:#fde68a;padding:.2rem .8rem;font-size:.8rem;font-weight:700;letter-spacing:.04em}
+h1{margin:.75rem 0 .25rem;font-size:1.75rem;line-height:1.2;color:#fff}
+.sub{margin:0 0 1rem;color:#a5b4cb;font-size:.95rem}
+.warn{display:flex;gap:.6rem;border-radius:.85rem;border:1px solid rgba(232,176,75,.5);background:rgba(232,176,75,.1);color:#fde68a;padding:.8rem 1rem;font-size:.9rem;margin-bottom:1rem}
+.warn b{color:#fff}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025));border:1px solid rgba(148,163,184,.16);border-radius:1.25rem;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 24px 48px -28px rgba(0,0,0,.7);padding:1.25rem;margin-bottom:1rem}
+.card h2{margin:0 0 .75rem;font-size:1rem;color:#fff}
+label{display:block;margin:0 0 .35rem;font-size:.875rem;font-weight:500;color:#e2e8f0}
+.f{margin-bottom:.9rem}.f.last{margin-bottom:0}.f.top{margin-top:.9rem}
+input{display:block;width:100%;min-height:2.75rem;border-radius:.85rem;border:1px solid rgba(148,163,184,.28);background:rgba(1,6,26,.55);padding:.6rem .9rem;color:#fff;font:inherit;font-size:1rem;text-align:left;font-variant-numeric:tabular-nums;transition:border-color .2s,box-shadow .2s}
+input::placeholder{color:#64748b}input:hover{border-color:rgba(148,163,184,.5)}
+input:focus{outline:none;border-color:#60a5fa;box-shadow:0 0 0 3px rgba(37,99,235,.35)}
+input:read-only{opacity:.65;cursor:progress}
+.row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
+.hint{margin:.4rem 0 0;font-size:.75rem;color:#94a3b8}
+.og-errors{color:#fecaca;font-size:.875rem}.og-errors:not(:empty){border:1px solid rgba(233,122,111,.4);background:rgba(233,122,111,.1);border-radius:.85rem;padding:.7rem .9rem;margin-bottom:.9rem}
+button{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;min-height:3rem;border:0;border-radius:9999px;padding:.8rem 1.5rem;font:inherit;font-weight:700;font-size:1rem;cursor:pointer;background:#22c55e;color:#03200f;box-shadow:0 10px 30px -10px rgba(34,197,94,.6);transition:background .2s,transform .2s}
+button:hover{background:#4ade80;transform:translateY(-1px)}
+button:disabled{opacity:.65;cursor:not-allowed;transform:none;box-shadow:none}
+button.alt{background:transparent;color:#dbeafe;border:1px solid rgba(147,197,253,.35);box-shadow:none;font-weight:600}button.alt:hover{background:rgba(37,99,235,.18)}
+a:focus-visible,button:focus-visible{outline:2px solid #93c5fd;outline-offset:3px}
+.spin{display:none;width:1.1rem;height:1.1rem;border-radius:9999px;border:2px solid rgba(3,32,15,.25);border-top-color:#03200f;animation:spin .8s linear infinite}.busy .spin{display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+#out{margin:.75rem 0;min-height:1.5rem;word-break:break-word;color:#a5b4cb;font-size:.95rem}#out.ok{color:#a7f3d0}#out.err{color:#fecaca}#out a{color:#7dd3fc}
+.secure{margin:.9rem 0 0;text-align:center;font-size:.75rem;color:#94a3b8}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style></head><body><main>
+<span class="badge">TEST ₪1</span>
+<h1>בדיקת סליקה: ₪1</h1><p class="sub">חיוב אמיתי של ₪1 (תשלום אחד) באותו מסלול קוד כמו הצ'קאאוט. דורש טוקן אדמין.</p>
+<div class="warn" role="note"><span aria-hidden="true">⚠️</span><div><b>זה חיוב אמיתי.</b> הכרטיס יחויב ב־₪1 וייווצרו קבלה והוראת קבע ב־SUMIT. ההחזר ידני בדשבורד של SUMIT (ראו TEST-CHECKOUT.he.md). אין להשתמש בכרטיס של לקוח.</div></div>
 <form id="f" autocomplete="off" novalidate>
-<input id="e" type="email" placeholder="מייל" autocomplete="off" dir="ltr"><input id="t" type="password" placeholder="טוקן אדמין" autocomplete="off" dir="ltr">
-<input type="text" inputmode="numeric" maxlength="23" placeholder="מספר כרטיס" autocomplete="off" dir="ltr" data-og="cardnumber">
-<div class="row"><input type="text" inputmode="numeric" maxlength="2" placeholder="MM" autocomplete="off" dir="ltr" data-og="expirationmonth"><input type="text" inputmode="numeric" maxlength="4" placeholder="YYYY" autocomplete="off" dir="ltr" data-og="expirationyear"><input type="text" inputmode="numeric" maxlength="4" placeholder="CVV" autocomplete="off" dir="ltr" data-og="cvv"></div>
-<input type="text" inputmode="numeric" maxlength="12" placeholder="תעודת זהות של בעל הכרטיס" autocomplete="off" dir="ltr" data-og="citizenid">
-<div class="og-errors"></div>
-<button id="go" type="submit">שלם ₪1</button></form>
-<button id="lk" class="alt" type="button">קבל קישור כניסה לדשבורד (אחרי החיוב)</button><p id="out" role="status"></p>
+<div class="card"><h2>פרטי בדיקה</h2>
+<div class="f"><label for="e">מייל</label><input id="e" type="email" placeholder="you@example.com" autocomplete="off" dir="ltr"></div>
+<div class="f last"><label for="t">טוקן אדמין</label><input id="t" type="password" placeholder="••••••••••••••••" autocomplete="off" dir="ltr"></div></div>
+<div class="card"><h2>פרטי כרטיס</h2>
+<div class="f"><label for="cn">מספר כרטיס</label><input id="cn" type="text" inputmode="numeric" maxlength="23" placeholder="1234 5678 9012 3456" autocomplete="cc-number" dir="ltr" data-og="cardnumber"></div>
+<div class="row"><div><label for="cm">חודש</label><input id="cm" type="text" inputmode="numeric" maxlength="2" placeholder="MM" autocomplete="cc-exp-month" dir="ltr" data-og="expirationmonth"></div><div><label for="cy">שנה</label><input id="cy" type="text" inputmode="numeric" maxlength="4" placeholder="YYYY" autocomplete="cc-exp-year" dir="ltr" data-og="expirationyear"></div><div><label for="cv">CVV</label><input id="cv" type="text" inputmode="numeric" maxlength="4" placeholder="•••" autocomplete="cc-csc" dir="ltr" data-og="cvv"></div></div>
+<p class="hint">CVV: שלוש הספרות בגב הכרטיס.</p>
+<div class="f last top"><label for="ci">ת.ז. בעל הכרטיס (לא חובה)</label><input id="ci" type="text" inputmode="numeric" maxlength="12" placeholder="123456789" autocomplete="off" dir="ltr" data-og="citizenid"><p class="hint">נדרש רק אם מנפיק הכרטיס דורש.</p></div></div>
+<div id="og" class="og-errors" role="alert" aria-live="assertive"></div>
+<button id="go" type="submit"><span class="spin" aria-hidden="true"></span><span id="gol">שלם ₪1</span></button>
+<p class="secure">🔒 תשלום מאובטח באמצעות SUMIT. פרטי הכרטיס לא עוברים בשרת שלנו.</p></form>
+<p id="out" role="status" aria-live="polite"></p>
+<button id="lk" class="alt" type="button">קבל קישור כניסה לדשבורד (אחרי החיוב)</button>
+</main>
 <script src="${JQUERY_PATH}"></script><script src="${SUMIT_SCRIPT_URL}"></script>
 <script nonce="${nonce}">
-const $=i=>document.getElementById(i),out=$('out');let busy=false;
+const $=i=>document.getElementById(i),out=$('out');let busy=false;const say=(m,c)=>{out.className=c||'';out.textContent=m};const wait=on=>{$('go').disabled=on;$('go').classList.toggle('busy',on);$('gol').textContent=on?'מעבד תשלום…':'שלם ₪1'};
 async function call(p,body){const r=await fetch(p,{method:'POST',headers:{'content-type':'application/json','x-admin-test-token':$('t').value},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));return{status:r.status,j}}
 function tokenize(c){return new Promise((res,rej)=>{if(typeof OfficeGuy==='undefined'||!OfficeGuy.Payments)return rej(new Error('payments.js לא נטען (חסימה או רשת)'));
 const to=setTimeout(()=>rej(new Error('הטוקניזציה לא הסתיימה בזמן')),30000);
 OfficeGuy.Payments.CreateToken({CompanyID:c.companyId,APIPublicKey:c.publicKey,FormSelector:'#f',ErrorsClass:'.og-errors',ResponseCallback:function(x){clearTimeout(to);const t=x&&x.Status===0&&x.Data&&x.Data.SingleUseToken;t?res(t):rej(new Error((x&&(x.UserErrorMessage||x.TechnicalErrorDetails))||'הכרטיס לא אומת'))}})})}
 function wipe(){document.querySelectorAll('[data-og]').forEach(i=>{i.value=''});const o=$('og-token');if(o)o.value=''}
-$('f').addEventListener('submit',async ev=>{ev.preventDefault();if(busy)return;busy=true;$('go').disabled=true;out.textContent='...';
-try{const st=await call('/api/admin/test-checkout',{email:$('e').value});if(!st.j.ok){out.textContent='נכשל ('+st.status+(st.j.error?': '+st.j.error:'')+')';return}
+$('f').addEventListener('submit',async ev=>{ev.preventDefault();if(busy)return;busy=true;wait(true);$('og').textContent='';say('מתחיל בדיקה…');
+try{const st=await call('/api/admin/test-checkout',{email:$('e').value});if(!st.j.ok){say('נכשל ('+st.status+(st.j.error?': '+st.j.error:'')+')','err');return}
 const tok=await tokenize(st.j.embedded);wipe();
 const ch=await call('/api/admin/test-checkout/charge',{identifier:st.j.embedded.identifier,token:tok});
-out.textContent=ch.j.ok?'החיוב עבר (₪1). בדוק ב־SUMIT: קבלה, הוראת קבע אחת.':'החיוב נכשל ('+ch.status+(ch.j.error?': '+ch.j.error:'')+')'}
-catch(e){out.textContent=String(e&&e.message||e)}finally{wipe();busy=false;$('go').disabled=false}});
-$('lk').onclick=async()=>{out.textContent='...';try{const k=await call('/api/admin/test-checkout/login-link',{email:$('e').value});if(!k.j.ok){out.textContent='נכשל ('+k.status+')';return}out.textContent='';const a=document.createElement('a');a.href=k.j.link;a.textContent='פתח דשבורד (תקף 15 דקות, שימוש אחד)';out.appendChild(a)}catch(e){out.textContent='שגיאת רשת'}};
+ch.j.ok?say('החיוב עבר (₪1). בדוק ב־SUMIT: קבלה, הוראת קבע אחת.','ok'):say('החיוב נכשל ('+ch.status+(ch.j.error?': '+ch.j.error:'')+')','err')}
+catch(e){const m=String(e&&e.message||e);say($('og').textContent.trim()===m?'':m,'err')}finally{wipe();busy=false;wait(false)}});
+$('lk').onclick=async()=>{say('…');try{const k=await call('/api/admin/test-checkout/login-link',{email:$('e').value});if(!k.j.ok){say('נכשל ('+k.status+')','err');return}say('','ok');const a=document.createElement('a');a.href=k.j.link;a.textContent='פתח דשבורד (תקף 15 דקות, שימוש אחד)';out.appendChild(a)}catch(e){say('שגיאת רשת','err')}};
 </script></body></html>`;
 app.get('/admin/test-checkout', (q, r, next) => { if (!realTestEnabled()) return next(); const nonce = adminNonce();
   r.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': checkoutCsp({ sumit: true, fonts: false, scriptSources: [`'nonce-${nonce}'`], styleSources: [`'nonce-${nonce}'`] }) }).type('html').send(adminPage(nonce)); });
@@ -159,14 +197,27 @@ app.post('/api/waitlist', loginLimiter, captcha, (q, r) => { const email = Strin
   const db = getDb(); db.waitlist ||= []; if (!db.waitlist.some(w => w.email === email)) { db.waitlist.push({ email, lang: q.body?.lang === 'he' ? 'he' : 'en', plan: Object.hasOwn(PLANS, q.body?.plan) ? q.body.plan : null, at: new Date().toISOString() }); save(); }
   r.json({ ok: true }); });
 
+// Free plan = one scan per email. Looked up BEFORE any engine call or spend, from the account's own stored businesses (email-based account).
+// Same business (name + city, case/space-insensitive) again -> the existing report is returned as before (existing:true). A different
+// business -> 409 free_scan_used with a pointer to the report this email already owns.
+const norm = v => String(v ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+export function freeScanLookup(db, account, body) {
+  if (account.plan !== 'free') return null;
+  const mine = Object.values(db.businesses).filter(b => b.accountId === account.id && b.scanIds?.length); if (!mine.length) return null;
+  const same = mine.find(b => norm(b.name) === norm(body?.name) && norm(b.city) === norm(body?.city)); const b = same || mine[0];
+  return { same: !!same, reportId: b.scanIds.at(-1) };
+}
+const FREE_USED_MSG = 'Free plan includes one scan per email.';
+const freeUsedBody = (hit, lang) => ({ error: 'free_scan_used', code: 'free_scan_used', message: FREE_USED_MSG, reportId: hit.reportId, reportUrl: `/${lang === 'he' ? 'he' : 'en'}/r/${hit.reportId}` });
+
 app.post('/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body;
   if (!name || !category || !city || !email) return r.status(400).send(V.landing('Please fill all required fields.'));
   const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).send(V.landing('Free scan limit reached for today.'));
   const db = getDb(); const account = findOrCreateAccount(email); recordConsent(account, q.body);
-  if (account.plan === 'free' && Object.values(db.businesses).some(b => b.accountId === account.id && b.scanIds?.length)) {
-    const b = Object.values(db.businesses).find(b => b.accountId === account.id); return r.redirect(`/r/${b.scanIds.at(-1)}`);
-  }
+  const hit = freeScanLookup(db, account, q.body);
+  if (hit && hit.same) return r.redirect(`/r/${hit.reportId}`);
+  if (hit) return r.status(409).send(V.landing(`${FREE_USED_MSG} Your existing report: ${BASE}/r/${hit.reportId}`));
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim() };
   db.businesses[business.id] = business; save();
   try {
@@ -216,8 +267,8 @@ async function completeCheckout(q, { identifier, query, via }) {
     Object.assign(account, { plan: isTest ? 'starter' : plan.id, subscriptionRef: res.subscriptionRef, paidAt: new Date().toISOString(), billing: { currency: billing.currency, amount: billing.amount }, status: 'active', lang, paidThrough: isTest ? new Date(Date.now() + TEST_ACCESS_MS).toISOString() : addMonth(new Date()).toISOString(), ...(account.pendingAdminTest ? { adminTest: true } : {}), ...(isTest ? { testSubscription: true, adminTest: true } : {}) }); delete account.cancelledAt; delete account.pendingAdminTest; delete account.pendingTest; delete account.pendingPlan; delete account.pendingBilling; delete account.checkoutState; delete account.pendingLang; save();
     db.events.push({ at: new Date().toISOString(), type: 'subscription.activated', account: account.id, plan: plan.id, currency: billing.currency, amount: billing.amount, ...(isTest ? { test: true, documentId: Number(res.documentId) || null } : {}) }); save();
     // Don't hand the dashboard key to whoever holds this URL: email a single-use magic link instead.
-    await emailMagicLink(account);
-    await sendEmail({ to: account.email, ...renderTx('receipt', lang, { planName: plan.name, amount: billing.amount, currency: billing.currency, paidThrough: ymd(account.paidThrough), receiptUrl: res.receiptUrl }) });
+    await emailMagicLink(account).catch(() => {});
+    await sendEmailSoft({ to: account.email, ...renderTx('receipt', lang, { planName: plan.name, amount: billing.amount, currency: billing.currency, paidThrough: ymd(account.paidThrough), receiptUrl: res.receiptUrl }) });
     return { code: 'ok', lang };
   } catch (e) { if (isTest) console.error('[admin-test] charge failed'); return { code: 'error', lang, error: e.message }; }
   finally { chargeLocks.delete(account.id); }
@@ -279,7 +330,7 @@ app.post('/api/dashboard/:id/cancel', async (q, r) => {
   const now = new Date(); a.status = 'cancelled'; a.cancelledAt = now.toISOString(); a.paidThrough ||= addMonth(a.paidAt || now).toISOString();
   getDb().events.push({ at: a.cancelledAt, type: 'subscription.cancelled', account: a.id, plan: a.plan, source: 'dashboard' }); save();
   const lang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : a.lang || 'en';
-  await sendEmail({ to: a.email, ...renderTx('cancel', lang, { planName: PLANS[a.plan].name, cancelDate: ymd(now), paidThrough: ymd(a.paidThrough), currency: a.billing?.currency }) });
+  await sendEmailSoft({ to: a.email, ...renderTx('cancel', lang, { planName: PLANS[a.plan].name, cancelDate: ymd(now), paidThrough: ymd(a.paidThrough), currency: a.billing?.currency }) });
   r.json({ ok: true, paidThrough: a.paidThrough });
 });
 // Unsubscribe: GET shows a confirm page (so mail scanners prefetching the link don't unsubscribe); POST performs it.
@@ -299,8 +350,9 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   if (!name || !category || !city || !email) return r.status(400).json({ error: 'Please fill all required fields.' });
   const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).json({ error: 'free_limit_reached', code: 'free_limit_reached', message: 'Free scan limit reached for today.' });
   const db = getDb(); const account = findOrCreateAccount(email); recordConsent(account, q.body);
-  const existing = Object.values(db.businesses).find(b => b.accountId === account.id && b.scanIds?.length);
-  if (account.plan === 'free' && existing) return r.json({ reportId: existing.scanIds.at(-1), existing: true });
+  const hit = freeScanLookup(db, account, q.body);
+  if (hit && hit.same) return r.json({ reportId: hit.reportId, existing: true });
+  if (hit) return r.status(409).json(freeUsedBody(hit, q.body?.lang));
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim() };
   db.businesses[business.id] = business; save();
   try {

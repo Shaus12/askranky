@@ -8,6 +8,7 @@ import { api, errMessage, getConfig, type Config } from "@/lib/api";
 import { demoNotices } from "@/lib/notices";
 import { creepPct, stepForPct, isSlow } from "@/lib/progress";
 import ScanForm, { PENDING } from "./ScanForm";
+import FreeLimitNotice from "./FreeLimitNotice";
 import Reveal from "./Reveal";
 import MaskHeading from "./MaskHeading";
 
@@ -21,7 +22,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   const s = t.scan; const n = s.steps.length; const router = useRouter();
   const [mode, setMode] = useState<"init" | "form" | "run" | "demo">("init");
   const [biz, setBiz] = useState<Pending | null>(null); const [cfg, setCfg] = useState<Config | null>(null); const nt = demoNotices(cfg, t);
-  const [step, setStep] = useState(0); const [reportId, setReportId] = useState(""); const [existing, setExisting] = useState(false); const [error, setError] = useState("");
+  const [step, setStep] = useState(0); const [reportId, setReportId] = useState(""); const [existing, setExisting] = useState(false); const [error, setError] = useState(""); const [used, setUsed] = useState<{ reportId?: string } | null>(null);
   const started = useRef(false); const t0 = useRef(0); const maxPct = useRef(0); const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     getConfig().then(setCfg);
@@ -33,10 +34,10 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   }, [lang, n]);
   // Starts the scan (from the stored pending form after /[lang] → /[lang]/scan, or directly from the form shown on this page).
   function run(p: Pending) {
-    t0.current = Date.now(); maxPct.current = 0; setElapsed(0); setBiz(p); setStep(0); setReportId(""); setExisting(false); setError(""); setMode("run");
+    t0.current = Date.now(); maxPct.current = 0; setElapsed(0); setBiz(p); setStep(0); setReportId(""); setExisting(false); setError(""); setUsed(null); setMode("run");
     api<{ reportId: string; existing?: boolean }>("/api/scan", { body: { ...p, lang } })
       .then((j) => { sessionStorage.removeItem(PENDING); setExisting(!!j.existing); setReportId(j.reportId); })
-      .catch((e) => { sessionStorage.removeItem(PENDING); setError(errMessage(e, t)); });
+      .catch((e) => { sessionStorage.removeItem(PENDING); if (e?.code === "free_scan_used") setUsed({ reportId: typeof e.data?.reportId === "string" ? e.data.reportId : undefined }); else setError(errMessage(e, t)); });
   }
   // Progress creeps asymptotically (never visibly stalls while a real scan takes 1-2 min); it finishes only once the server answered.
   useEffect(() => {
@@ -58,6 +59,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
       <span data-hair className="hairline mx-auto my-8 block w-40" />
       <div data-reveal><ScanForm t={t} lang={lang} onStart={(p) => run(p as unknown as Pending)} /></div>
     </Reveal></main>);
+  if (used) return <FreeLimitNotice lang={lang} reportId={used.reportId} prelaunch={cfg ? !!cfg.prelaunch : true} onOther={() => { setUsed(null); setMode("form"); }} />;
   const done = step >= n; const TOTAL = 15;
   // Never goes backwards: creeping %, then step-based % once the report is ready, 100 when done.
   maxPct.current = Math.max(maxPct.current, done ? 100 : reportId ? (step / n) * 100 : mode === "demo" ? (step / n) * 100 : creepPct(elapsed));
