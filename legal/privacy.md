@@ -1,5 +1,5 @@
 # Privacy Policy — Ranky
-Last updated: 2026-10-23 (version 1.1)
+Last updated: 2026-10-23 (version 1.2)
 The Hebrew version of this policy prevails over the English translation if they differ.
 
 ## 1. Who we are
@@ -50,7 +50,7 @@ Access through secret tokens and one-time sign-in links, HTTPS, rate limiting, b
 Under the Israeli Privacy Protection Law, 5741-1981, as amended (including Amendment 13, in force since August 2025) (and, where applicable, GDPR or US state laws such as CCPA), you may ask to access, correct or delete your data, object to direct marketing, and (where applicable) receive your data in portable form. Email shaysho1111@gmail.com from the address on your account; we respond within 30 days. You may also complain to the Israeli Privacy Protection Authority.
 
 ## 9. Emails and marketing
-Service emails (sign-in links, reports, billing notices) are sent as part of the Service. Weekly reports are part of paid plans and carry an unsubscribe link. Product news and tips are sent only if you tick the optional box on the scan form (it is unticked by default), are labelled as advertising ("פרסומת" in Hebrew), and include a one-click unsubscribe link. You can withdraw consent at any time (Communications Law, s.30A).
+Service emails (sign-in links, reports, billing notices) are sent as part of the Service. Scan reports carry an unsubscribe link; automated weekly report emails are not sent yet and, if we start sending them, will carry one too. Product news and tips are sent only if you tick the optional box on the scan form (it is unticked by default), are labelled as advertising ("פרסומת" in Hebrew), and include a one-click unsubscribe link. You can withdraw consent at any time (Communications Law, s.30A).
 
 ## 10. Cookies and similar technologies
 We use only strictly necessary and functional storage: a language-preference cookie and a currency-preference cookie (set only when you switch language or currency), browser session storage to carry your scan or dashboard session, and local storage to remember your cookie-notice choice and your accessibility settings. Cloudflare Turnstile (bot protection) and, on the card step of checkout, SUMIT's payment script may use their own storage. We do not use analytics, advertising or tracking cookies, and we do not use any third-party tracker. The full list, durations and how to control them are in the [Cookie Policy](/en/legal/cookies).

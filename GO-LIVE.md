@@ -109,3 +109,7 @@ The free plan has no cron jobs and the service sleeps after ~15 min idle, so the
 ## 4. Launch
 - `npm run config:check` shows no errors → set `PRELAUNCH=0` (or leave unset: auto-off once scans and payments are both live).
 - Verify: `/health` shows `prelaunch:false, store:"postgres"`, `/robots.txt`, `/sitemap.xml`, a test scan, a 404 page.
+
+## Weekly report emails (off by default)
+- `POST /api/internal/cron/weekly` (same `X-Cron-Secret` / `CRON_SECRET` rules as `/api/internal/cron/sync`) runs the weekly job (re-scan every paid business + email the report). It is **not scheduled** and does nothing unless `WEEKLY_EMAILS_ENABLED=1` is set on the server (otherwise it answers `200 {"ok":true,"skipped":"weekly_disabled"}`).
+- Until the owner approves automated weekly emails, the site and terms say "Regular tracking (weekly reports coming soon)". When enabling it: set the flag, add a weekly cron-job.org job, and update the copy and terms.

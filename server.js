@@ -70,18 +70,27 @@ app.get('/healthz', (q, r) => r.set('Cache-Control', 'no-store').json({ ok: true
 // Disabled (404) unless CRON_SECRET (>= 16 chars) is set. Requires header X-Cron-Secret, compared timing-safe (sha256 + timingSafeEqual).
 // Not behind the CAPTCHA. Only wrong-secret attempts are rate limited (CRON_FAIL_MAX per 15 min per IP). Concurrent runs are collapsed
 // by an in-process lock (the second caller gets 202 {running:true}). The sync is idempotent. Responses never include sync data.
-export const cronHooks = { sync: syncAll };
+import { runWeekly } from './src/weekly.js';
+export const cronHooks = { sync: syncAll, weekly: () => runWeekly({ base: BASE }) };
 const cronFailLimiter = createRateLimiter({ max: Number(process.env.CRON_FAIL_MAX || 10), windowMs: 15 * 60 * 1000, onLimit: (q, r) => r.status(429).json({ ok: false }) });
-let cronRunning = false;
-app.post('/api/internal/cron/sync', async (q, r) => {
-  r.set('Cache-Control', 'no-store'); const secret = process.env.CRON_SECRET || ''; if (secret.length < 16) return r.status(404).json({ ok: false });
-  if (!safeEqual(String(q.get('x-cron-secret') || ''), secret)) return cronFailLimiter(q, r, () => r.status(401).json({ ok: false }));
-  if (cronRunning) return r.status(202).json({ ok: true, running: true });
-  cronRunning = true;
-  try { await cronHooks.sync(); console.log('[cron] billing sync done'); return r.json({ ok: true, ranAt: new Date().toISOString() }); }
-  catch (e) { console.error(`[cron] billing sync failed (${e?.name || 'Error'})`); return r.status(500).json({ ok: false }); }
-  finally { cronRunning = false; }
-});
+// Same semantics for every cron endpoint: 404 disabled, 401 wrong secret, 202 already running, 500 {ok:false}, 200 {ok, ranAt}. `enabled` (optional)
+// is an extra opt-in flag; when it is off the endpoint answers 200 {ok:true, skipped} after authenticating and runs nothing.
+function cronEndpoint(name, label, { enabled, skipped } = {}) { let running = false;
+  return async (q, r) => {
+    r.set('Cache-Control', 'no-store'); const secret = process.env.CRON_SECRET || ''; if (secret.length < 16) return r.status(404).json({ ok: false });
+    if (!safeEqual(String(q.get('x-cron-secret') || ''), secret)) return cronFailLimiter(q, r, () => r.status(401).json({ ok: false }));
+    if (enabled && !enabled()) return r.json({ ok: true, skipped });
+    if (running) return r.status(202).json({ ok: true, running: true });
+    running = true;
+    try { await cronHooks[name](); console.log(`[cron] ${label} done`); return r.json({ ok: true, ranAt: new Date().toISOString() }); }
+    catch (e) { console.error(`[cron] ${label} failed (${e?.name || 'Error'})`); return r.status(500).json({ ok: false }); }
+    finally { running = false; }
+  }; }
+app.post('/api/internal/cron/sync', cronEndpoint('sync', 'billing sync'));
+// Weekly report emails: NOT scheduled anywhere and inert unless WEEKLY_EMAILS_ENABLED=1 (default off) — it re-scans every paid business (AI cost)
+// and emails the customers, so it only runs once the owner has approved automated weekly emails.
+export const weeklyEmailsEnabled = () => process.env.WEEKLY_EMAILS_ENABLED === '1';
+app.post('/api/internal/cron/weekly', cronEndpoint('weekly', 'weekly reports', { enabled: weeklyEmailsEnabled, skipped: 'weekly_disabled' }));
 // ---------- Card data guard (checkout / charge / admin routes) ----------
 // Card numbers must never reach this server: payments.js sends them straight to SUMIT and we only ever receive a SingleUseToken.
 // Defence in depth: refuse (400, nothing stored, nothing logged but the path) any request whose keys look like card fields or whose
