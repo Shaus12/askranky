@@ -5,7 +5,7 @@
 ## 0. משימות ל-Ops (לבדיקה אצלנו, לא בקוד)
 
 1. **בתשלום האמיתי הראשון: לוודא אם SUMIT שולחת ללקוח את הקבלה במייל.** לבדוק בתיבה של הלקוח (או חשבון בדיקה) ובכרטיס הלקוח ב-SUMIT. אם לא נשלחת: להפעיל שליחה אוטומטית של מסמכים בהגדרות SUMIT (או להוסיף `UpdateCustomerByEmail_AttachDocument` לבקשת החיוב אחרי בדיקה). עד אז הטקסט במייל שלנו כבר לא טוען כלום בביטחון ("ספק החיוב מנפיק; אם לא הגיעה, השב למייל").
-2. לוודא ב-Render: `SUPPORT_EMAIL` (אחרת הפוטר והקבלה מצביעים ל-`support@askranky.com`), `EMAIL_REPLY_TO`, `BASE_URL`.
+2. לוודא ב-Render: `SUPPORT_EMAIL` (ברירת המחדל: shaysho1111@gmail.com; הפוטר והקבלה מצביעים אליו), `EMAIL_REPLY_TO`, `BASE_URL`.
 3. לוודא ב-Render: `TRUST_PROXY`. הערך `1` עבד שגוי עד התיקון בענף הזה (ראו סעיף 3, פריט 1). אם Cloudflare בענן הכתום מול Render יש שתי קפיצות: אז הערך הנכון הוא `2`; לבדוק מה כתובת ה-IP שרואים בבקשה (למשל בלוג/בדיקה אחרי הפריסה).
 4. להחליט אם להפעיל דוחות שבועיים: אם כן, `WEEKLY_EMAILS_ENABLED=1` + משימת cron-job.org שבועית ל-`POST /api/internal/cron/weekly` + עדכון הטקסטים והתנאים.
 5. לעקוב אחרי אירועי `billing.email_failed`, `email.report_rate_limited`, `subscription.superseded` ב-DB (אין בהם כתובות מייל).
@@ -37,7 +37,7 @@
 1. **`TRUST_PROXY=1` לא עבד (תוקן בקוד).** המשתנה מגיע כמחרוזת "1", ו-Express מפרש מחרוזת כרשימת כתובות IP (`0.0.0.1`), כלומר ה-proxy של Render לא היה מהימן וכל המבקרים נראו כ-IP אחד. תוצאה אפשרית בפרודקשן: מגבלת "3 סריקות חינמיות ל-IP" ומגבלת ה-scan (5 ל-10 דקות) חלות על כל האתר יחד, ו-Turnstile מקבל `remoteip` של ה-proxy. תוקן ב-`a0c4436` (מספר → מספר קפיצות). **דורש פריסה כדי להשפיע.** אם Cloudflare מול Render, ייתכן שצריך `2`.
 2. **דוח שבועי לא נשלח בפועל.** אין תזמון. נוסף `POST /api/internal/cron/weekly` (כבוי, `WEEKLY_EMAILS_ENABLED=1`), והטקסטים באתר ובתנאי השימוש/פרטיות (גרסה 1.2) אומרים כעת "מעקב שוטף (דוחות שבועיים בקרוב)".
 3. **קבלה:** לא מאומת אם SUMIT שולחת אותה במייל (ראו משימה 1 ל-Ops). הבקשה לא שולחת `UpdateCustomerByEmail`/`UpdateCustomerByEmail_AttachDocument` (ברירת מחדל False לפי ה-OpenAPI).
-4. **כתובת תמיכה** בפוטר ובקבלה: `support@askranky.com` אלא אם `SUPPORT_EMAIL` מוגדר.
+4. **כתובת תמיכה** בפוטר ובקבלה: `shaysho1111@gmail.com` אלא אם `SUPPORT_EMAIL` מוגדר.
 5. **שימוש לרעה בחשבון בתשלום (לא תוקן, החלטה):** `/api/scan` ו-`/scan` לא דורשים כניסה גם כשהמייל שייך לחשבון בתשלום. מי שמקליד כתובת של לקוח משלם (אחרי captcha) מוסיף לו עסק לחשבון, שורף מהתקציב החודשי של המסלול שלו (`monthlyCheckBudget`), ושולח לו דוח (עד 3 ביממה אחרי התיקון). הגבלת העלות: `DAILY_SPEND_CAP_USD`. המלצה: לחשבון עם מסלול בתשלום לדרוש מפתח דשבורד/כניסה (או לענות 409 עם קישור לכניסה).
 6. דוחות הסריקה ב-fixes: שפת התיקונים נקבעת לפי שם העסק (`businessLang`), לא לפי שפת הלקוח; ללקוח עברי עם שם עסק באנגלית הטקסטים של "3 התיקונים" יהיו באנגלית בתוך מייל עברי.
 7. לא נמצאו: קישורי `send.askranky.com`, ניסוח דמו/mock (חוץ מ-`[MOCK DATA]`/`[נתוני דמו]` כשסריקה mock), מע"מ או "חשבונית מס". המותג נכון. הקישורים נבנים מ-`BASE_URL`.
@@ -69,9 +69,9 @@
 תודה! התקבל תשלום של 179 ILS עבור מסלול Pro ב-Ranky.
 קבלה על התשלום מונפקת על ידי ספק החיוב שלנו, SUMIT. אם היא לא הגיעה אליך, השב/י למייל זה ונדאג שתקבל/י אותה.
 המנוי מתחדש מדי חודש בהוראת קבע עד לביטול. בתוקף עד: 2026-11-30.
-לביטול: דרך הדשבורד, בתשובה למייל זה או בפנייה ל-support@askranky.com.
+לביטול: דרך הדשבורד, בתשובה למייל זה או בפנייה ל-shaysho1111@gmail.com.
 שי שוטשוילי, עוסק פטור 322713082; המסמך הוא קבלה.
-Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת ים, ישראל · support@askranky.com
+Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת ים, ישראל · shaysho1111@gmail.com
 ```
 
 ### receipt he (first payment, with receiptUrl)
@@ -81,9 +81,9 @@ Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת �
 תודה! התקבל תשלום של 179 ILS עבור מסלול Pro ב-Ranky.
 קבלה: [https://app.sumit.co.il/...](https://app.sumit.co.il/...)
 המנוי מתחדש מדי חודש בהוראת קבע עד לביטול. בתוקף עד: 2026-11-30.
-לביטול: דרך הדשבורד, בתשובה למייל זה או בפנייה ל-support@askranky.com.
+לביטול: דרך הדשבורד, בתשובה למייל זה או בפנייה ל-shaysho1111@gmail.com.
 שי שוטשוילי, עוסק פטור 322713082; המסמך הוא קבלה.
-Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת ים, ישראל · support@askranky.com
+Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת ים, ישראל · shaysho1111@gmail.com
 ```
 
 ### failed he
@@ -94,7 +94,7 @@ Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת �
 כדי לשמור על המסלול, אפשר להצטרף שוב עם כרטיס תקין: [https://askranky.com/he/checkout?plan=pro](https://askranky.com/he/checkout?plan=pro) (יש להשתמש באותה כתובת מייל; תיווצר הוראת קבע חודשית חדשה והחיוב יבוצע מיד). עדיין אין טופס לעדכון כרטיס, ולכן כך מחליפים כרטיס. אפשר גם להשיב למייל זה ונעזור.
 אם החוב לא יוסדר תוך 7 ימים, החשבון יעבור למסלול החינמי; המידע נשמר. אם אינך מעוניין/ת להמשיך, השב/י למייל זה ונדאג שלא יבוצעו חיובים נוספים.
 לא נגבים דמי גבייה על חיוב שנכשל.
-Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת ים, ישראל · support@askranky.com
+Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת ים, ישראל · shaysho1111@gmail.com
 ```
 
 ### cancel he
@@ -104,7 +104,7 @@ Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת �
 זהו אישור שהוראת הקבע של מסלול Pro בוטלה בתאריך 2026-11-05. לא יבוצעו חיובים נוספים.
 הגישה נשמרת עד 2026-11-30; לאחר מכן החשבון עובר למסלול החינמי.
 התחרטת? פשוט השב/י.
-Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת ים, ישראל · support@askranky.com
+Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת ים, ישראל · shaysho1111@gmail.com
 ```
 
 ### login he
@@ -114,7 +114,7 @@ Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת �
 כניסה לדשבורד של Ranky: [https://askranky.com/auth/magic?a=ACCOUNT&t=TOKEN](https://askranky.com/auth/magic?a=ACCOUNT&t=TOKEN)
 הקישור תקף ל-15 דקות ופועל פעם אחת בלבד.
 אם לא ביקשת זאת, אפשר להתעלם ממייל זה.
-Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת ים, ישראל · support@askranky.com
+Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת ים, ישראל · shaysho1111@gmail.com
 ```
 
 ### receipt en (renewal, no receiptUrl)
@@ -124,9 +124,9 @@ Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת �
 Thanks! We received your payment of 179 ILS for the Ranky Pro plan.
 A receipt (קבלה) is issued for this payment by our billing provider, SUMIT. If it doesn't reach you, reply to this email and we'll make sure you get it.
 Your plan renews monthly by standing order until you cancel. Paid through: 2026-11-30.
-To cancel, use your dashboard, reply to this email or contact support@askranky.com.
+To cancel, use your dashboard, reply to this email or contact shaysho1111@gmail.com.
 Shai Shotashvili is an exempt dealer (עוסק פטור); this document is a receipt.
-Ranky · Shai Shotashvili, Exempt Dealer 322713082 · Etzel 8, Bat Yam, Israel · support@askranky.com
+Ranky · Shai Shotashvili, Exempt Dealer 322713082 · Etzel 8, Bat Yam, Israel · shaysho1111@gmail.com
 ```
 
 ### receipt en (first payment, with receiptUrl)
@@ -136,9 +136,9 @@ Ranky · Shai Shotashvili, Exempt Dealer 322713082 · Etzel 8, Bat Yam, Israel �
 Thanks! We received your payment of 179 ILS for the Ranky Pro plan.
 Receipt: [https://app.sumit.co.il/...](https://app.sumit.co.il/...)
 Your plan renews monthly by standing order until you cancel. Paid through: 2026-11-30.
-To cancel, use your dashboard, reply to this email or contact support@askranky.com.
+To cancel, use your dashboard, reply to this email or contact shaysho1111@gmail.com.
 Shai Shotashvili is an exempt dealer (עוסק פטור); this document is a receipt.
-Ranky · Shai Shotashvili, Exempt Dealer 322713082 · Etzel 8, Bat Yam, Israel · support@askranky.com
+Ranky · Shai Shotashvili, Exempt Dealer 322713082 · Etzel 8, Bat Yam, Israel · shaysho1111@gmail.com
 ```
 
 ### failed en
@@ -149,7 +149,7 @@ We couldn't charge your card for the Pro plan (179 ILS). Your plan stays active 
 To keep your plan, subscribe again with a valid card: [https://askranky.com/en/checkout?plan=pro](https://askranky.com/en/checkout?plan=pro) (use the same email address; a new monthly standing order is created and charged right away). There is no card-update form yet, so this is how a card is replaced. You can also reply to this email and we'll help.
 If it isn't settled within 7 days, your account moves to the free tier; your data stays. If you don't want to continue, just reply and we'll make sure nothing more is charged.
 No fees are added for failed payments.
-Ranky · Shai Shotashvili, Exempt Dealer 322713082 · Etzel 8, Bat Yam, Israel · support@askranky.com
+Ranky · Shai Shotashvili, Exempt Dealer 322713082 · Etzel 8, Bat Yam, Israel · shaysho1111@gmail.com
 ```
 
 ### cancel en
@@ -159,7 +159,7 @@ Ranky · Shai Shotashvili, Exempt Dealer 322713082 · Etzel 8, Bat Yam, Israel �
 This confirms we cancelled your Pro plan's standing order on 2026-11-05. No further charges will be made.
 You keep access until 2026-11-30; after that the account moves to the free tier.
 Changed your mind? Just reply.
-Ranky · Shai Shotashvili, Exempt Dealer 322713082 · Etzel 8, Bat Yam, Israel · support@askranky.com
+Ranky · Shai Shotashvili, Exempt Dealer 322713082 · Etzel 8, Bat Yam, Israel · shaysho1111@gmail.com
 ```
 
 ### login en
@@ -169,7 +169,7 @@ Ranky · Shai Shotashvili, Exempt Dealer 322713082 · Etzel 8, Bat Yam, Israel �
 Open your Ranky dashboard: [https://askranky.com/auth/magic?a=ACCOUNT&t=TOKEN](https://askranky.com/auth/magic?a=ACCOUNT&t=TOKEN)
 The link is valid for 15 minutes and works once.
 If you didn't request this, you can ignore this email.
-Ranky · Shai Shotashvili, Exempt Dealer 322713082 · Etzel 8, Bat Yam, Israel · support@askranky.com
+Ranky · Shai Shotashvili, Exempt Dealer 322713082 · Etzel 8, Bat Yam, Israel · shaysho1111@gmail.com
 ```
 
 ### report email he
