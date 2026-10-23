@@ -1,54 +1,73 @@
 # ביקורת מיילים אוטומטיים ללקוחות — Ranky (askranky.com)
 
-נכון ל-`email-fixes` (מבוסס על main = 638e291). הטקסטים המדויקים נוצרו מהקוד עצמו (`src/email/templates.js`, `src/email/report.js`), ערכי הדוגמה הם: מסלול Pro, 179 ILS, עד 2026-11-30. כתובת השולח: `Ranky <hello@askranky.com>`, reply-to: `EMAIL_REPLY_TO` (שי ב-Gmail). כל המיילים עוברים דרך `src/email/send.js`.
+עודכן ב-`email-fixes` (מבוסס על main = 638e291). הטקסטים המדויקים נוצרו מהקוד (`src/email/templates.js`, `src/email/report.js`) עם ערכי דוגמה: מסלול Pro, 179 ILS, עד 2026-11-30, עסק "Maison Mana" בציון 7. כתובת השולח: `Ranky <hello@askranky.com>`, reply-to: `EMAIL_REPLY_TO` (שי ב-Gmail). שליחה דרך `src/email/send.js`.
+
+## 0. משימות ל-Ops (לבדיקה אצלנו, לא בקוד)
+
+1. **בתשלום האמיתי הראשון: לוודא אם SUMIT שולחת ללקוח את הקבלה במייל.** לבדוק בתיבה של הלקוח (או חשבון בדיקה) ובכרטיס הלקוח ב-SUMIT. אם לא נשלחת: להפעיל שליחה אוטומטית של מסמכים בהגדרות SUMIT (או להוסיף `UpdateCustomerByEmail_AttachDocument` לבקשת החיוב אחרי בדיקה). עד אז הטקסט במייל שלנו כבר לא טוען כלום בביטחון ("ספק החיוב מנפיק; אם לא הגיעה, השב למייל").
+2. לוודא ב-Render: `SUPPORT_EMAIL` (אחרת הפוטר והקבלה מצביעים ל-`support@askranky.com`), `EMAIL_REPLY_TO`, `BASE_URL`.
+3. לוודא ב-Render: `TRUST_PROXY`. הערך `1` עבד שגוי עד התיקון בענף הזה (ראו סעיף 3, פריט 1). אם Cloudflare בענן הכתום מול Render יש שתי קפיצות: אז הערך הנכון הוא `2`; לבדוק מה כתובת ה-IP שרואים בבקשה (למשל בלוג/בדיקה אחרי הפריסה).
+4. להחליט אם להפעיל דוחות שבועיים: אם כן, `WEEKLY_EMAILS_ENABLED=1` + משימת cron-job.org שבועית ל-`POST /api/internal/cron/weekly` + עדכון הטקסטים והתנאים.
+5. לעקוב אחרי אירועי `billing.email_failed`, `email.report_rate_limited`, `subscription.superseded` ב-DB (אין בהם כתובות מייל).
 
 ## 1. טבלת סיכום
 
-| # | מייל | טריגר | נמען | נושא (EN / HE) | שליחה | שפות | מה נמצא / מה תוקן |
-|---|------|--------|------|-----------------|--------|-------|--------------------|
-| 1 | קישור כניסה (magic link) | `POST /login`, `/api/login` (אחרי captcha) ובסיום תשלום מוצלח (`completeCheckout`) | בעל החשבון | `Your Ranky dashboard link` / `קישור הכניסה שלך ל-Ranky` | `sendEmail` (במסלול התשלום עם `.catch`) | **תוקן:** לפני כן רק אנגלית, בלי פוטר ובלי זהות שולח. עכשיו HE/EN לפי שפת הדף (נשלחת מהטופס), אחרת שפת החשבון, אחרת EN. הקישור עדיין ה-href הראשון | 
-| 2 | דוח סריקה (חד פעמי) | אחרי כל סריקה חינמית שהצליחה (`/scan`, `/api/scan`) | מי שהזין את המייל בטופס | `Your Ranky report: <עסק> scored N/100` | `sendEmailSoft` | **EN בלבד** (גם ללקוח עברי) | **תוקן:** הכותרת אמרה "weekly report" ו"This week's 3 fixes" למרות שזה דוח חד פעמי; עכשיו "AI visibility report" ו"Your 3 fixes". נוספה כתובת דואר לפוטר. **לא תוקן:** חסר תרגום עברי (עבודה גדולה יחסית, צריך החלטה) |
-| 3 | דוח שבועי | `npm run weekly` / `runWeekly` | חשבונות בתשלום שלא ביטלו הסרה | `Ranky weekly: <עסק> N/100` | `sendEmail` בתוך try (שגיאה נרשמת ללוג) | EN בלבד | **חריג חמור:** שום דבר לא מפעיל את `runWeekly` בפרודקשן (אין cron ב-Render החינמי, ו-`/api/internal/cron/sync` מריץ רק billing sync). כלומר המסלולים מבטיחים "Weekly tracking + email report" והמייל השבועי **לא נשלח אף פעם**. נוספה כתובת דואר לפוטר |
-| 4 | קבלה / חידוש | תשלום ראשון (`completeCheckout`) וחידוש חודשי שזוהה ב-`billing-sync` | בעל החשבון | `Ranky receipt: <מסלול>, <סכום> ILS` / `קבלה מ-Ranky: ...` | ראשון: `sendEmailSoft`. חידוש: **תוקן** מ-`sendEmail` ל-`sendEmailSoft` | HE/EN | הטקסט נשאר. ראו הערות סיכון בסעיף 3 |
-| 5 | כשל בתשלום | `billing-sync` מזהה שהוראת הקבע לא פעילה, פעם אחת לכל "אירוע כשל" | בעל החשבון | `Action needed: your Ranky payment didn't go through` / `נדרשת פעולה: התשלום ל-Ranky לא עבר` | **תוקן** מ-`sendEmail` ל-`sendEmailSoft` | HE/EN | **תוקן הטקסט:** הבטיח "קישור מאובטח לעדכון כרטיס" ו"ננסה לחייב שוב בעוד כמה ימים". אף אחד מהם לא קיים. עכשיו: קישור `/{lang}/checkout?plan=...` להצטרפות מחדש עם כרטיס תקין (באותו מייל), או תשובה למייל. בלי הבטחת ניסיון חוזר. ראו דה-דופליקציה למטה |
-| 6 | אישור ביטול | `POST /api/dashboard/:id/cancel` | בעל החשבון | `Your Ranky subscription is cancelled` / `המנוי שלך ב-Ranky בוטל` | `sendEmailSoft` | HE/EN | תקין. אין סכום החזר (לא מועבר `refundAmount`, והחזרים ידניים) |
-| 7 | אישור רשימת המתנה | `POST /api/waitlist` | — | — | **לא נשלח מייל** | — | רק שמירה ב-DB. מצב PRELAUNCH כבוי כרגע |
-| 8 | "סריקה חינמית אחת לכל אימייל" | `/scan` שנייה לאותו מייל | — | — | **לא נשלח מייל** (רק הודעה באתר) | — | — |
-| 9 | שיווק / חדשות מוצר | — | — | — | **אין קוד ששולח** | — | נשמרת הסכמה (`marketingConsent`) מטופס הסריקה אבל שום מייל שיווקי לא נשלח כרגע; אם יתווסף יש להוסיף תווית "פרסומת" ו-List-Unsubscribe (התשתית קיימת ב-`consent.js`) |
+| # | מייל | טריגר | נמען | נושא (HE / EN) | שליחה | שפות | מצב |
+|---|------|--------|------|-----------------|--------|-------|------|
+| 1 | קישור כניסה | `POST /login`, `/api/login` (אחרי captcha) ובסיום תשלום מוצלח | בעל החשבון | `קישור הכניסה שלך ל-Ranky` / `Your Ranky dashboard link` | `sendEmail` | HE/EN לפי שפת הדף, אחרת שפת החשבון, אחרת EN | תוקן קודם: היה EN בלבד, בלי פוטר |
+| 2 | דוח סריקה (חד פעמי) | אחרי סריקה חינמית/ראשונה שהצליחה (`/scan`, `/api/scan`) | הכתובת שהוקלדה בטופס בלבד | `הדוח שלך מ-Ranky: <עסק> קיבל N/100` / `Your Ranky report: <עסק> scored N/100` | `sendEmailSoft` | **HE/EN** לפי השפה שנשלחה עם הסריקה (נשמרת ב-`scan.lang`, ובחשבון אם אין), ברירת מחדל EN | **תוקן:** תורגם במלואו (נושא, גוף, הערת מנועים, פוטר, הסרה), RTL. מוגבל ל-3 מיילי דוח לכתובת ב-24 שעות |
+| 3 | דוח שבועי | `runWeekly` (`npm run weekly` או `POST /api/internal/cron/weekly` עם `WEEKLY_EMAILS_ENABLED=1`) | חשבונות בתשלום שלא ביטלו הסרה | `הדוח השבועי של Ranky: <עסק> N/100` / `Ranky weekly: <עסק> N/100` | `sendEmail` בתוך try | HE/EN לפי שפת החשבון, אחרת שפת הסריקה האחרונה, אחרת EN | **לא נשלח בפועל**: אין תזמון, והנקודה החדשה כבויה כברירת מחדל. הטקסטים באתר ובתנאים כבר לא מבטיחים דוח שבועי |
+| 4 | קבלה / חידוש | תשלום ראשון וחידוש שזוהה ב-`billing-sync` | בעל החשבון | `קבלה מ-Ranky: <מסלול>, <סכום> ILS` / `Ranky receipt: ...` | `sendEmailSoft` | HE/EN | **תוקן:** הטקסט אומר ש-SUMIT מנפיקה את הקבלה ושאם לא הגיעה יש להשיב למייל. בלי "נשלחת בנפרד/מצורפת" |
+| 5 | כשל בתשלום | `billing-sync`, פעם אחת לכל אירוע כשל | בעל החשבון | `נדרשת פעולה: התשלום ל-Ranky לא עבר` / `Action needed: your Ranky payment didn't go through` | `sendEmailSoft` | HE/EN | תוקן קודם: קישור להצטרפות מחדש (`/{lang}/checkout?plan=...`) במקום "קישור מאובטח לעדכון כרטיס". ראו סעיף 2 |
+| 6 | אישור ביטול | `POST /api/dashboard/:id/cancel` | בעל החשבון | `המנוי שלך ב-Ranky בוטל` / `Your Ranky subscription is cancelled` | `sendEmailSoft` | HE/EN | תקין |
+| 7 | אישור רשימת המתנה | `POST /api/waitlist` | — | — | לא נשלח מייל | — | — |
+| 8 | "סריקה חינמית אחת לכל אימייל" | סריקה שנייה לאותו מייל | — | — | לא נשלח מייל | — | — |
+| 9 | שיווק / חדשות מוצר | — | — | — | אין קוד ששולח | — | נשמרת הסכמה, שום מייל שיווקי לא נשלח. אם יתווסף: "פרסומת" + List-Unsubscribe (התשתית ב-`consent.js`) |
 
-## 2. מצב כשל בתשלום: דה-דופליקציה
+## 2. כשל בתשלום והגנה מפני חיוב כפול
 
-- המייל נשלח רק כש-`a.failedNoticeAt` ריק. הוא נקבע לפני השליחה ומתנקה רק כשהוראת הקבע חוזרת להיות פעילה. לכן הרצה יומית חוזרת **לא** שולחת שוב (יש בדיקה קיימת: "failed notice sent once"), וכשל חדש אחרי התאוששות כן ישלח שוב.
-- **באג שתוקן:** המייל נשלח עם `sendEmail` (זורק שגיאה). תקלה ב-Resend בחשבון אחד עצרה את כל הסנכרון באמצע ודילגה על חשבונות אחרים ועל `save()`. עכשיו `sendEmailSoft`, השגיאה נרשמת בלוג על ידי `send.js` ובאירוע `billing.email_failed` (בלי PII), וההרצה ממשיכה. תוצאה: אם השליחה נכשלה, **לא** ננסה שוב ביום הבא (בכוונה, כדי לא להציף). אפשר להחליט אחרת.
-- חשוב: `sync()` מחשיב סטטוסים `GracePeriod` (11) ו-`PendingRetry` (14) כ"פעיל". לכן מייל הכשל נשלח רק אחרי ש-SUMIT סיימה לנסות לבד (סטטוס כמו `DisabledFailedBillingPayment` (3) לפי ה-OpenAPI). מכאן שהבטחת "ננסה שוב" בטקסט הישן הייתה שגויה גם מהכיוון הזה.
-- **סיכון שנמצא ולא תוקן:** `startCheckout`/`completeCheckout` לא בודקים אם לחשבון כבר יש הוראת קבע פעילה. מי שלוחץ על הקישור במייל וגם מחובר עם הוראת קבע פעילה יוצר הוראה כפולה (וחיוב כפול). בקישור שבמייל זה קורה רק אחרי כשל, אבל מומלץ מגן בצד שרת (לבדוק `payments.sync` לפני יצירת הוראה חדשה, או לבטל את הישנה). הוראת קבע ישנה שנכשלה נשארת מושבתת ב-SUMIT, החשבון מקבל `subscriptionRef` חדש.
-- כפתור הביטול בדשבורד מוצג גם במצב `past_due`. ביטול הוראה שכבר מושבתת עלול להחזיר שגיאה מ-SUMIT (502 "Could not cancel") — לא מאומת. לכן במייל כתוב "השב למייל ונדאג שלא יחויב", ולא "בטל בדשבורד".
+- **דה-דופליקציה:** המייל נשלח רק כש-`failedNoticeAt` ריק; הוא מתנקה רק כשההוראה חוזרת להיות פעילה או כשהלקוח מצטרף מחדש. שליחה עם `sendEmailSoft`: תקלה בשליחה נרשמת (`billing.email_failed`, בלי כתובת) ולא עוצרת את הסנכרון ולא תשלח שוב מחר.
+- סטטוסי `GracePeriod` (11) ו-`PendingRetry` (14) נחשבים "פעיל" בסנכרון; לכן המייל יוצא רק אחרי ש-SUMIT סיימה לנסות לבד.
+- **הגנת חיוב כפול (חדש):** `POST /api/checkout`, `POST /checkout`, `POST /api/checkout/charge` ו-`/billing/return` מחזירים **409** `{ error: 'already_subscribed', code, message, messageHe }` לחשבון עם מנוי פעיל, כולל מנוי מבוטל שתקופתו טרם הסתיימה. חשבון `past_due`/`unpaid`/שהסתיים רשאי להצטרף מחדש. בתוך חיוב: נעילה לכל חשבון (`busy` 409 לשליחה שנייה במקביל, וגם ל-`start` באמצע חיוב). אחרי הצלחה ה-state החד-פעמי נצרך, ושליחה חוזרת של אותו identifier (טאב/מכשיר שני עם טוקן חדש) מקבלת 409 `already_subscribed` ולא נגבה שוב. identifier מזויף נשאר 400 (אין חשיפת סטטוס חשבון).
+- **הוראת הקבע הישנה:** כש-past_due/unpaid מצטרף מחדש, אחרי שההוראה החדשה פעילה נקראת `payments.cancel` על ה-`RecurringCustomerItemID` הישן (נתיב הביטול הקיים). אם נכשל (SUMIT כבר ביטלה/השביתה), נרשם `subscription.superseded {cancelled:false}` ולא משפיע. הוראה שנכשלה אינה "פעילה" בסנכרון (סטטוסים 1, 3, 9, 13) ולכן SUMIT לא חייבת אותה.
+- כפתור הביטול בדשבורד מוצג גם ב-`past_due`; ביטול הוראה מושבתת עלול להחזיר שגיאה מ-SUMIT (לא מאומת), לכן המייל אומר "השב למייל".
 
-## 3. סיכוני תוכן / ציות שנמצאו (לפי חומרה)
+## 3. ממצאים וסיכונים (לפי חומרה)
 
-1. **דוח שבועי לא נשלח בפועל** (ראו שורה 3). הבטחה מסחרית באתר ובתנאי השימוש ("דוחות שבועיים הכלולים במסלול"). צריך להחליט: להוסיף endpoint מוגן-secret ל-cron-job.org (כמו ה-sync), או להסיר את ההבטחה.
-2. **קבלה "נשלחת בנפרד" על ידי SUMIT, לא מאומת.** הבקשה ל-`/billing/recurring/charge/` לא שולחת `UpdateCustomerByEmail`/`UpdateCustomerByEmail_AttachDocument` (ברירת מחדל False לפי ה-OpenAPI), ו-`SendCopyToOrganization` תלוי בהגדרות החשבונאות. אם שליחת מסמך אוטומטית במייל לא מופעלת בהגדרות SUMIT, הלקוח לא יקבל קבלה וה-מייל שלנו אומר שכן. לבדוק בדשבורד של SUMIT (או לתקן בקוד אחרי בדיקת ₪1) — `receiptUrl` אף פעם לא מגיע מ-`handleReturn` ולכן תמיד מוצג "נשלחת בנפרד".
-3. **כתובת התמיכה בפוטר ובקבלה: `support@askranky.com` כברירת מחדל** (`BRAND.supportEmail`, אלא אם `SUPPORT_EMAIL` מוגדר ב-Render). ההחלטה העסקית היא shaysho1111@gmail.com. אם התיבה support@ לא קיימת, פניות לקוחות הולכות לאיבוד. לוודא `SUPPORT_EMAIL` ב-Render (Grok Bot) — לא שיניתי env וברירת המחדל.
-4. **מייל דוח (2) ו-(3) באנגלית בלבד** גם ללקוחות בעברית (אין שפה בתבנית). פער חוויה, לא טעות.
-5. **דוח הסריקה נשלח לכל כתובת שהוקלדה** (אחרי captcha, בלי אימות מייל): אפשר להפעיל אותו על כתובת של אדם אחר. יש קישור הסרה בכל מייל, ובמגבלת 3 סריקות ל-IP, אבל אין double opt-in. סיכון נמוך (חוק התקשורת סעיף 30א חל על פרסומת, וזה מייל שירות).
-6. לא נמצאו: קישורי `send.askranky.com`, ניסוח דמו/mock בגוף מיילים (חוץ מ-`[MOCK DATA]` בפוטר דוח כשהסריקה באמת mock; לא קורה ב-live), מע"מ או "חשבונית מס" (הקבלה: "עוסק פטור; המסמך הוא קבלה"). המותג Ranky נכון בכל מקום. קישורי הכניסה והדוח נבנים מ-`BASE_URL`; אם הוא חסר הם יצביעו ל-localhost (config-check נותן שגיאה במצב sumit).
+1. **`TRUST_PROXY=1` לא עבד (תוקן בקוד).** המשתנה מגיע כמחרוזת "1", ו-Express מפרש מחרוזת כרשימת כתובות IP (`0.0.0.1`), כלומר ה-proxy של Render לא היה מהימן וכל המבקרים נראו כ-IP אחד. תוצאה אפשרית בפרודקשן: מגבלת "3 סריקות חינמיות ל-IP" ומגבלת ה-scan (5 ל-10 דקות) חלות על כל האתר יחד, ו-Turnstile מקבל `remoteip` של ה-proxy. תוקן ב-`a0c4436` (מספר → מספר קפיצות). **דורש פריסה כדי להשפיע.** אם Cloudflare מול Render, ייתכן שצריך `2`.
+2. **דוח שבועי לא נשלח בפועל.** אין תזמון. נוסף `POST /api/internal/cron/weekly` (כבוי, `WEEKLY_EMAILS_ENABLED=1`), והטקסטים באתר ובתנאי השימוש/פרטיות (גרסה 1.2) אומרים כעת "מעקב שוטף (דוחות שבועיים בקרוב)".
+3. **קבלה:** לא מאומת אם SUMIT שולחת אותה במייל (ראו משימה 1 ל-Ops). הבקשה לא שולחת `UpdateCustomerByEmail`/`UpdateCustomerByEmail_AttachDocument` (ברירת מחדל False לפי ה-OpenAPI).
+4. **כתובת תמיכה** בפוטר ובקבלה: `support@askranky.com` אלא אם `SUPPORT_EMAIL` מוגדר.
+5. **שימוש לרעה בחשבון בתשלום (לא תוקן, החלטה):** `/api/scan` ו-`/scan` לא דורשים כניסה גם כשהמייל שייך לחשבון בתשלום. מי שמקליד כתובת של לקוח משלם (אחרי captcha) מוסיף לו עסק לחשבון, שורף מהתקציב החודשי של המסלול שלו (`monthlyCheckBudget`), ושולח לו דוח (עד 3 ביממה אחרי התיקון). הגבלת העלות: `DAILY_SPEND_CAP_USD`. המלצה: לחשבון עם מסלול בתשלום לדרוש מפתח דשבורד/כניסה (או לענות 409 עם קישור לכניסה).
+6. דוחות הסריקה ב-fixes: שפת התיקונים נקבעת לפי שם העסק (`businessLang`), לא לפי שפת הלקוח; ללקוח עברי עם שם עסק באנגלית הטקסטים של "3 התיקונים" יהיו באנגלית בתוך מייל עברי.
+7. לא נמצאו: קישורי `send.askranky.com`, ניסוח דמו/mock (חוץ מ-`[MOCK DATA]`/`[נתוני דמו]` כשסריקה mock), מע"מ או "חשבונית מס". המותג נכון. הקישורים נבנים מ-`BASE_URL`.
 
-## 4. רשימת שינויים בענף
+## 4. ניתוח שימוש לרעה במייל הדוח
 
-1. `618b8e4`: טקסט כשל בתשלום (he/en), `sendEmailSoft` ב-sync (כשל וגם קבלת חידוש), תבנית `login` חדשה, תמיכה ב-`link` בטוח ב-`renderTx`, בדיקות.
-2. `d3fbcd9`: מייל כניסה HE/EN עם פוטר (והטופס שולח `lang`), דוח חד פעמי לא נקרא "weekly", כתובת דואר בפוטר הדוחות, טקסט `pastDue` בדשבורד ("ננסה לחייב שוב" הוסר).
-3. קובץ הביקורת הזה.
+- **נמען:** רק `account.email` של הכתובת שהוקלדה בטופס. שדות `cc`/`bcc`/`to` בבקשה מתעלמים (נבדק). כל סריקה שולחת מייל אחד.
+- **מה מגביל שליחה לצדדים שלישיים בקנה מידה:**
+  1. **Captcha (Turnstile):** כשהמפתחות מוגדרים, בלי טוקן תקף: 403 ולא נוצר חשבון ולא נשלח מייל (נבדק).
+  2. **מגבלת IP:** 3 סריקות חינמיות מוצלחות לכל IP (מונה בזיכרון, מתאפס באתחול השרת) ו-5 בקשות סריקה ל-10 דקות לכל IP. כלומר IP אחד יכול לשלוח דוח לכל היותר ל-3 כתובות שונות (נבדק: ה-4 וה-5 מקבלים 429 בלי מייל). תלוי בכך ש-`TRUST_PROXY` עובד (סעיף 3 פריט 1).
+  3. **סריקה חינמית אחת לכל כתובת:** מייל נוסף לאותה כתובת לא נשלח (עסק אחר 409, אותו עסק הפניה בלי מייל).
+  4. **חדש: מגבלה לכל כתובת:** עד 3 מיילי דוח לכתובת ב-24 שעות (`REPORT_EMAIL_MAX_PER_DAY`, ברירת מחדל 3), חלון מתגלגל; מעבר לכך המייל מדולג בשקט, הסריקה והדוח המוצג במסך לא מושפעים, ורק אירוע `email.report_rate_limited` (ללא הכתובת) נרשם. חל גם על חשבונות בתשלום (שיכולים לסרוק כמה עסקים).
+  5. **עלות:** כל סריקה אמיתית עולה כסף (≈$0.17–0.21); תקרה יומית `DAILY_SPEND_CAP_USD` ($10) עוצרת הכל, ועם מגבלת ה-IP התוקף מוגבל ל-3 סריקות ל-IP.
+  6. בכל מייל דוח יש קישור הסרה חתום (+ List-Unsubscribe).
+- **שארית סיכון:** בלי אימות מייל (double opt-in) אפשר עדיין לגרום לשליחת עד 3 דוחות ליממה לכתובת שמישהו הקליד, ממספר IP-ים שונים. הכתובת יכולה להסיר את עצמה. אם רוצים לסגור לגמרי: אימות מייל לפני שליחה (או שליחת הקישור לדוח רק אחרי לחיצה).
 
-## 5. הטקסטים המדויקים (ללא ה-HTML)
+## 5. רשימת שינויים בענף
 
-כל מייל טרנזקציוני כולל את הפוטר: שם, שם בעל העסק, "עוסק פטור"/"Exempt Dealer" + מספר, כתובת, אימייל תמיכה.
+`618b8e4`, `d3fbcd9`, `be3b545` (מהסבב הקודם) ובנוסף: חסימת חיוב כפול (409 already_subscribed, נעילה, הוראה ישנה מבוטלת, UI בעברית/אנגלית), נקודת cron שבועית כבויה + ניסוח "מעקב שוטף (דוחות שבועיים בקרוב)" + תנאים ופרטיות 1.2, טקסט הקבלה, תיקון `TRUST_PROXY`, תרגום מיילי הדוח, מגבלה לכל כתובת.
+
+## 6. הטקסטים המדויקים (ללא ה-HTML)
+
+כל מייל טרנזקציוני כולל פוטר: שם, שם בעל העסק, "עוסק פטור"/"Exempt Dealer" + מספר, כתובת, אימייל תמיכה. מיילי הדוח כוללים פוטר עם שם, בעל העסק, כתובת וקישור הסרה.
 
 ### receipt he (renewal, no receiptUrl)
 **Subject:** קבלה מ-Ranky: Pro, 179 ILS
 
 ```
 תודה! התקבל תשלום של 179 ILS עבור מסלול Pro ב-Ranky.
-הקבלה מופקת על ידי ספק התשלומים ונשלחת בנפרד.
+קבלה על התשלום מונפקת על ידי ספק החיוב שלנו, SUMIT. אם היא לא הגיעה אליך, השב/י למייל זה ונדאג שתקבל/י אותה.
 המנוי מתחדש מדי חודש בהוראת קבע עד לביטול. בתוקף עד: 2026-11-30.
 לביטול: דרך הדשבורד, בתשובה למייל זה או בפנייה ל-support@askranky.com.
 שי שוטשוילי, עוסק פטור 322713082; המסמך הוא קבלה.
@@ -103,7 +122,7 @@ Ranky · שי שוטשוילי, עוסק פטור 322713082 · אצ"ל 8, בת �
 
 ```
 Thanks! We received your payment of 179 ILS for the Ranky Pro plan.
-Your receipt (קבלה) is issued by our payment provider and sent separately.
+A receipt (קבלה) is issued for this payment by our billing provider, SUMIT. If it doesn't reach you, reply to this email and we'll make sure you get it.
 Your plan renews monthly by standing order until you cancel. Paid through: 2026-11-30.
 To cancel, use your dashboard, reply to this email or contact support@askranky.com.
 Shai Shotashvili is an exempt dealer (עוסק פטור); this document is a receipt.
@@ -153,9 +172,53 @@ If you didn't request this, you can ignore this email.
 Ranky · Shai Shotashvili, Exempt Dealer 322713082 · Etzel 8, Bat Yam, Israel · support@askranky.com
 ```
 
-### report email (EN only)
+### report email he
+**Subject:** הדוח שלך מ-Ranky: Maison Mana קיבל 7/100
 
 ```
+כותרת בגוף: דוח נראות ב-AI של Ranky: Maison Mana
+7/100 
+העסק הוזכר ב-10% מתוך 10 תשובות AI. מיקום ממוצע: 2.
+המנועים שרצו: ChatGPT, Gemini.
+מנועאזכוריםדירוג ממוצע
+chatgpt1/52
+gemini0/5–
+את מי ה-AI ממליץ במקומך
+Example Co (3×)
+3 התיקונים שלך
+1. Fix title
+Why text
+Copy text
+[לדוח המלא ←](https://askranky.com/r/ID)
+התוצאות מגיעות מה-API של המנועים ועשויות להיות שונות מהאפליקציות הצרכניות. Ranky · שי שוטשוילי · אצ"ל 8, בת ים, ישראל · [הסרה מהרשימה](https://askranky.com/unsubscribe?t=TOKEN&lang=he)
+```
+
+### weekly email he
+**Subject:** הדוח השבועי של Ranky: Maison Mana 7/100
+
+```
+כותרת בגוף: הדוח השבועי של Ranky: Maison Mana
+7/100 ▲ 2
+העסק הוזכר ב-10% מתוך 10 תשובות AI. מיקום ממוצע: 2.
+המנועים שרצו: ChatGPT, Gemini.
+מנועאזכוריםדירוג ממוצע
+chatgpt1/52
+gemini0/5–
+את מי ה-AI ממליץ במקומך
+Example Co (3×)
+3 התיקונים של השבוע
+1. Fix title
+Why text
+Copy text
+[לדוח המלא ←](https://askranky.com/r/ID)
+התוצאות מגיעות מה-API של המנועים ועשויות להיות שונות מהאפליקציות הצרכניות. Ranky · שי שוטשוילי · אצ"ל 8, בת ים, ישראל · [הסרה מהרשימה](https://askranky.com/unsubscribe?t=TOKEN&lang=he)
+```
+
+### report email en
+**Subject:** Your Ranky report: Maison Mana scored 7/100
+
+```
+כותרת בגוף: Ranky AI visibility report: Maison Mana
 7/100 
 Mentioned in 10% of 10 AI answers. Average position: 2.
 Engines that ran: ChatGPT, Gemini.
@@ -172,9 +235,11 @@ Copy text
 Results come from the engines' APIs and can differ from the consumer apps. Ranky · Shai Shotashvili · Etzel 8, Bat Yam, Israel · [Unsubscribe](https://askranky.com/unsubscribe?t=TOKEN&lang=en)
 ```
 
-### weekly email (EN only)
+### weekly email en
+**Subject:** Ranky weekly: Maison Mana 7/100
 
 ```
+כותרת בגוף: Ranky weekly report: Maison Mana
 7/100 ▲ 2
 Mentioned in 10% of 10 AI answers. Average position: 2.
 Engines that ran: ChatGPT, Gemini.
@@ -190,7 +255,6 @@ Copy text
 [See the full report →](https://askranky.com/r/ID)
 Results come from the engines' APIs and can differ from the consumer apps. Ranky · Shai Shotashvili · Etzel 8, Bat Yam, Israel · [Unsubscribe](https://askranky.com/unsubscribe?t=TOKEN&lang=en)
 ```
-
 
 
 ### הטקסטים לפני התיקון (לשם השוואה)
