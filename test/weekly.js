@@ -24,7 +24,7 @@ try {
   // nothing schedules it
   const srvSrc = fs.readFileSync('server.js', 'utf8'); assert.equal((srvSrc.match(/runWeekly/g) || []).length, 2); assert.ok(!/setInterval|setTimeout\([^)]*weekly/i.test(srvSrc.replace(/\/\/.*$/gm, '').match(/runWeekly[\s\S]{0,200}/)?.[0] || '')); const pk = JSON.parse(fs.readFileSync('package.json', 'utf8')); assert.ok(!/cron\/weekly/.test(JSON.stringify(pk))); assert.ok(!fs.existsSync('.github/workflows')); ok('the weekly job is not scheduled by the app, npm scripts or workflows');
   // copy
-  const files = ['web/lib/i18n.ts', 'web/lib/i18n-free.ts', 'web/lib/i18n-pay.ts', 'web/lib/seo.ts', 'src/views.js', 'src/plans.js', 'legal/terms.md', 'legal/terms.he.md', 'legal/privacy.md', 'legal/privacy.he.md'];
+  const files = ['web/lib/i18n.ts', 'web/lib/i18n-free.ts', 'web/lib/i18n-pay.ts', 'web/lib/scan-intro.ts', 'web/lib/seo.ts', 'src/views.js', 'src/plans.js', 'legal/terms.md', 'legal/terms.he.md', 'legal/privacy.md', 'legal/privacy.he.md'];
   for (const f of files) for (const [i, line] of fs.readFileSync(f, 'utf8').split('\n').entries()) { if (!/weekly|every week|each week|שבועי|כל שבוע|בכל שבוע/i.test(line)) continue;
     assert.ok(/coming soon|בקרוב|not sent yet|עדיין אינם נשלחים|cadence: '(weekly|once)'/.test(line) || /^\s*\/\//.test(line), `${f}:${i + 1} promises weekly reports: ${line.slice(0, 120)}`); }
   const en = fs.readFileSync('web/lib/i18n.ts', 'utf8'); assert.equal((en.match(/"Regular tracking \(weekly reports coming soon\)"/g) || []).length, 3); assert.equal((en.match(/"מעקב שוטף \(דוחות שבועיים בקרוב\)"/g) || []).length, 3); assert.ok(!/3 fixes every week|3 תיקונים כל שבוע/.test(en));
