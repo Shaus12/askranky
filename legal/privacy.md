@@ -1,5 +1,5 @@
 # Privacy Policy — Ranky
-Last updated: 2026-10-23 (version 1.1)
+Last updated: 2026-10-23 (version 1.2)
 The Hebrew version of this policy prevails over the English translation if they differ.
 
 ## 1. Who we are
@@ -32,12 +32,12 @@ To perform our contract with you (run scans, deliver reports, bill), to comply w
 | Resend | Email delivery | USA (company); sending infrastructure in the EU (Ireland) |
 | Cloudflare | DNS, CDN, bot protection (Turnstile) | USA / global |
 | cron-job.org | Scheduled calls to our maintenance endpoint (keep-alive and daily sync). It receives no customer personal data | Germany (EU) |
-| OpenAI, Google (Gemini), Perplexity (when enabled) | Receive the scan questions, which contain only a business category and a city. Not your email, name, website or billing data | USA |
+| OpenAI (ChatGPT), Google (Gemini); other AI engines may be added later | Receive the scan questions, which contain only a business category and a city. Not your email, name, website or billing data | USA |
 | Google (Fonts) | Serves web fonts; receives your IP address and browser details when a page loads | USA / global |
 We may also disclose data where required by law or to protect our rights.
 
 ## 5. International transfers
-Your data is held and processed outside Israel. The Ranky application runs on Render in Frankfurt, Germany. Our database (Neon, PostgreSQL) runs on Amazon Web Services in the United States (us-east-2, Ohio), so account, business, scan and billing-reference data are stored in the US. Email delivery (Resend), our CDN and bot protection (Cloudflare) and the AI providers that receive scan questions (OpenAI, Google, Perplexity) are US companies or operate from the US. The AI providers receive only a business category and a city, not your email, name or website. Apart from payment data held by SUMIT in Israel, your data is therefore held in Germany and the United States, not only in the EU.
+Your data is held and processed outside Israel. The Ranky application runs on Render in Frankfurt, Germany. Our database (Neon, PostgreSQL) runs on Amazon Web Services in the United States (us-east-2, Ohio), so account, business, scan and billing-reference data are stored in the US. Email delivery (Resend), our CDN and bot protection (Cloudflare) and the AI providers that receive scan questions (OpenAI, Google) are US companies or operate from the US. The AI providers receive only a business category and a city, not your email, name or website. Apart from payment data held by SUMIT in Israel, your data is therefore held in Germany and the United States, not only in the EU.
 These transfers are subject to the Privacy Protection (Transfer of Data to Databases Abroad) Regulations, 5761-2001. We use the processors listed above to provide the service. They process data on our behalf. We have data-processing agreements, or the provider's standard data-processing terms, in place with our service providers (Render, Neon, Resend, Cloudflare, SUMIT, OpenAI, Google and cron-job.org), and we may rely on them for these transfers.
 
 ## 6. Retention

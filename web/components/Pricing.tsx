@@ -7,20 +7,22 @@ import { PRICES, fmt, setCurrencyCookie, type Currency, type Pricing as P } from
 // Plan cards + ILS/USD toggle. Currency comes from /api/pricing (cookie > CF-IPCountry > Hebrew locale > Accept-Language);
 // the toggle saves ranky_currency and refetches. Amounts shown are server prices; checkout re-prices server-side anyway.
 export default function Pricing({ t, lang }: { t: Dict; lang: Locale }) {
-  const [cur, setCur] = useState<Currency>(lang === "he" ? "ILS" : "USD"); const [data, setData] = useState<P | null>(null);
-  const load = (c?: Currency) => api<P>(`/api/pricing?lang=${lang}${c ? `&currency=${c}` : ""}`).then((j) => { setData(j); setCur(j.currency); }).catch(() => {});
+  const [cur, setCur] = useState<Currency>("ILS"); const [data, setData] = useState<P | null>(null);
+  const load = (c?: Currency) => api<P>(`/api/pricing?lang=${lang}${c ? `&currency=${c}` : ""}`).then((j) => { setData(j); setCur(j.usdBilling ? j.currency : "ILS"); }).catch(() => {});
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Billing is ILS only unless the server reports usdBilling: prices are shown in ILS and the currency toggle is hidden (no USD in public copy).
+  const usd = !!data?.usdBilling;
   const pick = (c: Currency) => { setCurrencyCookie(c); setCur(c); load(c); };
   const price = (id: string) => data?.plans.find((p) => p.id === id)?.prices[cur] ?? PRICES[id][cur];
   return (<>
-    <div data-reveal className="mt-10 flex justify-center">
+    {usd && <div data-reveal className="mt-10 flex justify-center">
       <div role="radiogroup" aria-label={t.pricing.currency} dir="ltr" className="inline-flex rounded-full border border-white/15 bg-white/5 p-1 text-sm font-semibold">
         {(["ILS", "USD"] as Currency[]).map((c) => (
           <button key={c} type="button" role="radio" aria-checked={cur === c} onClick={() => pick(c)} data-currency={c}
             className={`rounded-full px-4 py-1.5 transition ${cur === c ? "bg-brand-600 text-white" : "text-sky-300 hover:bg-white/5"}`}>{c === "ILS" ? "₪ ILS" : "$ USD"}</button>))}
       </div>
-    </div>
-    <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    </div>}
+    <div className={`${usd ? "mt-12" : "mt-10"} grid gap-5 sm:grid-cols-2 lg:grid-cols-4`}>
       {t.pricing.plans.map((p) => { const hot = p.id === "pro"; const v = price(p.id); return (
         <div data-reveal key={p.id} className={`card relative flex flex-col p-6 ${hot ? "vx-hot lg:-translate-y-2" : ""}`}>
           {hot && <span className="absolute -top-3 start-6 rounded-full bg-brand-600 px-3 py-1 text-xs font-semibold text-white">{t.pricing.popular}</span>}

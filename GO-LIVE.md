@@ -34,7 +34,7 @@ After the first deploy with `DATABASE_URL`: optionally import old JSON data once
 
 ## 2. Email
 - `EMAIL_MODE=resend`, `RESEND_API_KEY`, `EMAIL_FROM` = `Ranky <hello@askranky.com>` (a plain `hello@askranky.com` also works). The sender domain must be verified in Resend: the root domain `askranky.com` is; `send.askranky.com` is NOT, so do not use it (Resend answers 403 "domain is not verified"). Default if unset: `Ranky <hello@askranky.com>`. The config check errors on a malformed value and warns on a non-askranky.com domain.
-- `EMAIL_REPLY_TO` = `shaysho1111@gmail.com` (default `SUPPORT_EMAIL`, i.e. support@askranky.com)
+- `EMAIL_REPLY_TO` = `shaysho1111@gmail.com` (default `SUPPORT_EMAIL`, i.e. shaysho1111@gmail.com)
 - Resend failures are logged as `[email] <kind> send failed: Resend <status> <name>: <message>` (e.g. `Resend 403 validation_error: The … domain is not verified…`): the API error text without keys or email addresses. A failed report/receipt/cancel email is logged but never turns a finished scan, payment or cancellation into an error for the user.
 - `UNSUBSCRIBE_SECRET`: long random string (e.g. `openssl rand -base64 32`). Signs the unsubscribe links in weekly/report emails.
   **Required** for live email (config error otherwise). Changing it invalidates links in emails already sent.

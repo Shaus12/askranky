@@ -16,7 +16,7 @@ ${err ? `<p class="err">${esc(err)}</p>` : ''}
 <label>City<input name="city" required placeholder="Austin, TX"></label>
 <label>Email (we send your report)<input name="email" type="email" required placeholder="you@business.com"></label>
 <button>Run my free AI scan →</button></form></section>
-<section class="grid3"><div class="card"><h3>🔎 3 AI engines</h3><p>We ask ChatGPT, Gemini and Perplexity the questions your customers ask.</p></div>
+<section class="grid3"><div class="card"><h3>🔎 ChatGPT and Gemini</h3><p>We ask ChatGPT and Gemini the questions your customers ask.</p></div>
 <div class="card"><h3>🏁 Your rank vs competitors</h3><p>See who gets recommended instead of you and which sites AI cites.</p></div>
 <div class="card"><h3>🛠 3 fixes every week</h3><p>Concrete changes with ready-to-paste copy, not just charts.</p></div></section>`);
 
@@ -33,12 +33,12 @@ ${s.engines ? `<p class="sub">${esc(engineNote(s))}</p>` : ''}
 <div><h2>Sources AI cites</h2><ul>${s.topCitedHosts.map(h => `<li>${esc(h.host)} <span class="muted">(${+h.count}×)</span>${h.isOwnSite ? ' <b>your site</b>' : ''}</li>`).join('')}</ul></div></div>
 <h2>Your 3 fixes</h2>${scan.fixes.map((f, i) => `<div class="card fix"><h3>${i + 1}. ${esc(f.title)}</h3><p>${esc(f.why)}</p><pre>${esc(f.copy)}</pre></div>`).join('')}
 <h2>Answers</h2><table class="answers"><tr><th>Question</th><th>Engine</th><th>Mentioned</th><th>Rank</th></tr>${scan.results.map(r => `<tr><td>${esc(r.question)}</td><td>${esc(r.engine)}</td><td>${r.error ? 'error' : r.mentioned ? '✅' : '❌'}</td><td>${esc(r.rank ?? '–')}</td></tr>`).join('')}</table>
-<div class="cta card"><h3>Track this weekly and watch your score climb</h3><a class="btn" href="/pricing">Start from $19 / ₪79 a month →</a></div>
+<div class="cta card"><h3>Track this weekly and watch your score climb</h3><a class="btn" href="/pricing">Start from ₪79 a month →</a></div>
 <p class="muted small">Results come from the engines' APIs, which approximate but don't exactly match the consumer apps. Answers vary between runs, so watch trends.</p>`); };
 
-export const pricing = () => layout('Pricing', `<h1>Simple pricing</h1><p class="sub">Cancel anytime. No VAT is added (exempt dealer). Israel: ILS, elsewhere: USD.</p><div class="grid3">
-${Object.values(PLANS).map(p => `<div class="card plan"><h2>${esc(p.name)}</h2><div class="score">$${+p.prices.USD} / ₪${+p.prices.ILS}<small>${isPaid(p) ? '/mo' : ''}</small></div><ul>
-<li>${p.businesses} business${p.businesses > 1 ? 'es' : ''}</li><li>${p.questionsPerBusiness} questions × 3 AI engines</li><li>${p.cadence === 'once' ? 'One-time scan' : 'Weekly tracking + email report'}</li><li>Top ${p.competitors} competitors</li><li>3 fixes per report</li></ul>
+export const pricing = () => layout('Pricing', `<h1>Simple pricing</h1><p class="sub">Cancel anytime. No VAT is added (exempt dealer). Billed in ILS.</p><div class="grid3">
+${Object.values(PLANS).map(p => `<div class="card plan"><h2>${esc(p.name)}</h2><div class="score">₪${+p.prices.ILS}<small>${isPaid(p) ? '/mo' : ''}</small></div><ul>
+<li>${p.businesses} business${p.businesses > 1 ? 'es' : ''}</li><li>${p.questionsPerBusiness} questions × ChatGPT + Gemini</li><li>${p.cadence === 'once' ? 'One-time scan' : 'Weekly tracking + email report'}</li><li>Top ${p.competitors} competitors</li><li>3 fixes per report</li></ul>
 ${isPaid(p) ? `<form method="post" action="/checkout"><input type="hidden" name="plan" value="${esc(p.id)}"><input name="email" type="email" required placeholder="Email"><button>Choose ${esc(p.name)}</button></form>` : '<a class="btn" href="/">Run free scan</a>'}</div>`).join('')}</div>`);
 
 export const dashboard = (account, businesses, scansByBiz, budget) => layout('Dashboard', `<h1>Dashboard</h1><p class="sub">${esc(account.email)} · plan <b>${esc(account.plan)}</b> · ${account.subscriptionRef ? 'active' : 'no subscription'}</p>

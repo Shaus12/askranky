@@ -1,12 +1,12 @@
 # Terms of Service — Ranky
-Last updated: 2026-10-23 (version 1.1)
+Last updated: 2026-10-23 (version 1.2)
 
 These Terms govern your use of Ranky (askranky.com, the "Service"), operated by Shai Shotashvili, Exempt Dealer (Osek Patur) No. 322713082, Etzel 8, Bat Yam, Israel ("we", "us"). By creating an account, running a scan or paying, you agree to these Terms. If you do not agree, do not use the Service. The Hebrew version of these Terms prevails if the two versions differ (the English version is a convenience translation).
 
 ## 1. The Service
-1.1 Ranky sends questions about a business category and city to third-party AI systems through their APIs (currently OpenAI and Google Gemini; Perplexity if and when it is enabled), and reports whether and how often your business and competitors are mentioned, which sources are cited, and suggested fixes.
+1.1 Ranky sends questions about a business category and city to third-party AI systems through their APIs (currently ChatGPT, via OpenAI, and Google Gemini; other engines may be added later), and reports whether and how often your business and competitors are mentioned, which sources are cited, and suggested fixes.
 1.2 Results come from third-party systems we do not control. They vary between runs, locations and over time, and may differ from consumer apps (ChatGPT, Google AI Overviews, etc.). See the AI Results Disclaimer. We do not guarantee any ranking, mention, traffic, lead or revenue.
-1.3 Ranky is not affiliated with or endorsed by OpenAI, Google or Perplexity.
+1.3 Ranky is not affiliated with or endorsed by OpenAI or Google.
 
 ## 2. Eligibility and accounts
 2.1 You must be 18+ and able to enter a binding contract. If you use the Service for a business, you confirm you are authorised to bind it.

@@ -60,7 +60,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
       <div data-reveal><ScanForm t={t} lang={lang} onStart={(p) => run(p as unknown as Pending)} /></div>
     </Reveal></main>);
   if (used) return <FreeLimitNotice lang={lang} reportId={used.reportId} prelaunch={cfg ? !!cfg.prelaunch : true} onOther={() => { setUsed(null); setMode("form"); }} />;
-  const done = step >= n; const TOTAL = 15;
+  const done = step >= n; const TOTAL = 5 * s.engines.length; // 5 questions × the engines that run live (ChatGPT, Gemini)
   // Never goes backwards: creeping %, then step-based % once the report is ready, 100 when done.
   maxPct.current = Math.max(maxPct.current, done ? 100 : reportId ? (step / n) * 100 : mode === "demo" ? (step / n) * 100 : creepPct(elapsed));
   const pct = Math.round(maxPct.current); const slow = mode === "run" && !reportId && !error && isSlow(elapsed);
@@ -78,7 +78,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
         <div className="card mt-10 p-6 text-center"><p role="alert" className="text-red-200">{error}</p>
           <button onClick={() => { setError(""); setMode("form"); }} className="btn-cta mt-6">{t.scanErr.retry}</button></div>
       ) : (<>
-      <div className="mt-10 grid grid-cols-3 gap-3">
+      <div className={`mt-10 grid gap-3 ${s.engines.length === 2 ? "mx-auto max-w-md grid-cols-2" : "grid-cols-3"}`}>
         {s.engines.map((e, i) => { const st = engineState(i); return (
           <div key={e} className={`card p-4 text-center transition ${st === "active" ? "ring-2 ring-brand-400 shadow-[0_0_40px_-10px_#3b82f6]" : ""}`}>
             <div className={`mx-auto grid h-12 w-12 place-items-center rounded-full text-lg font-bold ${st === "done" ? "bg-score-high/20 text-score-high" : st === "active" ? "bg-white/50/30 text-white" : "bg-white/5 text-slate-400"}`}>

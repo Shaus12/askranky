@@ -4,6 +4,7 @@ export const SKIP_REASON_EN = { not_enabled: 'not enabled yet', missing_key: 'no
 export function engineNote(summary) {
   const e = summary?.engines; if (!e) return '';
   const ran = (e.ran || []).map(x => LABEL[x] || x).join(', ');
-  const sk = (e.skipped || []).map(x => `${LABEL[x.engine] || x.engine} (${SKIP_REASON_EN[x.reason] || x.reason})`).join(', ');
+  // Engines that are simply not enabled (e.g. Perplexity) are not mentioned: only real gaps (missing key, failed) are reported.
+  const sk = (e.skipped || []).filter(x => x.reason !== 'not_enabled').map(x => `${LABEL[x.engine] || x.engine} (${SKIP_REASON_EN[x.reason] || x.reason})`).join(', ');
   return `Engines that ran: ${ran || 'none'}.${sk ? ` Skipped, not included in the score: ${sk}.` : ''}`;
 }

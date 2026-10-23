@@ -37,7 +37,7 @@ try {
   const r = await realFetch(B + '/api/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Z', category: 'c', city: 'x', email: 'noeng@t.test' }) }); assert.equal(r.status, 503); const j = await r.json(); assert.equal(j.error, 'scan_unavailable'); assert.match(j.message, /unavailable/);
   assert.equal(Object.keys(getDb().scans).length, scansBefore); ok('live: no usable engine -> refuses (NO_ENGINE / HTTP 503 scan_unavailable), no spend, no scan stored, no mock results');
   // reporting
-  process.env.OPENAI_API_KEY = 'k1'; s = await runScan(acct(), biz()); const note = engineNote(s.summary); assert.match(note, /Engines that ran: ChatGPT\./); assert.match(note, /Gemini \(not configured\)/); assert.match(note, /Perplexity \(not enabled yet\)/);
+  process.env.OPENAI_API_KEY = 'k1'; s = await runScan(acct(), biz()); const note = engineNote(s.summary); assert.match(note, /Engines that ran: ChatGPT\./); assert.match(note, /Gemini \(not configured\)/); assert.ok(!/Perplexity/.test(note), 'engines that are not enabled are not advertised');
   const html = renderWeeklyEmail({ business: biz(), scan: s, prev: null, reportUrl: 'https://x/r/1', unsubscribeUrl: 'https://x/u' }); assert.match(html, /Engines that ran: ChatGPT\./); assert.match(html, /not included in the score/);
   assert.match(V.reportPage(biz(), s), /Engines that ran: ChatGPT\./); assert.ok(!V.reportPage(biz(), s).includes('MOCK MODE'));
   const i18n = fs.readFileSync('web/lib/i18n.ts', 'utf8'), rv = fs.readFileSync('web/components/ReportView.tsx', 'utf8'), apiTs = fs.readFileSync('web/lib/api.ts', 'utf8');
