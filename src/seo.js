@@ -4,7 +4,9 @@ export const SITE = () => (process.env.SITE_URL || 'https://askranky.com').repla
 export const DISALLOW = ['/app', '/api/', '/billing/', '/report', '/r/', '/dashboard', '/auth/', '/he/r/', '/en/r/', '/he/dashboard', '/en/dashboard', '/he/checkout', '/en/checkout', '/mock-checkout', '/webhooks/'];
 export const BOTS = ['*', 'GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'PerplexityBot', 'Perplexity-User', 'Google-Extended', 'Googlebot', 'ClaudeBot', 'Claude-SearchBot', 'Claude-User', 'Applebot-Extended', 'Bingbot'];
 export const robotsTxt = () => BOTS.map(b => [`User-agent: ${b}`, 'Allow: /', ...DISALLOW.map(d => `Disallow: ${d}`)].join('\n')).join('\n\n') + `\n\nSitemap: ${SITE()}/sitemap.xml\n`;
-export const SITEMAP_PAGES = ['', '/scan', '/report', ...['terms', 'privacy', 'refunds', 'disclaimer', 'accessibility'].map(d => `/legal?doc=${d}`)];
+// Legal docs have their own server-rendered, self-canonical URLs (/{lang}/legal/{doc}); the old ?doc= URLs 301 to them and are not listed.
+import { LEGAL_DOCS } from './legal.js';
+export const SITEMAP_PAGES = ['', '/scan', '/report', '/legal', ...LEGAL_DOCS.map(d => `/legal/${d}`)];
 const x = s => s.replace(/&/g, '&amp;');
 export function sitemapXml() {
   const u = (l, p) => x(`${SITE()}/${l}${p}`);
@@ -14,6 +16,7 @@ export function sitemapXml() {
       `<changefreq>weekly</changefreq><priority>${p ? '0.6' : '1.0'}</priority></url>`)).join('\n') + '\n</urlset>\n';
 }
 // llms.txt (seo-audit #4): plain summary + key pages for AI crawlers.
+const LEGAL_TITLES = { terms: 'Terms of Service', privacy: 'Privacy Policy', refunds: 'Refund and Cancellation Policy', disclaimer: 'AI Results Disclaimer', accessibility: 'Accessibility Statement' };
 export const llmsTxt = () => `# Ranky
 > Ranky (askranky.com) checks whether ChatGPT, Perplexity and Google's AI recommend a local business, shows who gets named instead and which sources are cited, and suggests 3 fixes. Free first scan. Markets: US (English) and Israel (Hebrew).
 
@@ -22,6 +25,6 @@ export const llmsTxt = () => `# Ranky
 - [Home (HE)](${SITE()}/he)
 - [Free scan](${SITE()}/en/scan)
 - [Sample report](${SITE()}/en/report)
-- [Terms](${SITE()}/en/legal?doc=terms)
-- [Privacy](${SITE()}/en/legal?doc=privacy)
+- [Legal documents](${SITE()}/en/legal)
+${LEGAL_DOCS.flatMap(d => [['en', 'EN'], ['he', 'HE']].map(([l, L]) => `- [${LEGAL_TITLES[d]} (${L})](${SITE()}/${l}/legal/${d})`)).join('\n')}
 `;

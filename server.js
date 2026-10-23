@@ -7,7 +7,7 @@ import { token, safeEqual, issueMagicLink, consumeMagic } from './src/security/t
 import { verifyTurnstile, turnstileSiteKey } from './src/security/turnstile.js'; import { esc } from './src/security/html.js';
 import { isPrelaunch } from './src/prelaunch.js'; import { billingPage, notFoundPage, langOf } from './src/pages.js'; import { robotsTxt, sitemapXml, llmsTxt } from './src/seo.js';
 import { renderTx } from './src/email/templates.js'; import { setConsent, verifyUnsubToken, unsubUrl, unsubHeaders } from './src/consent.js'; import { unsubscribePage } from './src/pages.js';
-import { startBillingCron, ymd } from './src/jobs/billing-sync.js';
+import { startBillingCron, ymd } from './src/jobs/billing-sync.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js';
 
 const app = express(); app.disable('x-powered-by'); if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY); app.use(express.urlencoded({ extended: false })); app.use(express.json()); // noindex on private pages (meta robots is also in the HTML; the header covers redirects and server-rendered pages).
 const NOINDEX = /^\/(?:(?:he|en)\/)?(?:dashboard|login|checkout|billing|auth|mock-checkout|unsubscribe)(?:\/|$)/;
@@ -202,23 +202,15 @@ app.post('/api/dashboard/:id/rescan', async (q, r) => {
 // Legal docs in legal/*.md (Hebrew: *.he.md). Whitelisted names only (COMPLIANCE-NOTES.md is internal and never served).
 // Docs are pre-filled; known {{KEY}} placeholders are still substituted (Hebrew files get the Hebrew entity/address), and
 // any other {{KEY}} renders as "[KEY]" (or env LEGAL_KEY) so it is visible but never leaks template syntax.
-export const LEGAL_DOCS = ['terms', 'privacy', 'refunds', 'disclaimer', 'accessibility'];
-function legal(q, r, doc, lang) {
-  if (!LEGAL_DOCS.includes(doc)) return r.status(404).json({ error: 'not found' });
-  const he = lang === 'he' && fs.existsSync(path.resolve('legal', doc + '.he.md')); const f = path.resolve('legal', doc + (he ? '.he.md' : '.md'));
-  if (!fs.existsSync(f)) return r.status(404).json({ error: 'not found' });
-  const known = { BRAND: BRAND.name, DOMAIN: BRAND.domain, EMAIL: BRAND.supportEmail, ENTITY: he ? BRAND.legalEntityHe : BRAND.legalEntity, ENTITY_ID: BRAND.entityId,
-    ADDRESS: he ? BRAND.addressHe : BRAND.address, DPO_NAME: he ? BRAND.legalEntityHe : BRAND.legalEntity, DPO_EMAIL: BRAND.privacyEmail,
-    ACCESSIBILITY_COORDINATOR: he ? BRAND.legalEntityHe : BRAND.legalEntity, ACCESSIBILITY_EMAIL: BRAND.accessibilityEmail };
-  r.json({ lang: he ? 'he' : 'en', doc, markdown: fs.readFileSync(f, 'utf8').replace(/\{\{([A-Z_]+)\}\}/g, (_, k) => known[k] ?? process.env['LEGAL_' + k] ?? `[${k}]`) });
-}
+export { LEGAL_DOCS };
+function legal(q, r, doc, lang) { const d = legalDoc(doc, lang); if (!d) return r.status(404).json({ error: 'not found' }); r.json(d); }
 app.get('/api/legal/:lang(he|en)/:doc', (q, r) => legal(q, r, q.params.doc, q.params.lang));
 app.get('/api/legal/:doc', (q, r) => legal(q, r, q.params.doc, q.query.lang === 'he' ? 'he' : 'en'));
 // Seller disclosure for footer/checkout (Consumer Protection Law s.14C). Public business details only.
 app.get('/api/seller', (q, r) => r.json({ name: BRAND.legalEntity, nameHe: BRAND.legalEntityHe, entityId: BRAND.entityId, entityType: BRAND.entityType, entityTypeHe: BRAND.entityTypeHe, address: BRAND.address, addressHe: BRAND.addressHe, email: BRAND.supportEmail, vat: false }));
 // ---------- Next.js frontend (static export in web/out, built with `npm run build`) ----------
 // Pages are plain HTML; dynamic segments (/r/:id, /dashboard/:id) map onto one exported page whose client code reads the id from the URL.
-const OUT = path.resolve('web/out'); const LANGS = ['he', 'en'];
+const PUBLIC_CACHE = 'public, max-age=0'; const OUT = path.resolve('web/out'); const LANGS = ['he', 'en'];
 const prefLang = q => { const c = /(?:^|;\s*)ranky_lang=(he|en)/.exec(q.get('cookie') || ''); if (c) return c[1]; return /\bhe\b|\biw\b/i.test(q.get('accept-language') || '') ? 'he' : 'en'; };
 const qs = q => { const i = q.originalUrl.indexOf('?'); return i >= 0 ? q.originalUrl.slice(i) : ''; };
 function page(r, lang, name) {
@@ -235,12 +227,22 @@ app.get('/dashboard/:id', (q, r) => r.redirect(`/${prefLang(q)}/dashboard/${enco
 app.get('/login', (q, r) => r.redirect(`/${prefLang(q)}/login`));
 app.get('/pricing', (q, r) => r.redirect(`/${prefLang(q)}#pricing`));
 app.get('/mock-checkout', (q, r) => { const k = String(q.query.account || '').split('.')[0]; const acc = Object.hasOwn(getDb().accounts, k) ? getDb().accounts[k] : null; return isPrelaunch() && !(acc?.pendingAdminTest && getPayments().id === 'mock') ? r.redirect(`/${prefLang(q)}/checkout`) : r.redirect(`/${prefLang(q)}/checkout${qs(q)}${isPrelaunch() ? (qs(q) ? '&' : '?') + 'admintest=1' : ''}`); });
-app.get('/legal/:lang(he|en)/:doc', (q, r) => r.redirect(`/${q.params.lang}/legal?doc=${encodeURIComponent(q.params.doc)}`));
-app.get('/legal/:doc', (q, r) => r.redirect(`/${prefLang(q)}/legal?doc=${encodeURIComponent(q.params.doc)}`));
+// Legal docs live at /{lang}/legal/{doc} (server-rendered from legal/*.md, full text in the HTML). Short links and the old
+// /{lang}/legal?doc=… URLs 301 there (language-less short links 302: the language is a per-visitor choice). Anything off the
+// whitelist, COMPLIANCE-NOTES included, is an explicit 404 and is never redirected to a page that could imply it exists.
+const isDoc = d => typeof d === 'string' && LEGAL_DOCS.includes(d);
+app.get('/legal', (q, r) => r.redirect(`/${prefLang(q)}/legal`));
+app.get('/legal/:lang(he|en)/:doc', (q, r, next) => isDoc(q.params.doc) ? r.redirect(301, `/${q.params.lang}/legal/${q.params.doc}`) : next());
+app.get('/legal/:doc', (q, r, next) => isDoc(q.params.doc) ? r.redirect(`/${prefLang(q)}/legal/${q.params.doc}`) : next());
+app.get('/:lang/legal', (q, r, next) => { if (!LANGS.includes(q.params.lang)) return next(); if (q.query.doc === undefined) return page(r, q.params.lang, 'legal'); return isDoc(q.query.doc) ? r.redirect(301, `/${q.params.lang}/legal/${q.query.doc}`) : r.redirect(301, `/${q.params.lang}/legal`); });
+app.get('/:lang/legal/:doc', (q, r, next) => {
+  if (!LANGS.includes(q.params.lang) || !isDoc(q.params.doc)) return next();
+  const h = legalPageHtml(OUT, q.params.lang, q.params.doc); if (h === undefined) return r.status(503).send('Frontend not built: cd web && npm install && npm run build');
+  r.set('Cache-Control', PUBLIC_CACHE).type('html').send(h); });
 app.get('/:lang', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang) : next());
 app.get('/:lang/r/:id', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'report') : next());
 app.get('/:lang/dashboard/:id', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'dashboard') : next());
-app.get('/:lang/:page', (q, r, next) => LANGS.includes(q.params.lang) && ['scan', 'report', 'login', 'dashboard', 'checkout', 'legal'].includes(q.params.page) ? page(r, q.params.lang, q.params.page) : next());
+app.get('/:lang/:page', (q, r, next) => LANGS.includes(q.params.lang) && ['scan', 'report', 'login', 'dashboard', 'checkout'].includes(q.params.page) ? page(r, q.params.lang, q.params.page) : next());
 app.get(['/he.txt', '/en.txt', '/:lang/:page.txt'], (q, r) => { const f = path.join(OUT, q.path); return LANGS.some(l => q.path.startsWith('/' + l)) && fs.existsSync(f) && !q.path.includes('..') ? r.sendFile(f) : r.sendStatus(404); });
 // Branded bilingual 404 (RTL Hebrew + English, order follows the URL language or preference). JSON for /api.
 app.use((q, r) => { if (wantsJson(q)) return r.status(404).json({ error: 'not found' }); const m = /^\/(he|en)(\/|$)/.exec(q.path); r.status(404).type('html').send(notFoundPage(m ? m[1] : prefLang(q))); });

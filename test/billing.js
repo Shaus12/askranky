@@ -87,10 +87,10 @@ try {
     process.env.PAYMENTS_PROVIDER = 'sumit'; assert.equal((await ck({ 'x-admin-test-token': 'adm-0123456789abcdef' })).status, 403); delete process.env.PAYMENTS_PROVIDER; ok('admin test checkout never works with real payments (SUMIT)');
     delete process.env.ADMIN_TEST_TOKEN; delete process.env.PRELAUNCH; }
   // 8) Hebrew legal pages
-  { for (const d of ['terms', 'privacy', 'refunds', 'disclaimer', 'accessibility']) { const p = await get(`/he/legal?doc=${d}`); assert.equal(p.status, 200, d); assert.match(await p.text(), /<html lang="he" dir="rtl"/);
+  { for (const d of ['terms', 'privacy', 'refunds', 'disclaimer', 'accessibility']) { const p = await get(`/he/legal/${d}`); assert.equal(p.status, 200, d); assert.match(await p.text(), /<html lang="he" dir="rtl"/);
       const j = await (await get(`/api/legal/he/${d}`)).json(); assert.equal(j.lang, 'he'); assert.ok(j.markdown.includes(BRAND.legalEntityHe) || j.markdown.includes(BRAND.entityId) || j.markdown.includes(BRAND.supportEmail) || j.markdown.includes(BRAND.name), d); }
     const t = await (await get('/api/legal/he/terms')).json(); assert.match(t.markdown, /שי שוטשוילי/); assert.match(t.markdown, /322713082/); assert.ok(!/\[[A-Z_]+\]/.test(t.markdown));
-    assert.equal((await get('/legal/he/terms')).status, 302); ok('Hebrew legal pages: /he/legal?doc=* → 200 RTL; API returns Hebrew docs with שי שוטשוילי / 322713082');
+    assert.equal((await get('/legal/he/terms')).status, 301); ok('Hebrew legal pages: /he/legal/{doc} → 200 RTL; API returns Hebrew docs with שי שוטשוילי / 322713082');
     const { execFileSync } = await import('node:child_process'); const out = execFileSync(process.execPath, ['--input-type=module', '-e', "const {BRAND}=await import('./src/brand.js');process.stdout.write(BRAND.legalEntity)"], { env: { ...process.env, LEGAL_ENTITY: 'Test Entity Ltd' } }).toString();
     assert.equal(out, 'Test Entity Ltd'); assert.equal(process.env.LEGAL_ENTITY, undefined); const s = await (await get('/api/seller')).json(); assert.equal(s.name, BRAND.legalEntity); assert.equal(s.nameHe, 'שי שוטשוילי'); ok('LEGAL_ENTITY env overrides the brand entity; /api/seller renders entity details'); }
   // 9) SEO P1

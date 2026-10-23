@@ -15,7 +15,8 @@ export default function Nav({ t, lang, path = "" }: { t: Dict; lang: Locale; pat
         </div>
         <Link href={base} className="vx-link font-head text-xl font-bold tracking-tight">{t.brand}</Link>
         <div className="flex items-center justify-end gap-4 text-sm">
-          <Link href={`/${other}${path}`} className="vx-link opacity-75">{other === "he" ? "עברית" : "English"}</Link>
+          {/* Legal docs are filled in by the server per request, so switching language there must be a full page load, not a client-side RSC fetch. */}
+          {path.startsWith("/legal/") ? <a href={`/${other}${path}`} hrefLang={other} className="vx-link opacity-75">{other === "he" ? "עברית" : "English"}</a> : <Link href={`/${other}${path}`} className="vx-link opacity-75">{other === "he" ? "עברית" : "English"}</Link>}
           <Link href={`${base}/scan`} className="btn-cta !px-4 !py-1.5 text-sm">{t.nav.cta}</Link>
         </div>
       </div>

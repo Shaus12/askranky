@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Dict, Locale } from "@/lib/i18n";
 export default function Footer({ t, lang = "en" }: { t: Dict; lang?: Locale }) {
   const base = `/${lang}`;
-  const L = (doc: string, label: string) => <a href={`${base}/legal?doc=${doc}`} className="vx-link hover:text-white">{label}</a>;
+  const L = (doc: string, label: string) => <a href={`${base}/legal/${doc}`} className="vx-link hover:text-white">{label}</a>;
   return (
     <footer className="relative bg-[var(--navy)] px-5 pb-10 pt-14 text-sm text-slate-400">
       <span className="hairline absolute inset-x-0 top-0 block" />

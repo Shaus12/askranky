@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { Locale } from "./i18n";
 import { dict } from "./i18n";
 import { PRICES } from "./prices";
+import { LEGAL_DOCS, LEGAL_META } from "./legal";
 // Per-language metadata: title/description/OG + canonical and hreflang (he, en, x-default → language-picking root).
 export const SITE = "https://askranky.com";
 const T = {
@@ -17,6 +18,9 @@ const PAGE: Record<string, { he: string; en: string; dhe: string; den: string }>
   "/dashboard": { he: "דשבורד", en: "Dashboard", dhe: "הדשבורד הפרטי שלך ב־Ranky.", den: "Your private Ranky dashboard." },
   "/legal": { he: "מסמכים משפטיים", en: "Legal", dhe: "תנאי שימוש, פרטיות, החזרים, הצהרת נגישות והבהרות של Ranky.", den: "Ranky terms, privacy policy, refunds, accessibility statement and disclaimer." },
 };
+// One entry per legal document: /legal/{doc} (own title, description, self-canonical, he<->en alternates; indexable).
+for (const d of LEGAL_DOCS) PAGE[`/legal/${d}`] = { he: LEGAL_META[d].he.title, en: LEGAL_META[d].en.title, dhe: LEGAL_META[d].he.desc, den: LEGAL_META[d].en.desc };
+// PRIVATE pages get <meta name="robots" content="noindex, nofollow">; robots.txt must NOT disallow them (see src/seo.js).
 export const PRIVATE = ["/checkout", "/dashboard", "/login", "/billing"];
 export function pageMeta(lang: Locale, path = ""): Metadata {
   const t = T[lang]; const title = PAGE[path] ? `${PAGE[path][lang]} · Ranky` : t.title; const desc = PAGE[path]?.[lang === "he" ? "dhe" : "den"] ?? t.desc; const og = `${SITE}/og-${lang}.png`; const url = `${SITE}/${lang}${path}`;

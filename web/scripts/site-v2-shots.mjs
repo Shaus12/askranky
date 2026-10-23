@@ -32,7 +32,7 @@ for (const [vname, vp] of Object.entries(views).filter(([v]) => !process.env.VIE
   await p.route("**/api/scan", async (r) => { await new Promise((ok) => setTimeout(ok, 5000)); await r.continue(); });
   await p.click("form button"); await p.waitForURL(/\/scan$/); await p.waitForTimeout(2400); await shot(p, `scan-${tag}`);
   await p.waitForURL(/\/r\//, { timeout: 30000 }); await p.waitForLoadState("networkidle"); await settle(p); await shot(p, `report-${tag}`);
-  for (const [n2, u] of [["report-sample", "/report"], ["checkout-pro", "/checkout?plan=pro"], ["legal-terms", "/legal?doc=terms"], ["scan-form", "/scan"]]) { await p.goto(`${BASE}/${lang}${u}`, { waitUntil: "networkidle" }); await settle(p); await shot(p, `${n2}-${tag}`); }
+  for (const [n2, u] of [["report-sample", "/report"], ["checkout-pro", "/checkout?plan=pro"], ["legal-terms", "/legal/terms"], ["scan-form", "/scan"]]) { await p.goto(`${BASE}/${lang}${u}`, { waitUntil: "networkidle" }); await settle(p); await shot(p, `${n2}-${tag}`); }
   await p.goto(`${BASE}/${lang}#pricing`, { waitUntil: "networkidle" }); await settle(p); { const el = p.locator("#pricing"); await el.scrollIntoViewIfNeeded(); await p.waitForTimeout(1500); const f = path.join(OUT, `pricing-${tag}.png`); await el.screenshot({ path: f }); console.log(f); }
   await p.goto(`${BASE}/${lang}/login`, { waitUntil: "networkidle" }); await p.waitForTimeout(800); await shot(p, `login-${tag}`);
   // Upgrade (mock payment) so the dashboard shows re-scan + history, then sign in through a real magic link.
