@@ -37,7 +37,7 @@ export default function ScanForm({ t, lang, onStart }: { t: Dict; lang: Locale; 
       <label className="flex items-start gap-2 text-sm text-slate-300">
         <input type="checkbox" name="marketingConsent" value="on" defaultChecked={false} className="mt-1 h-4 w-4 shrink-0 accent-emerald-500" data-consent />
         <span>{t.form.consent}</span></label>
-      <p className="text-xs text-slate-400" data-privacy>{noEmail ? t.demo.privacy : t.form.privacy} <a className="vx-link underline" href={`/${lang}/legal?doc=privacy`}>{t.form.privacyLink}</a>.</p>
+      <p className="text-xs text-slate-400" data-privacy>{noEmail ? t.demo.privacy : t.form.privacy} <a className="vx-link underline" href={`/${lang}/legal/privacy`}>{t.form.privacyLink}</a>.</p>
       {(demo || noEmail) && <p role="note" data-demo-note className="rounded-lg border border-[#e8b04b]/30 bg-[#e8b04b]/10 px-3 py-2 text-sm text-amber-100">{noEmail ? t.demo.scanNote : t.demo.sampleNote}</p>}
       <Turnstile siteKey={siteKey} lang={lang} />
       {err && <p role="alert" className="rounded-lg bg-score-low/15 px-3 py-2 text-sm text-red-200">{err}</p>}
