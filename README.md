@@ -37,5 +37,8 @@ y, the one place to change. `src/plans.js`: ILS/USD prices, caps, cost per check
 ## Going live checklist
 Set keys in `.env` (see `.env.example`), `SCAN_MODE=live`, `PAYMENTS_PROVIDER=sumit`, `EMAIL_MODE=live`; configure the SUMIT redirect URL to `${BASE_URL}/billing/return`; verify fields marked VERIFY in `src/payments/sumit.js` and `src/providers/perplexity.js`; add a daily cron that calls `sync()` per paid account.
 
+## External cron (free Render plan)
+The daily billing sync is triggered from cron-job.org (a GitHub Actions example is in `docs/cron.yml.example`) via `POST /api/internal/cron/sync` with header `X-Cron-Secret` (env `CRON_SECRET`, `openssl rand -hex 32`); `GET /healthz` is the keep-warm ping. Full setup, caveats and cold-start/missed-run behaviour: **GO-LIVE.md → "External cron on the free Render plan"**.
+
 ## Frontend
 Next.js 15 + TypeScript + Tailwind 4 in `web/` (Lenis smooth scroll, GSAP ScrollTrigger reveals, animated score gauge, scan progress, report). Copy in `web/lib/i18n.ts` (he/en). The previous React+Vite frontend was replaced; it's in `../app.backup-20261021-1743/web`.

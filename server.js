@@ -7,7 +7,7 @@ import { token, safeEqual, issueMagicLink, consumeMagic } from './src/security/t
 import { verifyTurnstile, turnstileSiteKey } from './src/security/turnstile.js'; import { esc } from './src/security/html.js';
 import { isPrelaunch } from './src/prelaunch.js'; import { billingPage, notFoundPage, langOf } from './src/pages.js'; import { robotsTxt, sitemapXml, llmsTxt, NOINDEX_PATH } from './src/seo.js';
 import { renderTx } from './src/email/templates.js'; import { setConsent, verifyUnsubToken, unsubUrl, unsubHeaders } from './src/consent.js'; import { unsubscribePage } from './src/pages.js';
-import { startBillingCron, ymd } from './src/jobs/billing-sync.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js';
+import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js';
 
 const app = express(); app.disable('x-powered-by'); if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY); app.use(express.urlencoded({ extended: false })); app.use(express.json()); // noindex on private pages (meta robots is also in the HTML; the header covers redirects and server-rendered pages).
 // Which paths: NOINDEX_PATH in src/seo.js (the single source for robots.txt and these headers).
@@ -61,6 +61,24 @@ function findOrCreateAccount(email) {
 }
 
 app.get('/health', (q, r) => r.json({ ok: true, brand: BRAND.name, mockScans: isMockMode(), payments: getPayments().id, prelaunch: isPrelaunch(), store: BACKEND }));
+// Keep-warm for free hosting (cold starts): tiny, no DB or provider calls.
+app.get('/healthz', (q, r) => r.set('Cache-Control', 'no-store').json({ ok: true }));
+// External cron trigger (GitHub Actions / cron-job.org) for the daily billing sync, because the free Render plan has no cron.
+// Disabled (404) unless CRON_SECRET (>= 16 chars) is set. Requires header X-Cron-Secret, compared timing-safe (sha256 + timingSafeEqual).
+// Not behind the CAPTCHA. Only wrong-secret attempts are rate limited (CRON_FAIL_MAX per 15 min per IP). Concurrent runs are collapsed
+// by an in-process lock (the second caller gets 202 {running:true}). The sync is idempotent. Responses never include sync data.
+export const cronHooks = { sync: syncAll };
+const cronFailLimiter = createRateLimiter({ max: Number(process.env.CRON_FAIL_MAX || 10), windowMs: 15 * 60 * 1000, onLimit: (q, r) => r.status(429).json({ ok: false }) });
+let cronRunning = false;
+app.post('/api/internal/cron/sync', async (q, r) => {
+  r.set('Cache-Control', 'no-store'); const secret = process.env.CRON_SECRET || ''; if (secret.length < 16) return r.status(404).json({ ok: false });
+  if (!safeEqual(String(q.get('x-cron-secret') || ''), secret)) return cronFailLimiter(q, r, () => r.status(401).json({ ok: false }));
+  if (cronRunning) return r.status(202).json({ ok: true, running: true });
+  cronRunning = true;
+  try { await cronHooks.sync(); console.log('[cron] billing sync done'); return r.json({ ok: true, ranAt: new Date().toISOString() }); }
+  catch (e) { console.error(`[cron] billing sync failed (${e?.name || 'Error'})`); return r.status(500).json({ ok: false }); }
+  finally { cronRunning = false; }
+});
 app.get('/llms.txt', (q, r) => r.type('text/plain; charset=utf-8').send(llmsTxt()));
 app.get('/robots.txt', (q, r) => r.type('text/plain').send(robotsTxt()));
 app.get('/sitemap.xml', (q, r) => r.type('application/xml').send(sitemapXml()));

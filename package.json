@@ -7,7 +7,7 @@
     "start": "node server.js",
     "build": "cd web && npm run build",
     "dev:web": "cd web && npm run dev",
-    "test": "node test/e2e.js && node test/security.js && node test/hebrew.js && node test/pricing.js && node test/live-regression.js && node test/qa.js && node test/pg.js && node test/ops.js && node test/legal.js && node test/billing.js && node test/turnstile.js && node test/demo.js && node test/engines.js && node test/seo.js",
+    "test": "node test/e2e.js && node test/security.js && node test/hebrew.js && node test/pricing.js && node test/live-regression.js && node test/qa.js && node test/pg.js && node test/ops.js && node test/legal.js && node test/billing.js && node test/turnstile.js && node test/demo.js && node test/engines.js && node test/seo.js && node test/cron.js",
     "weekly": "node src/weekly.js",
     "shots": "node web/scripts/screenshots.mjs",
     "config:check": "node scripts/config-check.js",

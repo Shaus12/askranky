@@ -52,9 +52,28 @@ After the first deploy with `DATABASE_URL`: optionally import old JSON data once
   - or in-process: `BILLING_SYNC_CRON=1` on the web service (single instance only; first run 1 min after boot, then every 24h).
   The job renews `paidThrough` + sends a receipt email, marks failed payments `past_due` + sends one failed-payment email,
   downgrades to free after 7 days unpaid, and ends cancelled plans at `paidThrough`.
+  - **Free Render plan (no cron):** use the external trigger below instead.
 - Self-serve cancel: dashboard → "Cancel subscription" → confirm → `POST /api/dashboard/:id/cancel` → SUMIT
   `/billing/recurring/cancel/`, access kept until `paidThrough`, written confirmation email (s.13D).
 - In SUMIT: company set as עוסק פטור, default document קבלה, no VAT; renewals also produce קבלה. First real charge only with Shai's approval.
+
+### External cron on the free Render plan (cron-job.org)
+The free plan has no cron jobs and the service sleeps after ~15 min idle, so the daily billing sync is triggered from outside:
+
+- **Endpoint:** `POST https://askranky.com/api/internal/cron/sync` with header `X-Cron-Secret: <CRON_SECRET>`. No body.
+  - `CRON_SECRET` is a **new, separate** env var (NOT `ADMIN_TEST_TOKEN`). Generate it with `openssl rand -hex 32` and set it on Render (min 16 chars).
+  - `CRON_SECRET` unset (or shorter than 16) → the endpoint is **disabled** (404). Wrong/missing header → 401 (compared timing-safe); more than 10 wrong attempts per 15 min per IP → 429 (`CRON_FAIL_MAX`). It is not behind the CAPTCHA.
+  - Success → `200 {"ok":true,"ranAt":"<ISO time>"}`. Failure → `500 {"ok":false}`. If a run is already in progress → `202 {"ok":true,"running":true}`. Responses and logs never contain SUMIT data or the secret.
+- **Keep-warm:** `GET /healthz` → `{"ok":true}` (no DB or provider calls).
+- **cron-job.org setup (free account, two jobs):**
+  1. **Daily sync:** URL `https://askranky.com/api/internal/cron/sync`, request method **POST**, under *Advanced* add the header `X-Cron-Secret` with the value of `CRON_SECRET`. Schedule: once a day (e.g. 04:07 UTC). **Request timeout: 60 s or more** (a cold start takes ~60 s; use the maximum the plan allows). Turn **on** "Retry on failure"/execution retries and **on** failure notifications (email on failed or timed-out runs). Success = HTTP 200 (a 202 means a run was already in progress, also fine).
+  2. **Keep-warm:** URL `https://askranky.com/healthz`, method **GET**, every 10 minutes, timeout 60 s, failure notification optional.
+  3. Use "Test run" on the sync job once after setting `CRON_SECRET` on Render; expect `{"ok":true,...}`.
+- **Optional, later:** a GitHub Actions version of the same schedule is stored as `docs/cron.yml.example`. The token we deploy with has no `workflow` scope, so the file is **not** in `.github/workflows/`. To use it, add it through the GitHub web UI (Add file → Create new file → `.github/workflows/cron.yml`, paste the YAML) and create the repo secret `CRON_SECRET` (Settings → Secrets and variables → Actions → New repository secret). GitHub scheduled workflows can be delayed or skipped and are disabled after 60 days without repo activity.
+- **Caveats:**
+  - A keep-warm ping every 10 min keeps the service awake around the clock, which uses roughly 720-744 of Render's 750 free instance-hours per month. Fine for one free service, not for two. Drop the keep-warm job (or ping less often) if that matters; the sync still works from a cold start.
+  - **What the sync does when the service is cold:** the first request wakes the service (~60 s), so the job needs a timeout of 60 s or more and retries on. The sync runs inside that request and is idempotent: renewals only move `paidThrough` forward when it has passed, the failed-payment email is sent once per failure (`failedNoticeAt`), and downgraded accounts are skipped on later runs. A late, duplicated or retried run is therefore safe, and overlapping runs are collapsed by the in-process lock.
+  - **If a day is missed:** nothing is lost, the next run catches up. Renewals/downgrades are decided from stored dates (`paidThrough`, `pastDueSince`), but the sync advances `paidThrough` by one month per run, and the 7-day unpaid grace starts when the sync first sees the failure, so a missed day delays receipts/failed-payment emails/downgrades by about a day (a multi-week outage would need several runs to catch up).
 
 ## 3b. Pre-launch admin test checkout
 - `ADMIN_TEST_TOKEN` (≥16 random chars). While pre-launch, `POST /api/checkout` with header `x-admin-test-token: <token>`

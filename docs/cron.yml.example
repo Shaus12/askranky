@@ -1,0 +1,47 @@
+# EXAMPLE ONLY. Not active: copy to .github/workflows/cron.yml via the GitHub web UI (our deploy token has no `workflow` scope).
+# External cron for the free Render plan (no native cron, service sleeps when idle).
+#  - sync: daily billing sync via POST /api/internal/cron/sync (needs the repo secret CRON_SECRET = the CRON_SECRET env var on Render)
+#  - warm: GET /healthz every 10 minutes so the service rarely cold-starts
+# GitHub may delay or skip scheduled runs and disables them after 60 days without repo activity; see README "External cron".
+name: cron
+
+on:
+  schedule:
+    - cron: '7 4 * * *'      # daily sync, 04:07 UTC
+    - cron: '*/10 * * * *'   # keep-warm
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Which job to run now'
+        type: choice
+        options: [sync, warm]
+        default: sync
+
+permissions: {}
+
+env:
+  BASE_URL: https://askranky.com
+
+jobs:
+  sync:
+    if: github.event_name == 'workflow_dispatch' && inputs.job == 'sync' || github.event.schedule == '7 4 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency: { group: ranky-cron-sync, cancel-in-progress: false }
+    steps:
+      - name: Daily billing sync (idempotent; first attempt may wake the service from a cold start)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then echo "::error::Repository secret CRON_SECRET is not set"; exit 1; fi
+          curl --fail --silent --show-error --max-time 90 --retry 3 --retry-delay 20 --retry-all-errors \
+            -X POST -H "X-Cron-Secret: $CRON_SECRET" "$BASE_URL/api/internal/cron/sync"
+          echo
+
+  warm:
+    if: github.event_name == 'workflow_dispatch' && inputs.job == 'warm' || github.event.schedule == '*/10 * * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Keep-warm ping
+        run: curl --fail --silent --show-error --max-time 90 --retry 3 --retry-delay 20 --retry-all-errors "$BASE_URL/healthz"
