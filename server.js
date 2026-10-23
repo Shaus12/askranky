@@ -8,6 +8,7 @@ import { verifyTurnstile, turnstileSiteKey } from './src/security/turnstile.js';
 import { isPrelaunch } from './src/prelaunch.js'; import { billingPage, notFoundPage, langOf } from './src/pages.js'; import { robotsTxt, sitemapXml, llmsTxt, NOINDEX_PATH } from './src/seo.js';
 import { renderTx } from './src/email/templates.js'; import { setConsent, verifyUnsubToken, unsubUrl, unsubHeaders } from './src/consent.js'; import { unsubscribePage } from './src/pages.js';
 import { TEST_PLAN, TEST_BILLING, TEST_CHECKOUT_TTL_MS, TEST_ACCESS_MS } from './src/payments/test-plan.js';
+import { validSingleUseToken, looksLikeCardNumber } from './src/payments/sumit.js'; import { checkoutCsp, inlineScriptHashes, adminNonce, JQUERY_PATH, SUMIT_SCRIPT_URL } from './src/security/csp.js';
 import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js';
 
 const app = express(); app.disable('x-powered-by'); if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY); app.use(express.urlencoded({ extended: false })); app.use(express.json()); // noindex on private pages (meta robots is also in the HTML; the header covers redirects and server-rendered pages).
@@ -80,40 +81,76 @@ app.post('/api/internal/cron/sync', async (q, r) => {
   catch (e) { console.error(`[cron] billing sync failed (${e?.name || 'Error'})`); return r.status(500).json({ ok: false }); }
   finally { cronRunning = false; }
 });
+// ---------- Card data guard (checkout / charge / admin routes) ----------
+// Card numbers must never reach this server: payments.js sends them straight to SUMIT and we only ever receive a SingleUseToken.
+// Defence in depth: refuse (400, nothing stored, nothing logged but the path) any request whose keys look like card fields or whose
+// values look like a card number (13-19 digits passing Luhn), in the JSON/urlencoded body or the query string.
+const CARD_KEY = /card|cvv|cvc|cc[-_ ]?num|expir|citizen|^og[-_]/i, CARD_VALUE = /^[\d\s-]{13,23}$/;
+const hasCardData = (v, depth = 0) => { if (v == null || depth > 4) return false; if (typeof v === 'string') return CARD_VALUE.test(v) && looksLikeCardNumber(v);
+  if (typeof v === 'number') return looksLikeCardNumber(String(v)); if (typeof v !== 'object') return false;
+  return Object.entries(v).some(([k, x]) => CARD_KEY.test(k) || hasCardData(x, depth + 1)); };
+export const noCardData = (q, r, next) => { if (!hasCardData(q.body) && !hasCardData(q.query)) return next();
+  console.error(`[security] card-like data rejected on ${q.path}`); return r.status(400).set('Cache-Control', 'no-store').json({ ok: false, error: 'card_data_rejected', code: 'card_data_rejected' }); };
 // ---------- Hidden admin-only REAL 1 ILS test checkout (PAYMENTS_PROVIDER=sumit + ADMIN_TEST_TOKEN) ----------
-// Same real code path as production checkout (SUMIT hosted card page -> /billing/return -> recurring/charge with DocumentType 2
+// Same real code path as production checkout (embedded SUMIT Payments JS card form -> POST token -> recurring/charge with DocumentType 2
 // receipt, NoVAT true), but with the internal TEST_PLAN (1 ILS, exactly one payment) that is not part of PLANS. 404 for everyone when
 // the provider is not sumit or ADMIN_TEST_TOKEN (>= 16 chars) is unset. Token: header x-admin-test-token only (never a URL), compared
 // timing-safe; wrong tokens are rate limited. Not linked, not in the sitemap, noindex. Nothing from SUMIT is logged (ok/fail + document id).
+// Flow: POST /api/admin/test-checkout {email} -> { embedded: {companyId, publicKey, identifier} } ; the page tokenizes the card in the browser
+// (payments.js) ; POST /api/admin/test-checkout/charge {identifier, token} charges. Only the admin charge route may complete a test checkout.
 const realTestEnabled = () => getPayments().id === 'sumit' && (process.env.ADMIN_TEST_TOKEN || '').length >= 16;
 const adminTokenOk = q => safeEqual(String(q.get('x-admin-test-token') || ''), process.env.ADMIN_TEST_TOKEN || '');
 const adminFailLimiter = createRateLimiter({ max: Number(process.env.ADMIN_FAIL_MAX || 10), windowMs: 15 * 60 * 1000, onLimit: (q, r) => r.status(429).json({ ok: false }) });
 const adminTestGate = (q, r, next) => { r.set('Cache-Control', 'no-store'); r.set('X-Robots-Tag', 'noindex, nofollow'); r.set('Referrer-Policy', 'no-referrer');
   if (!realTestEnabled()) return next('route'); if (!adminTokenOk(q)) return adminFailLimiter(q, r, () => r.status(401).json({ ok: false })); next(); };
 const adminEmail = q => { const e = String(q.body?.email || '').trim().toLowerCase(); return e.length <= 200 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) ? e : null; };
-app.post('/api/admin/test-checkout', adminTestGate, async (q, r) => {
+app.post('/api/admin/test-checkout', adminTestGate, noCardData, async (q, r) => {
   const email = adminEmail(q); if (!email) return r.status(400).json({ ok: false, error: 'email' });
   const ex = Object.values(getDb().accounts).find(x => x.email === email);
   if (ex && ex.subscriptionRef && ex.plan !== 'free' && !ex.testSubscription) return r.status(409).json({ ok: false, error: 'real_subscription' }); // never touch a real customer's subscription
   if (ex?.testSubscription && ex.status === 'active' && ex.paidThrough && Date.now() < Date.parse(ex.paidThrough)) return r.status(409).json({ ok: false, error: 'test_active_cancel_first' });
   const account = findOrCreateAccount(email); const state = token(24);
   Object.assign(account, { pendingTest: { at: new Date().toISOString() }, pendingPlan: 'starter', pendingBilling: { ...TEST_BILLING }, pendingLang: 'he', checkoutState: state }); delete account.pendingAdminTest; await save();
-  try { const { redirectUrl } = await getPayments().createCheckout({ account, plan: TEST_PLAN, billing: { ...TEST_BILLING }, state, returnUrl: `${BASE}/billing/return?lang=he` }); console.log('[admin-test] checkout started'); return r.json({ ok: true, redirectUrl }); }
+  try { const { embedded } = await getPayments().createCheckout({ account, plan: TEST_PLAN, billing: { ...TEST_BILLING }, state }); console.log('[admin-test] checkout started'); return r.json({ ok: true, embedded }); }
   catch { console.error('[admin-test] checkout start failed'); return r.status(502).json({ ok: false }); }
 });
+app.post('/api/admin/test-checkout/charge', adminTestGate, noCardData, (q, r, next) => chargeLimiter(q, r, next), (q, r) => chargeJson(q, r, 'admin'));
 // One-time dashboard sign-in link for a TEST account only (so cancel can be tested even while EMAIL_MODE is not live). Never works for real customers.
 app.post('/api/admin/test-checkout/login-link', adminTestGate, async (q, r) => {
   const email = adminEmail(q); const a = email && Object.values(getDb().accounts).find(x => x.email === email); if (!a || !a.testSubscription) return r.status(404).json({ ok: false });
   const link = issueMagicLink(a, BASE); await save(); return r.json({ ok: true, link });
 });
-const ADMIN_TEST_PAGE = `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ranky admin test</title>
-<style>body{font:16px system-ui,sans-serif;background:#01061a;color:#e6ecff;max-width:30rem;margin:3rem auto;padding:0 1rem}input,button{display:block;width:100%;box-sizing:border-box;margin:.5rem 0;padding:.7rem;border-radius:8px;border:1px solid #3a4a7a;background:#0b1430;color:#fff;font-size:1rem}button{background:#2563eb;cursor:pointer}p{color:#9fb0d8}#out{word-break:break-all}</style></head><body>
-<h1>בדיקת סליקה: ₪1</h1><p>חיוב אמיתי של ₪1 (תשלום אחד). דורש טוקן אדמין.</p>
-<input id="e" type="email" placeholder="מייל" autocomplete="off"><input id="t" type="password" placeholder="טוקן אדמין" autocomplete="off">
-<button id="go">התחל חיוב ₪1</button><button id="lk" style="background:#334155">קבל קישור כניסה לדשבורד (אחרי החיוב)</button><p id="out"></p>
-<script>const $=i=>document.getElementById(i),out=$('out');async function call(p){out.textContent='...';try{const r=await fetch(p,{method:'POST',headers:{'content-type':'application/json','x-admin-test-token':$('t').value},body:JSON.stringify({email:$('e').value})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok){out.textContent='נכשל ('+r.status+(j.error?': '+j.error:'')+')';return null}return j}catch(e){out.textContent='שגיאת רשת';return null}}
-$('go').onclick=async()=>{const j=await call('/api/admin/test-checkout');if(j&&j.redirectUrl)location.href=j.redirectUrl};$('lk').onclick=async()=>{const j=await call('/api/admin/test-checkout/login-link');if(j&&j.link){out.textContent='';const a=document.createElement('a');a.href=j.link;a.textContent='פתח דשבורד (תקף 15 דקות, שימוש אחד)';a.style.color='#7dd3fc';out.appendChild(a)}}</script></body></html>`;
-app.get('/admin/test-checkout', (q, r, next) => { if (!realTestEnabled()) return next(); r.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' }).type('html').send(ADMIN_TEST_PAGE); });
+// The page is plain HTML with ONE inline script + ONE inline style, both allowed by a per-response CSP nonce. Card inputs have no `name`
+// (a native submit could never send them) and are read only by SUMIT's payments.js from the DOM; our script never reads their values.
+const adminPage = nonce => `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ranky admin test</title>
+<style nonce="${nonce}">body{font:16px system-ui,sans-serif;background:#01061a;color:#e6ecff;max-width:30rem;margin:3rem auto;padding:0 1rem}input,button{display:block;width:100%;box-sizing:border-box;margin:.5rem 0;padding:.7rem;border-radius:8px;border:1px solid #3a4a7a;background:#0b1430;color:#fff;font-size:1rem}.row{display:flex;gap:.5rem}button{background:#2563eb;cursor:pointer}button.alt{background:#334155}p{color:#9fb0d8}#out{word-break:break-all}#out a{color:#7dd3fc}</style></head><body>
+<h1>בדיקת סליקה: ₪1</h1><p>חיוב אמיתי של ₪1 (תשלום אחד). דורש טוקן אדמין. פרטי הכרטיס נשלחים ישירות ל־SUMIT ולא עוברים בשרת שלנו.</p>
+<form id="f" autocomplete="off" novalidate>
+<input id="e" type="email" placeholder="מייל" autocomplete="off" dir="ltr"><input id="t" type="password" placeholder="טוקן אדמין" autocomplete="off" dir="ltr">
+<input type="text" inputmode="numeric" maxlength="23" placeholder="מספר כרטיס" autocomplete="off" dir="ltr" data-og="cardnumber">
+<div class="row"><input type="text" inputmode="numeric" maxlength="2" placeholder="MM" autocomplete="off" dir="ltr" data-og="expirationmonth"><input type="text" inputmode="numeric" maxlength="4" placeholder="YYYY" autocomplete="off" dir="ltr" data-og="expirationyear"><input type="text" inputmode="numeric" maxlength="4" placeholder="CVV" autocomplete="off" dir="ltr" data-og="cvv"></div>
+<input type="text" inputmode="numeric" maxlength="12" placeholder="תעודת זהות של בעל הכרטיס" autocomplete="off" dir="ltr" data-og="citizenid">
+<div class="og-errors"></div>
+<button id="go" type="submit">שלם ₪1</button></form>
+<button id="lk" class="alt" type="button">קבל קישור כניסה לדשבורד (אחרי החיוב)</button><p id="out" role="status"></p>
+<script src="${JQUERY_PATH}"></script><script src="${SUMIT_SCRIPT_URL}"></script>
+<script nonce="${nonce}">
+const $=i=>document.getElementById(i),out=$('out');let busy=false;
+async function call(p,body){const r=await fetch(p,{method:'POST',headers:{'content-type':'application/json','x-admin-test-token':$('t').value},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));return{status:r.status,j}}
+function tokenize(c){return new Promise((res,rej)=>{if(typeof OfficeGuy==='undefined'||!OfficeGuy.Payments)return rej(new Error('payments.js לא נטען (חסימה או רשת)'));
+const to=setTimeout(()=>rej(new Error('הטוקניזציה לא הסתיימה בזמן')),30000);
+OfficeGuy.Payments.CreateToken({CompanyID:c.companyId,APIPublicKey:c.publicKey,FormSelector:'#f',ErrorsClass:'.og-errors',ResponseCallback:function(x){clearTimeout(to);const t=x&&x.Status===0&&x.Data&&x.Data.SingleUseToken;t?res(t):rej(new Error((x&&(x.UserErrorMessage||x.TechnicalErrorDetails))||'הכרטיס לא אומת'))}})})}
+function wipe(){document.querySelectorAll('[data-og]').forEach(i=>{i.value=''});const o=$('og-token');if(o)o.value=''}
+$('f').addEventListener('submit',async ev=>{ev.preventDefault();if(busy)return;busy=true;$('go').disabled=true;out.textContent='...';
+try{const st=await call('/api/admin/test-checkout',{email:$('e').value});if(!st.j.ok){out.textContent='נכשל ('+st.status+(st.j.error?': '+st.j.error:'')+')';return}
+const tok=await tokenize(st.j.embedded);wipe();
+const ch=await call('/api/admin/test-checkout/charge',{identifier:st.j.embedded.identifier,token:tok});
+out.textContent=ch.j.ok?'החיוב עבר (₪1). בדוק ב־SUMIT: קבלה, הוראת קבע אחת.':'החיוב נכשל ('+ch.status+(ch.j.error?': '+ch.j.error:'')+')'}
+catch(e){out.textContent=String(e&&e.message||e)}finally{wipe();busy=false;$('go').disabled=false}});
+$('lk').onclick=async()=>{out.textContent='...';try{const k=await call('/api/admin/test-checkout/login-link',{email:$('e').value});if(!k.j.ok){out.textContent='נכשל ('+k.status+')';return}out.textContent='';const a=document.createElement('a');a.href=k.j.link;a.textContent='פתח דשבורד (תקף 15 דקות, שימוש אחד)';out.appendChild(a)}catch(e){out.textContent='שגיאת רשת'}};
+</script></body></html>`;
+app.get('/admin/test-checkout', (q, r, next) => { if (!realTestEnabled()) return next(); const nonce = adminNonce();
+  r.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': checkoutCsp({ sumit: true, scriptSources: [`'nonce-${nonce}'`], styleSources: [`'nonce-${nonce}'`] }) }).type('html').send(adminPage(nonce)); });
 app.get('/llms.txt', (q, r) => r.type('text/plain; charset=utf-8').send(llmsTxt()));
 app.get('/robots.txt', (q, r) => r.type('text/plain').send(robotsTxt()));
 app.get('/sitemap.xml', (q, r) => r.type('application/xml').send(sitemapXml()));
@@ -150,30 +187,65 @@ async function startCheckout(q) {
   const plan = Object.hasOwn(PLANS, q.body?.plan) ? PLANS[q.body.plan] : null; if (!isPaid(plan) || !q.body?.email) return null;
   const billing = billingFor(plan, displayCurrencyFor(q));
   const account = findOrCreateAccount(q.body.email); account.pendingPlan = plan.id; account.pendingBilling = billing; account.pendingLang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : langOf(q); const state = account.checkoutState = token(24); if (adminTest) account.pendingAdminTest = true; else delete account.pendingAdminTest; delete account.pendingTest; save();
-  const { redirectUrl } = await getPayments().createCheckout({ account, plan, billing, state, returnUrl: `${BASE}/billing/return?lang=${account.pendingLang}` }); return { redirectUrl, billing };
+  // Mock provider: { redirectUrl } (stand-in card page). SUMIT: { embedded: {companyId, publicKey, identifier} } for the on-page Payments JS card form.
+  const co = await getPayments().createCheckout({ account, plan, billing, state, returnUrl: `${BASE}/billing/return?lang=${account.pendingLang}` }); return { ...co, billing, lang: account.pendingLang, plan: plan.id };
 }
-app.post('/checkout', captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).send(billingPage('prelaunch', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (!c) return r.status(400).send('bad plan'); r.redirect(c.redirectUrl); });
-app.get('/billing/return', async (q, r) => {
-  const db = getDb(); const [accId, state] = String(q.query.Identifier || '').split('.'); const account = Object.hasOwn(db.accounts, accId) ? db.accounts[accId] : null;
-  // The hidden admin 1 ILS test (account.pendingTest, set only by POST /api/admin/test-checkout) is the one thing allowed through while pre-launch, and only with the real provider.
-  const isTest = !!account?.pendingTest && realTestEnabled();
-  if (isPrelaunch() && !(account?.pendingAdminTest && getPayments().id === 'mock') && !isTest) return r.status(403).send(billingPage('prelaunch', langOf(q)));
-  if (!account || !account.checkoutState || !safeEqual(state, account.checkoutState) || (account.pendingTest && (!isTest || !(Date.now() - Date.parse(account.pendingTest.at) < TEST_CHECKOUT_TTL_MS)))) return r.status(400).send(billingPage('invalid', langOf(q)));
-  const plan = isTest ? TEST_PLAN : PLANS[account.pendingPlan || 'starter']; const lang = q.query.lang === 'he' || q.query.lang === 'en' ? q.query.lang : account.pendingLang || langOf(q);
+app.post('/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).send(billingPage('prelaunch', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (!c) return r.status(400).send('bad plan'); r.redirect(c.redirectUrl || `/${c.lang}/checkout?plan=${encodeURIComponent(c.plan)}`); });
+// One checkout completion for every provider flow. via: 'return' (GET /billing/return, the mock provider's redirect), 'public'
+// (POST /api/checkout/charge, embedded SUMIT) or 'admin' (POST /api/admin/test-checkout/charge). Returns { code, lang, error } where
+// code is ok | failed | error | invalid | prelaunch | busy. The identifier is "<accountId>.<checkoutState>"; the state is an unguessable
+// single-use secret handed out by POST /api/checkout (or the admin start), so no CAPTCHA is needed here.
+const chargeLocks = new Set();
+async function completeCheckout(q, { identifier, query, via }) {
+  const db = getDb(); const [accId, state] = String(identifier || '').split('.'); const account = Object.hasOwn(db.accounts, accId) ? db.accounts[accId] : null;
+  // The hidden admin 1 ILS test (account.pendingTest, set only by POST /api/admin/test-checkout) is the one thing allowed through while pre-launch,
+  // only with the real provider, and only through the admin charge route (valid ADMIN_TEST_TOKEN).
+  const isTest = via !== 'public' && !!account?.pendingTest && realTestEnabled();
+  if (via === 'return' && getPayments().id === 'sumit') return { code: 'invalid' }; // SUMIT no longer redirects back; tokens never travel in URLs
+  if (isPrelaunch() && !(account?.pendingAdminTest && getPayments().id === 'mock') && !isTest) return { code: 'prelaunch' };
+  if (!account || !account.checkoutState || !safeEqual(state, account.checkoutState) || (via === 'admin' && !isTest) || (account.pendingTest && (via === 'public' || !isTest || !(Date.now() - Date.parse(account.pendingTest.at) < TEST_CHECKOUT_TTL_MS)))) return { code: 'invalid' };
+  if (chargeLocks.has(account.id)) return { code: 'busy' };
+  const plan = isTest ? TEST_PLAN : PLANS[account.pendingPlan || 'starter']; const lang = query.lang === 'he' || query.lang === 'en' ? query.lang : account.pendingLang || langOf(q);
   // Re-derive from PLANS (never trust stored/client amounts); keeps the currency chosen at checkout start.
   const billing = isTest ? { ...TEST_BILLING } : billingFor(plan, account.pendingBilling?.displayCurrency || 'ILS');
+  chargeLocks.add(account.id);
   try {
-    const res = await getPayments().handleReturn(q.query, account, plan, billing);
+    const res = await getPayments().handleReturn(query, account, plan, billing);
     if (isTest) console.log(res.ok ? `[admin-test] charge ok${res.documentId ? ` doc=${Number(res.documentId) || ''}` : ''}` : '[admin-test] charge failed');
-    if (!res.ok) return r.send(billingPage('failed', lang, res.error));
+    if (!res.ok) return { code: 'failed', lang, error: res.error };
     Object.assign(account, { plan: isTest ? 'starter' : plan.id, subscriptionRef: res.subscriptionRef, paidAt: new Date().toISOString(), billing: { currency: billing.currency, amount: billing.amount }, status: 'active', lang, paidThrough: isTest ? new Date(Date.now() + TEST_ACCESS_MS).toISOString() : addMonth(new Date()).toISOString(), ...(account.pendingAdminTest ? { adminTest: true } : {}), ...(isTest ? { testSubscription: true, adminTest: true } : {}) }); delete account.cancelledAt; delete account.pendingAdminTest; delete account.pendingTest; delete account.pendingPlan; delete account.pendingBilling; delete account.checkoutState; delete account.pendingLang; save();
     db.events.push({ at: new Date().toISOString(), type: 'subscription.activated', account: account.id, plan: plan.id, currency: billing.currency, amount: billing.amount, ...(isTest ? { test: true, documentId: Number(res.documentId) || null } : {}) }); save();
     // Don't hand the dashboard key to whoever holds this URL: email a single-use magic link instead.
     await emailMagicLink(account);
     await sendEmail({ to: account.email, ...renderTx('receipt', lang, { planName: plan.name, amount: billing.amount, currency: billing.currency, paidThrough: ymd(account.paidThrough), receiptUrl: res.receiptUrl }) });
-    r.send(billingPage('ok', lang));
-  } catch (e) { if (isTest) console.error('[admin-test] charge failed'); r.status(502).send(billingPage('error', lang, e.message)); }
+    return { code: 'ok', lang };
+  } catch (e) { if (isTest) console.error('[admin-test] charge failed'); return { code: 'error', lang, error: e.message }; }
+  finally { chargeLocks.delete(account.id); }
+}
+app.get('/billing/return', async (q, r) => {
+  const o = await completeCheckout(q, { identifier: q.query.Identifier, query: q.query, via: 'return' });
+  if (o.code === 'prelaunch') return r.status(403).send(billingPage('prelaunch', langOf(q)));
+  if (o.code === 'invalid' || o.code === 'busy') return r.status(400).send(billingPage('invalid', langOf(q)));
+  if (o.code === 'failed') return r.send(billingPage('failed', o.lang, o.error));
+  if (o.code === 'error') return r.status(502).send(billingPage('error', o.lang, o.error));
+  r.send(billingPage('ok', o.lang));
 });
+// Embedded SUMIT flow: the browser tokenizes the card with payments.js (card data goes browser -> SUMIT only) and POSTs just
+// { identifier, token, lang } here. Only the SUMIT provider has this route (404 otherwise). JSON only; no card data, tokens or SUMIT
+// responses are ever logged or echoed back; the client only gets a stable error code to localize.
+export const chargeLimiter = createRateLimiter({ max: Number(process.env.CHARGE_RATE_MAX || 15), windowMs: 15 * 60 * 1000, onLimit: (q, r, retry) => r.status(429).json({ ok: false, error: 'rate_limited', code: 'rate_limited', retryAfter: retry }) });
+async function chargeJson(q, r, via) {
+  r.set('Cache-Control', 'no-store'); r.set('Referrer-Policy', 'no-referrer'); const b = q.body || {};
+  if (typeof b.identifier !== 'string' || b.identifier.length > 200 || !validSingleUseToken(b.token)) return r.status(400).json({ ok: false, error: 'bad_request' });
+  const o = await completeCheckout(q, { identifier: b.identifier, query: { Valid: '1', Token: b.token, Identifier: b.identifier, lang: b.lang }, via });
+  if (o.code === 'ok') return r.json({ ok: true, lang: o.lang });
+  if (o.code === 'prelaunch') return r.status(403).json({ ok: false, error: 'prelaunch', prelaunch: true });
+  if (o.code === 'invalid') return r.status(400).json({ ok: false, error: 'invalid_checkout' });
+  if (o.code === 'busy') return r.status(409).json({ ok: false, error: 'busy' });
+  if (o.code === 'failed') return r.status(402).json({ ok: false, error: 'declined' });
+  return r.status(502).json({ ok: false, error: 'charge_error' });
+}
+app.post('/api/checkout/charge', (q, r, next) => getPayments().id === 'sumit' ? next() : next('route'), noCardData, chargeLimiter, (q, r) => chargeJson(q, r, 'public'));
 // Webhooks are rejected unless SUMIT_WEBHOOK_SECRET is set AND the request carries it (x-webhook-secret header or
 // ?secret= in the trigger URL), compared timing-safe. Applies to every provider, mock included.
 export const webhookAuthorized = q => { const s = process.env.SUMIT_WEBHOOK_SECRET || ''; if (s.length < 16) return false;
@@ -240,7 +312,7 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
 app.get('/api/report/:id', (q, r) => { const db = getDb(); const s = db.scans[q.params.id]; if (!s) return r.status(404).json({ error: 'not found' });
   const b = db.businesses[s.businessId]; const hist = (b.scanIds || []).map(i => db.scans[i]).filter(Boolean); const idx = hist.findIndex(x => x.id === s.id);
   r.json({ demo: !!s.mock, business: { name: b.name, category: b.category, city: b.city, website: b.website }, scan: s, previousScore: idx > 0 ? hist[idx - 1].summary.score : null, history: hist.slice(0, idx + 1).map(x => x.summary.score) }); });
-app.post('/api/checkout', captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).json({ error: 'Pre-launch: checkout is not open yet. Join the waitlist.', prelaunch: true }); if (!c) return r.status(400).json({ error: 'Choose a plan and enter your email.' }); r.json(c); });
+app.post('/api/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).json({ error: 'Pre-launch: checkout is not open yet. Join the waitlist.', prelaunch: true }); if (!c) return r.status(400).json({ error: 'Choose a plan and enter your email.' }); r.json(c); });
 // Pricing for the UI: detected display currency + server prices + what checkout will actually charge.
 app.get('/api/pricing', (q, r) => {
   const forced = String(q.query.currency || '').toUpperCase(); const d = CURRENCIES.includes(forced) ? { currency: forced, source: 'query' } : detectCurrency(q, q.query.lang);
@@ -306,11 +378,18 @@ app.get('/:lang/legal/:doc', (q, r, next) => {
 app.get('/:lang', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang) : next());
 app.get('/:lang/r/:id', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'report', false) : next());
 app.get('/:lang/dashboard/:id', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'dashboard') : next());
-app.get('/:lang/:page', (q, r, next) => LANGS.includes(q.params.lang) && ['scan', 'report', 'login', 'dashboard', 'checkout'].includes(q.params.page) ? page(r, q.params.lang, q.params.page) : next());
+// The checkout page is the only static page with a CSP (card entry): own origin + Turnstile, and the SUMIT script/API origins only while PAYMENTS_PROVIDER=sumit.
+const checkoutCspFor = lang => checkoutCsp({ sumit: getPayments().id === 'sumit', turnstile: true, scriptSources: inlineScriptHashes(path.join(OUT, `${lang}/checkout.html`)) });
+app.get('/:lang/:page', (q, r, next) => { if (!(LANGS.includes(q.params.lang) && ['scan', 'report', 'login', 'dashboard', 'checkout'].includes(q.params.page))) return next();
+  if (q.params.page === 'checkout') { r.set('Content-Security-Policy', checkoutCspFor(q.params.lang)); r.set('Referrer-Policy', 'no-referrer'); } return page(r, q.params.lang, q.params.page); });
 app.get(['/he.txt', '/en.txt', '/:lang/:page.txt'], (q, r) => { const f = path.join(OUT, q.path); return LANGS.some(l => q.path.startsWith('/' + l)) && fs.existsSync(f) && !q.path.includes('..') ? r.sendFile(f) : r.sendStatus(404); });
 // Branded bilingual 404 (RTL Hebrew + English, order follows the URL language or preference). JSON for /api.
 app.use((q, r) => { if (wantsJson(q)) return r.status(404).json({ error: 'not found' }); const m = /^\/(he|en)(\/|$)/.exec(q.path); r.status(404).type('html').send(notFoundPage(m ? m[1] : prefLang(q))); });
 
+// Last-resort error handler. Express's default prints err.stack, and a malformed JSON body error can embed a fragment of the body
+// (which on the checkout/charge routes could be card-adjacent data). Log only the method, path and error class; never the message.
+app.use((err, q, r, next) => { if (r.headersSent) return next(err); const st = Number(err?.status || err?.statusCode) >= 400 && Number(err?.status || err?.statusCode) < 600 ? Number(err.status || err.statusCode) : 500;
+  console.error(`[http] ${q.method} ${q.path} -> ${st} (${err?.type || err?.name || 'Error'})`); r.status(st).json({ error: st === 400 ? 'bad_request' : 'server_error' }); });
 const port = process.env.PORT || 3000;
 if (process.argv[1]?.endsWith('server.js')) { const cfg = (await import('./src/config-check.js')).logConfig(); if (cfg.fatal.length) { console.error('[config] FATAL: ' + cfg.fatal.join('; ')); process.exit(1); } if (!cfg.ok && process.env.CONFIG_STRICT === '1') process.exit(1); }
 if (process.argv[1]?.endsWith('server.js') && process.env.BILLING_SYNC_CRON === '1') { startBillingCron(); console.log('billing sync: in-process daily scheduler on'); }

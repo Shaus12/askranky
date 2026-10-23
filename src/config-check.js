@@ -10,7 +10,11 @@ export function checkConfig(env = process.env) {
   const pay = V('PAYMENTS_PROVIDER') || 'mock'; modes.PAYMENTS_PROVIDER = pay;
   if (!['mock', 'sumit'].includes(pay)) errors.push('PAYMENTS_PROVIDER must be "mock" or "sumit"');
   if (pay === 'sumit') { for (const k of ['SUMIT_COMPANY_ID', 'SUMIT_API_KEY', 'SUMIT_PUBLIC_API_KEY', 'SUMIT_WEBHOOK_SECRET']) if (!E(k) && !(k === 'SUMIT_PUBLIC_API_KEY' && E('SUMIT_API_PUBLIC_KEY'))) errors.push(`${k} missing (needed for PAYMENTS_PROVIDER=sumit)`);
-    if (!E('BASE_URL')) errors.push('BASE_URL missing (SUMIT return URL)'); }
+    // Embedded Payments JS: the browser gets SUMIT_COMPANY_ID + the PUBLIC key only. Catch the one dangerous misconfiguration: the private key pasted as the public one.
+    const pub = V('SUMIT_PUBLIC_API_KEY') || V('SUMIT_API_PUBLIC_KEY');
+    if (E('SUMIT_COMPANY_ID') && !/^[1-9]\d{0,12}$/.test(V('SUMIT_COMPANY_ID').trim())) errors.push('SUMIT_COMPANY_ID must be the numeric SUMIT company id');
+    if (pub && pub === V('SUMIT_API_KEY')) errors.push('SUMIT_PUBLIC_API_KEY must be the PUBLIC API key, not the private SUMIT_API_KEY (the public key is sent to the browser)');
+    if (!E('BASE_URL')) errors.push('BASE_URL missing (dashboard magic links in receipt emails; SUMIT no longer redirects back)'); }
   const usd = ['1', 'true'].includes(V('ENABLE_USD_BILLING')); modes.ENABLE_USD_BILLING = usd;
   if (usd && pay === 'sumit' && V('SUMIT_USD_VERIFIED') !== '1') errors.push('ENABLE_USD_BILLING must be false: USD standing orders via SUMIT are unverified (ILS-only billing enforced)');
   const mail = V('EMAIL_MODE') || 'mock'; modes.EMAIL_MODE = mail;
