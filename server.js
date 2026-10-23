@@ -9,7 +9,7 @@ import { isPrelaunch } from './src/prelaunch.js'; import { billingPage, notFound
 import { renderTx } from './src/email/templates.js'; import { setConsent, verifyUnsubToken, unsubUrl, unsubHeaders } from './src/consent.js'; import { unsubscribePage } from './src/pages.js';
 import { TEST_PLAN, TEST_BILLING, TEST_CHECKOUT_TTL_MS, TEST_ACCESS_MS } from './src/payments/test-plan.js';
 import { validSingleUseToken, looksLikeCardNumber } from './src/payments/sumit.js'; import { checkoutCsp, inlineScriptHashes, adminNonce, JQUERY_PATH, SUMIT_SCRIPT_URL } from './src/security/csp.js';
-import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js';
+import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js'; import { blogPageHtml } from './src/blog.js';
 
 const app = express(); app.disable('x-powered-by'); if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY); app.use(express.urlencoded({ extended: false })); app.use(express.json()); // noindex on private pages (meta robots is also in the HTML; the header covers redirects and server-rendered pages).
 // Which paths: NOINDEX_PATH in src/seo.js (the single source for robots.txt and these headers).
@@ -395,7 +395,7 @@ app.get('/api/seller', (q, r) => r.json({ name: BRAND.legalEntity, nameHe: BRAND
 // Pages are plain HTML; dynamic segments (/r/:id, /dashboard/:id) map onto one exported page whose client code reads the id from the URL.
 // Public pages are the same for everyone (language comes from the URL), so they carry no Set-Cookie/Vary and may be cached at a
 // CDN briefly (s-maxage short because a deploy replaces the hashed /_next chunks the HTML points at).
-const PUBLIC_CACHE = 'public, max-age=0, s-maxage=120'; const PUBLIC_PAGES = new Set(['', 'scan', 'report', 'legal']); const OUT = path.resolve('web/out'); const LANGS = ['he', 'en'];
+const PUBLIC_CACHE = 'public, max-age=0, s-maxage=120'; const PUBLIC_PAGES = new Set(['', 'scan', 'report', 'legal', 'blog']); const OUT = path.resolve('web/out'); const LANGS = ['he', 'en'];
 const prefLang = q => { const c = /(?:^|;\s*)ranky_lang=(he|en)/.exec(q.get('cookie') || ''); if (c) return c[1]; return /\bhe\b|\biw\b/i.test(q.get('accept-language') || '') ? 'he' : 'en'; };
 const qs = q => { const i = q.originalUrl.indexOf('?'); return i >= 0 ? q.originalUrl.slice(i) : ''; };
 function page(r, lang, name, shared = PUBLIC_PAGES.has(name || '')) {
@@ -405,7 +405,7 @@ function page(r, lang, name, shared = PUBLIC_PAGES.has(name || '')) {
   if (shared) r.set('Cache-Control', PUBLIC_CACHE); r.sendFile(f, { cacheControl: !shared });
 }
 // Language-less short links redirect by cookie / Accept-Language: say so (Vary) and keep them out of shared caches.
-app.use((q, r, next) => { if (/^\/(?:(?:r|dashboard)\/[^/]+|login|pricing|mock-checkout|legal(?:\/[^/]+)?)?\/?$/.test(q.path)) { r.vary('Cookie'); r.vary('Accept-Language'); r.set('Cache-Control', 'private, no-store'); } next(); });
+app.use((q, r, next) => { if (/^\/(?:(?:r|dashboard)\/[^/]+|login|pricing|mock-checkout|legal(?:\/[^/]+)?|blog)?\/?$/.test(q.path)) { r.vary('Cookie'); r.vary('Accept-Language'); r.set('Cache-Control', 'private, no-store'); } next(); });
 app.use(['/dashboard', '/auth', '/he/dashboard', '/en/dashboard'], (q, r, next) => { r.set('Referrer-Policy', 'no-referrer'); r.set('Cache-Control', 'no-store'); next(); });
 app.use('/_next', express.static(path.join(OUT, '_next'), { immutable: true, maxAge: '1y' }));
 app.get('/', (q, r) => r.redirect(`/${prefLang(q)}`));
@@ -426,6 +426,14 @@ app.get('/:lang/legal', (q, r, next) => { if (!LANGS.includes(q.params.lang)) re
 app.get('/:lang/legal/:doc', (q, r, next) => {
   if (!LANGS.includes(q.params.lang) || !isDoc(q.params.doc)) return next();
   const h = legalPageHtml(OUT, q.params.lang, q.params.doc); if (h === undefined) return r.status(503).send('Frontend not built: cd web && npm install && npm run build');
+  r.set('Cache-Control', PUBLIC_CACHE).type('html').send(h); });
+// Blog: /{lang}/blog (static index) and /{lang}/blog/{slug} (article text rendered from content/blog/{lang}/{slug}.md into the exported shell, like legal docs).
+app.get('/blog', (q, r) => r.redirect(`/${prefLang(q)}/blog`));
+app.get('/:lang/blog', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'blog') : next());
+app.get('/:lang/blog/:slug', (q, r, next) => {
+  if (!LANGS.includes(q.params.lang)) return next();
+  const h = blogPageHtml(OUT, q.params.lang, q.params.slug); if (h === null) return next();
+  if (h === undefined) return r.status(503).send('Frontend not built: cd web && npm install && npm run build');
   r.set('Cache-Control', PUBLIC_CACHE).type('html').send(h); });
 app.get('/:lang', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang) : next());
 app.get('/:lang/r/:id', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'report', false) : next());

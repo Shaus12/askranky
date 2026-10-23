@@ -13,6 +13,7 @@ export default function Footer({ t, lang = "en" }: { t: Dict; lang?: Locale }) {
         <nav aria-label="footer" className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-slate-300">
           <Link className="vx-link hover:text-white" href={`${base}#how`}>{t.nav.how}</Link><Link className="vx-link hover:text-white" href={`${base}#sample`}>{t.nav.sample}</Link>
           <Link className="vx-link hover:text-white" href={`${base}#pricing`}>{t.nav.pricing}</Link><Link className="vx-link hover:text-white" href={`${base}#faq`}>{t.nav.faq}</Link>
+          <Link className="vx-link hover:text-white" href={`${base}/blog`}>{t.footer.blog}</Link>
           <Link className="vx-link hover:text-white" href={`${base}/login`}>{t.login.nav}</Link>
         </nav>
         <span className="hairline block w-full max-w-md" />
