@@ -1,7 +1,7 @@
 # AI Results Disclaimer — Ranky
-> **DRAFT — not legal advice.** Last updated: 2026-10-22
+Last updated: 2026-10-23
 
-- Ranky measures answers returned by AI providers' **APIs** (OpenAI with web search, Google Gemini with Search grounding, Perplexity). These approximate, but may differ from, what people see in consumer products such as ChatGPT, Gemini, Google AI Overviews/AI Mode or Perplexity apps, which use personalisation, location, history and different model versions.
+- Ranky measures answers returned by AI providers' **APIs** (OpenAI with web search, Google Gemini with Search grounding, Perplexity). These approximate, but may differ from, what people see in consumer products such as ChatGPT, Gemini, Google AI Overviews/AI Mode or the Perplexity app, which use personalisation, location, history and different model versions.
 - AI answers are non-deterministic: the same question can produce different answers between runs, times and locations. Scores, "visibility" percentages and rankings are **indicators based on a sample of questions**, not a complete or guaranteed measure.
 - Questions are generated automatically for your category and city and may not reflect how all customers search.
 - Recommendations ("fixes") are general guidance, not professional SEO, legal or marketing advice. Implementing them does not guarantee any change in AI answers, traffic or revenue.

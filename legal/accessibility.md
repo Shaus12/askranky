@@ -1,31 +1,29 @@
 # Accessibility Statement — Ranky
-> **DRAFT — not legal advice.** Update after an actual accessibility audit. Last updated: 2026-10-22
+Last updated: 2026-10-23
 
-Shai Shotashvili (Exempt Dealer (Osek Patur) No. 322713082) is committed to equal access for all customers, including people with disabilities, in accordance with the Israeli Equal Rights for Persons with Disabilities Law, 5758-1998, and the Equal Rights for Persons with Disabilities (Service Accessibility Adjustments) Regulations, 5773-2013 (reg. 35).
+Shai Shotashvili (Exempt Dealer (Osek Patur) No. 322713082) is committed to equal access to Ranky for all customers, including people with disabilities, in accordance with the Israeli Equal Rights for Persons with Disabilities Law, 5758-1998, and the Equal Rights for Persons with Disabilities (Service Accessibility Adjustments) Regulations, 5773-2013.
 
-## Conformance
-askranky.com [conforms / is being adapted] to Israeli Standard IS 5568, based on WCAG 2.0 level AA. [WCAG 2.1 AA recommended; also relevant for US ADA expectations.]
+## Standard and current status
+We are working to make askranky.com meet Israeli Standard IS 5568, based on WCAG 2.0 level AA. The site has not yet undergone a formal external accessibility audit; the measures below come from our own review, and some parts may not yet be fully accessible.
 
 ## What we have done
-- Semantic structure (headings, landmarks, lists), screen-reader support.
-- Full keyboard navigation with visible focus.
-- Alt text for images, labelled form fields, clear error messages.
-- AA colour contrast; text resizable to 200% without loss of content.
-- Hebrew RTL and language attributes.
-- Responsive/mobile layout.
-- Bot check (Cloudflare Turnstile) — [verify accessibility; alternative: email us for a manual scan].
-[Update with audit date, browsers and screen readers tested.]
+- Each page declares its language, and Hebrew pages are laid out right-to-left.
+- Visible keyboard focus indicators on links, buttons and form fields.
+- Animations are reduced for visitors who set "reduce motion" in their system.
+- Responsive layout for phones and tablets.
 
 ## Known limitations
-- SUMIT's hosted payment page is operated by a third party.
-- AI answer content and report charts [list known issues].
+- The bot check (Cloudflare Turnstile) is provided by a third party. If you cannot complete it, email us and we will run the scan for you manually.
+- Visual elements in reports, such as the score gauge and charts, may not yet be fully accessible to screen readers. Email us and we will send you the same data in an accessible format.
+- The payment page is hosted by our payment processor, SUMIT, and its accessibility is the processor's responsibility.
 
 ## Physical accessibility
-Online-only service; no public premises.
+Ranky is an online-only service with no public premises.
 
-## Accessibility coordinator / contact
-- Coordinator: Shai Shotashvili
-- Email: shaysho1111@gmail.com (or shaysho1111@gmail.com)
-Please include the page, a description of the issue and the assistive technology used. We aim to reply within [5] business days.
+## Accessibility coordinator and contact
+If you run into an accessibility problem, please tell us and we will help:
+- Accessibility coordinator: Shai Shotashvili
+- Email: shaysho1111@gmail.com
+Please include the page, a description of the problem and the assistive technology you used. We aim to reply within 5 business days.
 
-Statement last updated: 2026-10-22
+Statement last updated: 2026-10-23
