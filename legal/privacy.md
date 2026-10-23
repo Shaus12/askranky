@@ -16,6 +16,7 @@ You are not legally required to provide personal data, but without an email addr
 | Email preferences and consent records (what you agreed to, when, from which form, in which language) | You | Sending only the emails you agreed to |
 | Browser-only preferences (language, currency, cookie-notice choice, accessibility settings): stored in your own browser, not sent to us | You | Remembering your choices (see the Cookie Policy) |
 | Waitlist email (before launch) | You | Telling you when the Service opens |
+| Marketing attribution: the `utm_source` and `utm_campaign` values of the link you arrived through (letters, digits and `_.-` only), stored with your scan, waitlist entry or account; no IP address or other identifier | Your browser (link) | Understanding which of our posts and campaigns bring visitors |
 | IP address and browser data (in server and CDN logs), rate-limit counters, bot-check result | Automatically | Security, abuse prevention, free-scan limits |
 | Usage counters (checks per month), service events | Automatically | Plan caps, cost control, support |
 We do **not** collect full card numbers (they are typed into secure card fields served by SUMIT on our checkout page and go straight from your browser to SUMIT; we receive only a one-time token), and we do not intentionally collect sensitive data. Please do not enter personal data of other people in business fields.
