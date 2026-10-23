@@ -34,6 +34,18 @@ try {
     for (const d of LEGAL_DOCS) for (const l of ['he', 'en']) { assert.ok(sm.includes(`<loc>https://askranky.com/${l}/legal/${d}</loc>`), `${l}/${d}`); assert.ok(sm.includes(`hreflang="${l === 'he' ? 'en' : 'he'}" href="https://askranky.com/${l === 'he' ? 'en' : 'he'}/legal/${d}"`)); }
     assert.ok(sm.includes('<loc>https://askranky.com/en/legal</loc>')); const llms = (await get('/llms.txt')).t; assert.ok(!llms.includes('doc=')); for (const d of LEGAL_DOCS) for (const l of ['he', 'en']) assert.ok(llms.includes(`(https://askranky.com/${l}/legal/${d})`), `llms ${l}/${d}`);
     ok('sitemap.xml and llms.txt list the new /{lang}/legal/{doc} URLs (no ?doc=)'); }
+  // robots.txt vs noindex: one method per path (never both, so crawlers can read the tag they are meant to obey)
+  { const rb = (await get('/robots.txt')).t; const groups = rb.split(/\n\n/).filter(g => g.startsWith('User-agent')); assert.ok(groups.length >= 10);
+    const dis = g => g.split('\n').filter(l => l.startsWith('Disallow: ')).map(l => l.slice(10)); const base = dis(groups[0]); assert.deepEqual(base, ['/api/', '/webhooks/']); for (const g of groups) assert.deepEqual(dis(g), base, g.split('\n')[0]);
+    const blocked = p => base.some(d => p.startsWith(d)); const hdr = async p => (await get(p)).h.get('x-robots-tag');
+    const PRIVATE_HTML = ['/dashboard/abc?key=k', '/he/dashboard/abc', '/en/dashboard', '/login', '/he/login', '/en/login', '/en/checkout', '/he/checkout', '/en/r/abc', '/he/r/abc', '/r/abc', '/billing/return', '/auth/magic?t=x', '/mock-checkout', '/unsubscribe?t=x'];
+    for (const p of PRIVATE_HTML) { assert.equal(await hdr(p), 'noindex, nofollow', `noindex header ${p}`); assert.ok(!blocked(p.split('?')[0]), `${p} must be crawlable so the noindex can be read`); }
+    for (const p of ['/api/health', '/api/config', '/webhooks/sumit']) { assert.ok(blocked(p), p); assert.equal(await hdr(p), null, `${p} is Disallow-only (never indexable), no noindex`); }
+    for (const p of ['/he', '/en', '/en/scan', '/he/scan', '/en/report', '/he/report', '/en/legal', '/en/legal/terms']) { assert.ok(!blocked(p), p); assert.equal(await hdr(p), null, `${p} indexable`); }
+    if (BUILT) { for (const p of ['/he/dashboard', '/en/dashboard', '/en/login', '/he/login', '/en/checkout', '/he/checkout']) assert.match((await get(p)).t, /<meta name="robots" content="noindex, nofollow"\/>/, `meta ${p}`);
+      for (const p of ['/en/report', '/he/report', '/en/scan', '/he']) assert.ok(!/name="robots"/.test((await get(p)).t), `${p} must not carry a robots meta`); }
+    assert.ok(/NOINDEX_PATH/.test(fs.readFileSync('server.js', 'utf8')) && !/Disallow: \/(dashboard|login|checkout|r\/)/.test(rb));
+    ok('robots/noindex consistency: private HTML = crawlable + noindex (header; meta on static pages), /api/ + /webhooks/ = Disallow only, public pages indexable'); }
   // footer + client no longer fetches legal text
   { const ft = fs.readFileSync('web/components/Footer.tsx', 'utf8'); assert.ok(!ft.includes('legal?doc=')); assert.match(ft, /\/legal\/\$\{doc\}/); const lg = fs.readFileSync('web/components/Legal.tsx', 'utf8'); assert.ok(!/useEffect|api\(/.test(lg)); ok('footer links to /legal/{doc}; legal components no longer fetch text client-side'); }
   console.log(`ALL SEO TESTS PASSED (${n})`);

@@ -9,7 +9,7 @@ const txt = (p, h = {}) => fetch(B + p, { headers: h, redirect: 'manual' }).then
 try {
   // 1. robots + sitemap
   const rb = (await txt('/robots.txt')).t; const groups = rb.split(/\n\n/).filter(g => g.startsWith('User-agent'));
-  assert.ok(groups.length >= 10); for (const g of groups) for (const d of ['/app', '/api/', '/billing/', '/report']) assert.ok(g.includes(`Disallow: ${d}\n`) || g.endsWith(`Disallow: ${d}`), `${g.split('\n')[0]} missing ${d}`);
+  assert.ok(groups.length >= 10); for (const g of groups) for (const d of ['/api/', '/webhooks/']) assert.ok(g.includes(`Disallow: ${d}\n`) || g.endsWith(`Disallow: ${d}`), `${g.split('\n')[0]} missing ${d}`);
   assert.match(rb, /User-agent: GPTBot/); assert.match(rb, /User-agent: PerplexityBot/); assert.match(rb, /Sitemap: https:\/\/askranky\.com\/sitemap\.xml/); ok(`robots.txt: ${groups.length} groups each repeat all disallows; sitemap referenced`);
   const sm = await txt('/sitemap.xml'); assert.match(sm.ct, /xml/); assert.match(sm.t, /<loc>https:\/\/askranky\.com\/he<\/loc>/); assert.match(sm.t, /hreflang="en" href="https:\/\/askranky\.com\/en\/scan"/); assert.match(sm.t, /hreflang="x-default"/); assert.ok(!/&(?!amp;)/.test(sm.t)); ok('sitemap.xml: he/en pages with hreflang alternates, XML-escaped');
   // 2. metadata (static export)

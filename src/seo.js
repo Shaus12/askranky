@@ -1,7 +1,15 @@
 // robots.txt + sitemap.xml for https://askranky.com (SITE_URL overrides). A named User-agent group replaces `*` for that
 // bot, so every group repeats the full Disallow list (see business/seo/technical-seo-checklist.md §5).
 export const SITE = () => (process.env.SITE_URL || 'https://askranky.com').replace(/\/$/, '');
-export const DISALLOW = ['/app', '/api/', '/billing/', '/report', '/r/', '/dashboard', '/auth/', '/he/r/', '/en/r/', '/he/dashboard', '/en/dashboard', '/he/checkout', '/en/checkout', '/mock-checkout', '/webhooks/'];
+// ONE method per path, so a crawler can always read the directive that applies:
+//  * HTML pages that must not be indexed (dashboard, login, checkout, /r/:id scan results, /billing/*, /auth/* magic links,
+//    /mock-checkout, /unsubscribe): crawling is ALLOWED and they carry `noindex, nofollow` (X-Robots-Tag header from server.js via
+//    NOINDEX_PATH, plus <meta name="robots"> in the static pages listed in web/lib/seo.ts PRIVATE). The /{lang}/r/:id shell is the
+//    same export as the indexable sample /{lang}/report, so for scan results the header is the only signal.
+//  * Non-HTML endpoints that never were indexable: /api/ (JSON) and /webhooks/ (POST callbacks): Disallow, and no noindex.
+//  * The sample report /{lang}/report, /scan, legal docs and the home page are public and indexable.
+export const DISALLOW = ['/api/', '/webhooks/'];
+export const NOINDEX_PATH = /^\/(?:(?:he|en)\/)?(?:dashboard|login|checkout|billing|auth|mock-checkout|unsubscribe|r)(?:\/|$)/;
 export const BOTS = ['*', 'GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'PerplexityBot', 'Perplexity-User', 'Google-Extended', 'Googlebot', 'ClaudeBot', 'Claude-SearchBot', 'Claude-User', 'Applebot-Extended', 'Bingbot'];
 export const robotsTxt = () => BOTS.map(b => [`User-agent: ${b}`, 'Allow: /', ...DISALLOW.map(d => `Disallow: ${d}`)].join('\n')).join('\n\n') + `\n\nSitemap: ${SITE()}/sitemap.xml\n`;
 // Legal docs have their own server-rendered, self-canonical URLs (/{lang}/legal/{doc}); the old ?doc= URLs 301 to them and are not listed.
