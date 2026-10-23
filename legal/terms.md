@@ -42,7 +42,7 @@ You must not: scan businesses for unlawful purposes, or defame or harass others;
 8.3 We may publish aggregated, non-identifying statistics (e.g. "most-cited sites for plumbers in Austin").
 
 ## 9. Emails
-We send service emails: sign-in links, scan reports, weekly reports that are part of a paid plan, and billing notices (receipts, failed payments, cancellation confirmations). Weekly reports include an unsubscribe link. Product news and tips are sent only if you opt in on the scan form, are labelled as advertising, and can be stopped at any time (see the Privacy Policy).
+We send service emails: sign-in links, scan reports, and billing notices (receipts, failed payments, cancellation confirmations). Automated weekly report emails are not sent yet; if we start sending them they will carry an unsubscribe link. Product news and tips are sent only if you opt in on the scan form, are labelled as advertising, and can be stopped at any time (see the Privacy Policy).
 
 ## 10. Availability and changes
 We aim for high availability but do not guarantee uninterrupted service. AI providers may change, limit or discontinue their APIs; we may change engines, questions or methodology accordingly. Material adverse changes to paid plans will be notified in advance.

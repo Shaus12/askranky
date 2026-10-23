@@ -22,10 +22,11 @@ const BILLING = {
   failed: { he: ['התשלום נכשל', 'לא חויבת. אפשר לנסות שוב.', 'לנסות שוב'], en: ['Payment failed', 'You were not charged. You can try again.', 'Try again'] },
   error: { he: ['שגיאה בתשלום', 'משהו השתבש מול ספק התשלום. לא בוצע חיוב כפול.', 'חזרה למחירים'], en: ['Payment error', 'Something went wrong with the payment provider.', 'Back to pricing'] },
   ok: { he: ['התשלום התקבל', 'תודה! שלחנו לך במייל קישור פרטי לדשבורד וקבלה.', 'לעמוד הבית'], en: ['Payment received', 'Thanks! Check your inbox: we emailed you a private link to your dashboard and your receipt.', 'Home'] },
+  already: { he: ['כבר יש לך מנוי פעיל', 'לא בוצע חיוב. אפשר לנהל את המנוי מלוח הבקרה.', 'ללוח הבקרה'], en: ['You already have an active subscription', 'You were not charged. You can manage your subscription from your dashboard.', 'Go to your dashboard'] },
   prelaunch: { he: ['בקרוב', 'Ranky עדיין לפני השקה, ולכן לא נגבה תשלום. אפשר להצטרף לרשימת ההמתנה.', 'לרשימת ההמתנה'], en: ['Coming soon', 'Ranky is pre-launch, so no payment is taken yet. Join the waitlist instead.', 'Join the waitlist'] },
 };
 export function billingPage(kind, lang, err = '') {
-  const [title, text, cta] = BILLING[kind][lang]; const href = kind === 'ok' ? `/${lang}` : kind === 'prelaunch' ? `/${lang}/checkout` : `/${lang}#pricing`;
+  const [title, text, cta] = BILLING[kind][lang]; const href = kind === 'ok' ? `/${lang}` : kind === 'prelaunch' ? `/${lang}/checkout` : kind === 'already' ? `/${lang}/login` : `/${lang}#pricing`;
   return branded({ lang, title, blocks: [{ lang, title, text, err, links: [[href, cta]] }] });
 }
 export function notFoundPage(lang = 'en') {

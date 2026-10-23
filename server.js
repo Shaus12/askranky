@@ -1,7 +1,7 @@
-import express from 'express'; import fs from 'node:fs'; import path from 'node:path';
+import express from 'express'; import fs from 'node:fs'; import path from 'node:path'; import { createHash } from 'node:crypto';
 import { BRAND } from './src/brand.js'; import { PLANS, isPaid, CURRENCIES } from './src/plans.js'; import { detectCurrency, billingFor, publicPlans, usdBillingEnabled } from './src/currency.js';
 import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan } from './src/scan.js';
-import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail } from './src/email/report.js'; import { sendEmail, sendEmailSoft, emailIsMock } from './src/email/send.js';
+import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail, reportSubject } from './src/email/report.js'; import { sendEmail, sendEmailSoft, emailIsMock } from './src/email/send.js';
 import * as V from './src/views.js'; import { isMockMode } from './src/providers/index.js';
 import { token, safeEqual, issueMagicLink, consumeMagic } from './src/security/tokens.js'; import { createRateLimiter } from './src/security/ratelimit.js';
 import { verifyTurnstile, turnstileSiteKey } from './src/security/turnstile.js'; import { esc } from './src/security/html.js';
@@ -11,7 +11,10 @@ import { TEST_PLAN, TEST_BILLING, TEST_CHECKOUT_TTL_MS, TEST_ACCESS_MS } from '.
 import { validSingleUseToken, looksLikeCardNumber } from './src/payments/sumit.js'; import { checkoutCsp, inlineScriptHashes, adminNonce, JQUERY_PATH, SUMIT_SCRIPT_URL } from './src/security/csp.js';
 import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { buildStatus, recordSync } from './src/status.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js'; import { blogPageHtml } from './src/blog.js';
 
-const app = express(); app.disable('x-powered-by'); if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY); app.use(express.urlencoded({ extended: false })); app.use(express.json()); // noindex on private pages (meta robots is also in the HTML; the header covers redirects and server-rendered pages).
+// TRUST_PROXY=1 (GO-LIVE.md) is a *string* in process.env; Express treats a string as an IP/subnet list ('1' = the address 0.0.0.1), so the proxy was
+// NOT trusted and every visitor shared the proxy's IP in all per-IP limits. Numbers become a hop count, 'true'/'false' booleans, anything else is passed through.
+export const trustProxySetting = v => { const s = String(v).trim(); return /^\d+$/.test(s) ? Number(s) : s === 'true' ? true : s === 'false' ? false : s; };
+const app = express(); app.disable('x-powered-by'); if (process.env.TRUST_PROXY) app.set('trust proxy', trustProxySetting(process.env.TRUST_PROXY)); app.use(express.urlencoded({ extended: false })); app.use(express.json()); // noindex on private pages (meta robots is also in the HTML; the header covers redirects and server-rendered pages).
 // Which paths: NOINDEX_PATH in src/seo.js (the single source for robots.txt and these headers).
 app.use((q, r, next) => { if (NOINDEX_PATH.test(q.path)) r.set('X-Robots-Tag', 'noindex, nofollow'); next(); });
 // Baseline security headers on every response. HSTS without `preload` (opt-in later, and it is hard to undo).
@@ -37,9 +40,10 @@ async function captcha(q, r, next) {
   return captchaFailLimiter(q, r, () => wantsJson(q) ? r.status(403).json({ error: v.code, code: v.code, message: v.error }) : r.status(403).send(V.landing(v.error)));
 }
 const dashUrl = a => `/dashboard/${encodeURIComponent(a.id)}?key=${encodeURIComponent(a.key)}`;
-async function emailMagicLink(a) {
-  const link = issueMagicLink(a, BASE); await save();
-  await sendEmail({ to: a.email, subject: `Your ${BRAND.name} dashboard link`, html: `<p>Open your ${esc(BRAND.name)} dashboard (link valid 15 minutes, single use):</p><p><a href="${esc(link)}">${esc(link)}</a></p><p>If you didn't request this, ignore this email.</p>` });
+// Sign-in link email (HE/EN via renderTx('login')). Language: explicit > the account's known language > English.
+async function emailMagicLink(a, lang) {
+  const link = issueMagicLink(a, BASE); await save(); const l = lang === 'he' ? 'he' : lang === 'en' ? 'en' : (a.lang || a.pendingLang) === 'he' ? 'he' : 'en';
+  await sendEmail({ to: a.email, ...renderTx('login', l, { link }) });
 }
 
 // Optional marketing consent from the scan form (unchecked by default). Stored only when given, with timestamp, language
@@ -50,8 +54,19 @@ function recordConsent(a, body) {
   setConsent(a, 'marketing', true, 'scan-form'); a.marketingConsent = { granted: true, at: a.marketingConsent.at, lang: body?.lang === 'he' ? 'he' : 'en', source: 'scan-form', version: CONSENT_VERSION };
   getDb().events.push({ at: a.marketingConsent.at, type: 'consent.marketing', account: a.id, version: CONSENT_VERSION }); save();
 }
-async function sendReportEmail(account, business, scan, lang) { const u = unsubUrl(BASE, account, 'all', lang === 'he' ? 'he' : 'en');
-  await sendEmailSoft({ to: account.email, headers: unsubHeaders(u), subject: `Your ${BRAND.name} report: ${business.name} scored ${scan.summary.score}/100`, html: renderWeeklyEmail({ business, scan, reportUrl: `${BASE}/r/${scan.id}`, unsubscribeUrl: u }) }); }
+// Language of the report email: the language of the page the scan was started from (body.lang), else the one stored on the account, else English.
+// Stored on the scan (scan.lang) and, if the account has none yet, on the account (account.lang, used by the other emails too).
+const validLang = v => (v === 'he' || v === 'en' ? v : null);
+const scanLang = (account, body) => validLang(body?.lang) || validLang(account.lang) || validLang(account.pendingLang) || 'en';
+function rememberLang(account, scan, lang) { scan.lang = lang; if (!validLang(account.lang)) account.lang = lang; save(); }
+// Per-address limit (abuse bound): at most REPORT_EMAIL_MAX_PER_DAY (default 3) report emails to one address per rolling 24h. Beyond it the email is
+// silently skipped (the scan and the on-screen report are unaffected); only a counter event without the address is recorded.
+const REPORT_EMAIL_WINDOW_MS = 864e5, reportEmailMax = () => Math.max(1, Number(process.env.REPORT_EMAIL_MAX_PER_DAY) || 3);
+function reportEmailAllowed(account) { const now = Date.now(); account.reportEmails = (account.reportEmails || []).filter(t => now - t < REPORT_EMAIL_WINDOW_MS);
+  if (account.reportEmails.length >= reportEmailMax()) { getDb().events.push({ at: new Date(now).toISOString(), type: 'email.report_rate_limited', account: account.id }); save(); return false; }
+  account.reportEmails.push(now); save(); return true; }
+async function sendReportEmail(account, business, scan, lang) { if (!reportEmailAllowed(account)) return false; const l = validLang(lang) || 'en'; const u = unsubUrl(BASE, account, 'all', l);
+  return sendEmailSoft({ to: account.email, headers: unsubHeaders(u), subject: reportSubject({ variant: 'report', lang: l, business, scan }), html: renderWeeklyEmail({ business, scan, reportUrl: `${BASE}/r/${scan.id}`, unsubscribeUrl: u, variant: 'report', lang: l }) }); }
 // Admin-only test checkout while pre-launch: ADMIN_TEST_TOKEN via x-admin-test-token header (or ?admin_token=), compared
 // timing-safe. Only ever with the mock payments provider, so no real card can be charged before launch.
 export const adminTestOk = q => { const t = process.env.ADMIN_TEST_TOKEN; if (!t || t.length < 16 || getPayments().id !== 'mock') return false;
@@ -69,18 +84,28 @@ app.get('/healthz', (q, r) => r.set('Cache-Control', 'no-store').json({ ok: true
 // Disabled (404) unless CRON_SECRET (>= 16 chars) is set. Requires header X-Cron-Secret, compared timing-safe (sha256 + timingSafeEqual).
 // Not behind the CAPTCHA. Only wrong-secret attempts are rate limited (CRON_FAIL_MAX per 15 min per IP). Concurrent runs are collapsed
 // by an in-process lock (the second caller gets 202 {running:true}). The sync is idempotent. Responses never include sync data.
-export const cronHooks = { sync: syncAll };
+import { runWeekly } from './src/weekly.js';
+export const cronHooks = { sync: syncAll, weekly: () => runWeekly({ base: BASE }) };
 const cronFailLimiter = createRateLimiter({ max: Number(process.env.CRON_FAIL_MAX || 10), windowMs: 15 * 60 * 1000, onLimit: (q, r) => r.status(429).json({ ok: false }) });
-let cronRunning = false;
-app.post('/api/internal/cron/sync', async (q, r) => {
-  r.set('Cache-Control', 'no-store'); const secret = process.env.CRON_SECRET || ''; if (secret.length < 16) return r.status(404).json({ ok: false });
-  if (!safeEqual(String(q.get('x-cron-secret') || ''), secret)) return cronFailLimiter(q, r, () => r.status(401).json({ ok: false }));
-  if (cronRunning) return r.status(202).json({ ok: true, running: true });
-  cronRunning = true;
-  try { await cronHooks.sync(); recordSync(true); console.log('[cron] billing sync done'); return r.json({ ok: true, ranAt: new Date().toISOString() }); }
-  catch (e) { recordSync(false, e); console.error(`[cron] billing sync failed (${e?.name || 'Error'})`); return r.status(500).json({ ok: false }); }
-  finally { cronRunning = false; }
-});
+// Same semantics for every cron endpoint: 404 disabled, 401 wrong secret, 202 already running, 500 {ok:false}, 200 {ok, ranAt}. `enabled` (optional)
+// is an extra opt-in flag; when it is off the endpoint answers 200 {ok:true, skipped} after authenticating and runs nothing.
+const cronRunning = {}; // per-endpoint in-process lock (the status endpoint reports cronRunning.sync)
+function cronEndpoint(name, label, { enabled, skipped, record } = {}) {
+  return async (q, r) => {
+    r.set('Cache-Control', 'no-store'); const secret = process.env.CRON_SECRET || ''; if (secret.length < 16) return r.status(404).json({ ok: false });
+    if (!safeEqual(String(q.get('x-cron-secret') || ''), secret)) return cronFailLimiter(q, r, () => r.status(401).json({ ok: false }));
+    if (enabled && !enabled()) return r.json({ ok: true, skipped });
+    if (cronRunning[name]) return r.status(202).json({ ok: true, running: true });
+    cronRunning[name] = true;
+    try { await cronHooks[name](); if (record) record(true); console.log(`[cron] ${label} done`); return r.json({ ok: true, ranAt: new Date().toISOString() }); }
+    catch (e) { if (record) record(false, e); console.error(`[cron] ${label} failed (${e?.name || 'Error'})`); return r.status(500).json({ ok: false }); }
+    finally { cronRunning[name] = false; }
+  }; }
+app.post('/api/internal/cron/sync', cronEndpoint('sync', 'billing sync', { record: recordSync }));
+// Weekly report emails: NOT scheduled anywhere and inert unless WEEKLY_EMAILS_ENABLED=1 (default off) — it re-scans every paid business (AI cost)
+// and emails the customers, so it only runs once the owner has approved automated weekly emails.
+export const weeklyEmailsEnabled = () => process.env.WEEKLY_EMAILS_ENABLED === '1';
+app.post('/api/internal/cron/weekly', cronEndpoint('weekly', 'weekly reports', { enabled: weeklyEmailsEnabled, skipped: 'weekly_disabled' }));
 // Read-only ops status (aggregate numbers, no PII / SUMIT data): GET /api/internal/status with header X-Status-Token (env STATUS_TOKEN, >= 24 chars).
 // Disabled, missing or wrong token: the request falls through to the normal unknown-route 404 (same status, body and headers as any other
 // unknown /api/ path: no 401/403, no hint that it exists). The token is only ever read from the header (never URL/body), compared timing-safe
@@ -92,7 +117,7 @@ app.get('/api/internal/status', (q, r, next) => {
   q.statusLimited = () => next(); statusFailLimiter(q, r, () => {
     if (!safeEqual(String(q.get('x-status-token') || ''), secret)) return next();
     statusFailLimiter.refund(q); r.set('Cache-Control', 'no-store'); r.set('X-Robots-Tag', 'noindex, nofollow');
-    try { return r.json(buildStatus({ running: cronRunning })); } catch (e) { console.error(`[status] failed (${e?.name || 'Error'})`); return r.status(500).json({ ok: false }); }
+    try { return r.json(buildStatus({ running: !!cronRunning.sync })); } catch (e) { console.error(`[status] failed (${e?.name || 'Error'})`); return r.status(500).json({ ok: false }); }
   });
 });
 // ---------- Card data guard (checkout / charge / admin routes) ----------
@@ -235,8 +260,8 @@ app.post('/scan', scanLimiter, captcha, async (q, r) => {
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim() };
   db.businesses[business.id] = business; save();
   try {
-    const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1);
-    await sendReportEmail(account, business, scan, q.body?.lang);
+    const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
+    await sendReportEmail(account, business, scan, lang);
     r.redirect(`/r/${scan.id}`);
   } catch (e) { r.status(e.code === 'CAP' ? 429 : e.code === 'NO_ENGINE' ? 503 : 500).send(V.landing(e.message)); }
 });
@@ -247,15 +272,28 @@ app.post('/scan', scanLimiter, captcha, async (q, r) => {
 const displayCurrencyFor = q => { const c = String(q.body?.currency || '').toUpperCase(); return CURRENCIES.includes(c) ? c : detectCurrency(q, q.body?.lang).currency; };
 // Pre-launch admin test checkouts (valid ADMIN_TEST_TOKEN, mock payments only) skip the CAPTCHA; everyone else is verified.
 const captchaUnlessAdminTest = (q, r, next) => (isPrelaunch() && adminTestOk(q) ? next() : captcha(q, r, next));
+// Double-charge guard. An account "has an active subscription" while it holds a paid plan with a standing order that is active, or
+// cancelled by the customer but still inside the paid period. past_due (grace) and unpaid accounts MAY check out again: that is the
+// card-replacement flow (the old failed order is superseded, see completeCheckout). Admin test accounts are not real subscriptions.
+export const hasActiveSubscription = (a, now = Date.now()) => !!a && !a.testSubscription && !a.adminTest && isPaid(PLANS[a.plan]) && !!a.subscriptionRef && a.status !== 'past_due'
+  && !(a.status === 'cancelled' && !(a.paidThrough && Date.parse(a.paidThrough) > now)) && !['unpaid', 'cancelled_ended'].includes(a.status);
+export const ALREADY_SUBSCRIBED = { ok: false, error: 'already_subscribed', code: 'already_subscribed', message: 'You already have an active subscription. Sign in to your dashboard to manage it.', messageHe: 'כבר יש לך מנוי פעיל. היכנס/י ללוח הבקרה כדי לנהל אותו.' };
+const CHECKOUT_BUSY = { ok: false, error: 'busy', code: 'busy', message: 'A payment is already in progress for this account. Please wait a moment.', messageHe: 'תשלום כבר בתהליך בחשבון הזה. המתינו רגע.' };
+const stateHash = st => createHash('sha256').update(String(st)).digest('hex');
+const findAccountByEmail = email => Object.values(getDb().accounts).find(x => x.email === String(email || '').trim().toLowerCase());
+// Sends the structured 409 for a start/charge that was refused ('already' | 'busy').
+const refuseCheckout = (r, code) => r.status(409).json(code === 'busy' ? CHECKOUT_BUSY : ALREADY_SUBSCRIBED);
 async function startCheckout(q) {
   const adminTest = isPrelaunch() && adminTestOk(q); if (isPrelaunch() && !adminTest) return { prelaunch: true };
   const plan = Object.hasOwn(PLANS, q.body?.plan) ? PLANS[q.body.plan] : null; if (!isPaid(plan) || !q.body?.email) return null;
   const billing = billingFor(plan, displayCurrencyFor(q));
+  const existing = findAccountByEmail(q.body.email);
+  if (existing && !adminTest) { if (chargeLocks.has(existing.id)) return { refused: 'busy' }; if (hasActiveSubscription(existing)) return { refused: 'already' }; } // never overwrite checkoutState mid-charge, never open a 2nd checkout for a live subscription
   const account = findOrCreateAccount(q.body.email); account.pendingPlan = plan.id; account.pendingBilling = billing; account.pendingLang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : langOf(q); const state = account.checkoutState = token(24); if (adminTest) account.pendingAdminTest = true; else delete account.pendingAdminTest; delete account.pendingTest; save();
   // Mock provider: { redirectUrl } (stand-in card page). SUMIT: { embedded: {companyId, publicKey, identifier} } for the on-page Payments JS card form.
   const co = await getPayments().createCheckout({ account, plan, billing, state, returnUrl: `${BASE}/billing/return?lang=${account.pendingLang}` }); return { ...co, billing, lang: account.pendingLang, plan: plan.id };
 }
-app.post('/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).send(billingPage('prelaunch', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (!c) return r.status(400).send('bad plan'); r.redirect(c.redirectUrl || `/${c.lang}/checkout?plan=${encodeURIComponent(c.plan)}`); });
+app.post('/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.refused) return r.status(409).send(billingPage(c.refused === 'busy' ? 'invalid' : 'already', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (c?.prelaunch) return r.status(403).send(billingPage('prelaunch', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (!c) return r.status(400).send('bad plan'); r.redirect(c.redirectUrl || `/${c.lang}/checkout?plan=${encodeURIComponent(c.plan)}`); });
 // One checkout completion for every provider flow. via: 'return' (GET /billing/return, the mock provider's redirect), 'public'
 // (POST /api/checkout/charge, embedded SUMIT) or 'admin' (POST /api/admin/test-checkout/charge). Returns { code, lang, error } where
 // code is ok | failed | error | invalid | prelaunch | busy. The identifier is "<accountId>.<checkoutState>"; the state is an unguessable
@@ -268,7 +306,10 @@ async function completeCheckout(q, { identifier, query, via }) {
   const isTest = via !== 'public' && !!account?.pendingTest && realTestEnabled();
   if (via === 'return' && getPayments().id === 'sumit') return { code: 'invalid' }; // SUMIT no longer redirects back; tokens never travel in URLs
   if (isPrelaunch() && !(account?.pendingAdminTest && getPayments().id === 'mock') && !isTest) return { code: 'prelaunch' };
+  // A checkout that already completed (its single-use state was consumed): a repeat/second-device submit is a 409, not a charge.
+  if (account && account.lastCheckout?.h && !isTest && state && safeEqual(stateHash(state), account.lastCheckout.h)) return { code: 'already' };
   if (!account || !account.checkoutState || !safeEqual(state, account.checkoutState) || (via === 'admin' && !isTest) || (account.pendingTest && (via === 'public' || !isTest || !(Date.now() - Date.parse(account.pendingTest.at) < TEST_CHECKOUT_TTL_MS)))) return { code: 'invalid' };
+  if (!isTest && hasActiveSubscription(account)) return { code: 'already' };
   if (chargeLocks.has(account.id)) return { code: 'busy' };
   const plan = isTest ? TEST_PLAN : PLANS[account.pendingPlan || 'starter']; const lang = query.lang === 'he' || query.lang === 'en' ? query.lang : account.pendingLang || langOf(q);
   // Re-derive from PLANS (never trust stored/client amounts); keeps the currency chosen at checkout start.
@@ -278,11 +319,16 @@ async function completeCheckout(q, { identifier, query, via }) {
     const res = await getPayments().handleReturn(query, account, plan, billing);
     if (isTest) console.log(res.ok ? `[admin-test] charge ok${res.documentId ? ` doc=${Number(res.documentId) || ''}` : ''}` : '[admin-test] charge failed');
     if (!res.ok) return { code: 'failed', lang, error: res.error };
+    // Card-replacement flow: a past-due/unpaid customer subscribing again. Remember the old standing order so it can be cancelled after the new one is live.
+    const oldRef = !isTest && ['past_due', 'unpaid'].includes(account.status) && account.subscriptionRef && String(account.subscriptionRef) !== String(res.subscriptionRef) ? String(account.subscriptionRef) : null;
     Object.assign(account, { plan: isTest ? 'starter' : plan.id, subscriptionRef: res.subscriptionRef, paidAt: new Date().toISOString(), billing: { currency: billing.currency, amount: billing.amount }, status: 'active', lang, paidThrough: isTest ? new Date(Date.now() + TEST_ACCESS_MS).toISOString() : addMonth(new Date()).toISOString(), ...(account.pendingAdminTest ? { adminTest: true } : {}), ...(isTest ? { testSubscription: true, adminTest: true } : {}) }); delete account.cancelledAt; delete account.pendingAdminTest; delete account.pendingTest; delete account.pendingPlan; delete account.pendingBilling; delete account.checkoutState; delete account.pendingLang; save();
+    if (!isTest) { account.lastCheckout = { h: stateHash(state), at: new Date().toISOString() }; delete account.pastDueSince; delete account.failedNoticeAt; } // repeat submits of this checkout get 409 'already', never a 2nd charge
     db.events.push({ at: new Date().toISOString(), type: 'subscription.activated', account: account.id, plan: plan.id, currency: billing.currency, amount: billing.amount, ...(isTest ? { test: true, documentId: Number(res.documentId) || null } : {}) }); save();
     // Don't hand the dashboard key to whoever holds this URL: email a single-use magic link instead.
-    await emailMagicLink(account).catch(() => {});
+    await emailMagicLink(account, lang).catch(() => {});
     await sendEmailSoft({ to: account.email, ...renderTx('receipt', lang, { planName: plan.name, amount: billing.amount, currency: billing.currency, paidThrough: ymd(account.paidThrough), receiptUrl: res.receiptUrl }) });
+    // Supersede the old failed order (best effort: SUMIT normally already disabled it; the provider's own cancel path is used, errors are only recorded).
+    if (oldRef) { let ok = false; try { ok = !!(await getPayments().cancel({ ...account, subscriptionRef: oldRef }))?.ok; } catch { /* already disabled/cancelled at the provider */ } getDb().events.push({ at: new Date().toISOString(), type: 'subscription.superseded', account: account.id, cancelled: ok }); save(); }
     return { code: 'ok', lang };
   } catch (e) { if (isTest) console.error('[admin-test] charge failed'); return { code: 'error', lang, error: e.message }; }
   finally { chargeLocks.delete(account.id); }
@@ -290,6 +336,7 @@ async function completeCheckout(q, { identifier, query, via }) {
 app.get('/billing/return', async (q, r) => {
   const o = await completeCheckout(q, { identifier: q.query.Identifier, query: q.query, via: 'return' });
   if (o.code === 'prelaunch') return r.status(403).send(billingPage('prelaunch', langOf(q)));
+  if (o.code === 'already') return r.status(409).send(billingPage('already', langOf(q)));
   if (o.code === 'invalid' || o.code === 'busy') return r.status(400).send(billingPage('invalid', langOf(q)));
   if (o.code === 'failed') return r.send(billingPage('failed', o.lang, o.error));
   if (o.code === 'error') return r.status(502).send(billingPage('error', o.lang, o.error));
@@ -306,7 +353,8 @@ async function chargeJson(q, r, via) {
   if (o.code === 'ok') return r.json({ ok: true, lang: o.lang });
   if (o.code === 'prelaunch') return r.status(403).json({ ok: false, error: 'prelaunch', prelaunch: true });
   if (o.code === 'invalid') return r.status(400).json({ ok: false, error: 'invalid_checkout' });
-  if (o.code === 'busy') return r.status(409).json({ ok: false, error: 'busy' });
+  if (o.code === 'already') return refuseCheckout(r, 'already');
+  if (o.code === 'busy') return refuseCheckout(r, 'busy');
   if (o.code === 'failed') return r.status(402).json({ ok: false, error: 'declined' });
   return r.status(502).json({ ok: false, error: 'charge_error' });
 }
@@ -321,7 +369,7 @@ const accountFor = q => { const db = getDb(); const a = Object.hasOwn(db.account
 function auth(q, r) { const a = accountFor(q); if (!a) { r.status(403).send('forbidden'); return null; } return a; }
 // Magic-link login: always answers the same way so it can't be used to probe which emails exist.
 async function login(q, r) { const email = String(q.body?.email || '').trim().toLowerCase(); const a = email && Object.values(getDb().accounts).find(x => x.email === email);
-  if (a) await emailMagicLink(a); const msg = 'If that email has an account, we sent a sign-in link.'; return wantsJson(q) ? r.json({ ok: true, message: msg }) : r.send(V.message('Check your email', '', msg)); }
+  if (a) await emailMagicLink(a, q.body?.lang); const msg = 'If that email has an account, we sent a sign-in link.'; return wantsJson(q) ? r.json({ ok: true, message: msg }) : r.send(V.message('Check your email', '', msg)); }
 app.post('/login', loginLimiter, captcha, login); app.post('/api/login', loginLimiter, captcha, login);
 app.get('/auth/magic', loginLimiter, (q, r) => { const db = getDb(); const a = Object.hasOwn(db.accounts, String(q.query.a)) ? db.accounts[q.query.a] : null;
   if (!a || !consumeMagic(a, q.query.t)) return r.status(403).send(V.message('Link expired', '', 'This sign-in link is invalid or already used. Request a new one.'));
@@ -370,15 +418,15 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim() };
   db.businesses[business.id] = business; save();
   try {
-    const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1);
-    await sendReportEmail(account, business, scan, q.body?.lang);
+    const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
+    await sendReportEmail(account, business, scan, lang);
     r.json({ reportId: scan.id });
   } catch (e) { if (e.code === 'NO_ENGINE') return r.status(503).json({ error: 'scan_unavailable', code: 'scan_unavailable', message: e.message }); r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }
 });
 app.get('/api/report/:id', (q, r) => { const db = getDb(); const s = db.scans[q.params.id]; if (!s) return r.status(404).json({ error: 'not found' });
   const b = db.businesses[s.businessId]; const hist = (b.scanIds || []).map(i => db.scans[i]).filter(Boolean); const idx = hist.findIndex(x => x.id === s.id);
   r.json({ demo: !!s.mock, business: { name: b.name, category: b.category, city: b.city, website: b.website }, scan: s, previousScore: idx > 0 ? hist[idx - 1].summary.score : null, history: hist.slice(0, idx + 1).map(x => x.summary.score) }); });
-app.post('/api/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).json({ error: 'Pre-launch: checkout is not open yet. Join the waitlist.', prelaunch: true }); if (!c) return r.status(400).json({ error: 'Choose a plan and enter your email.' }); r.json(c); });
+app.post('/api/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.refused) return refuseCheckout(r, c.refused); if (c?.prelaunch) return r.status(403).json({ error: 'Pre-launch: checkout is not open yet. Join the waitlist.', prelaunch: true }); if (!c) return r.status(400).json({ error: 'Choose a plan and enter your email.' }); r.json(c); });
 // Pricing for the UI: detected display currency + server prices + what checkout will actually charge.
 app.get('/api/pricing', (q, r) => {
   const forced = String(q.query.currency || '').toUpperCase(); const d = CURRENCIES.includes(forced) ? { currency: forced, source: 'query' } : detectCurrency(q, q.query.lang);

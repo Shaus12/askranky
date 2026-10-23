@@ -22,7 +22,7 @@ function tokenize(e: Embedded, lang: Locale, tt: (typeof payText)[Locale]): Prom
 const Lock = () => (<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>);
 const Warn = () => (<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0"><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16.5v.01" /></svg>);
 // `amount`: display-only label of what the server will charge (e.g. "₪79"); the server re-prices and the client never sends an amount.
-export default function CardForm({ embedded, lang, onPaid, amount }: { embedded: Embedded; lang: Locale; onPaid: () => void; amount?: string }) {
+export default function CardForm({ embedded, lang, onPaid, onAlready, amount }: { embedded: Embedded; lang: Locale; onPaid: () => void; onAlready?: () => void; amount?: string }) {
   const tt = payText[lang]; const [ready, setReady] = useState(false); const [busy, setBusy] = useState(false); const [err, setErr] = useState(""); const lock = useRef(false); const errBox = useRef<HTMLDivElement>(null);
   useEffect(() => { let on = true; loadSumit().then(() => on && setReady(true)).catch(() => on && setErr(tt.loadErr)); return () => { on = false; wipe(); }; }, [tt.loadErr]);
   useEffect(() => { if (err) errBox.current?.scrollIntoView({ block: "nearest" }); }, [err]);
@@ -31,7 +31,7 @@ export default function CardForm({ embedded, lang, onPaid, amount }: { embedded:
     try {
       const token = await tokenize(embedded, lang, tt); wipe();
       try { await api("/api/checkout/charge", { body: { identifier: embedded.identifier, token, lang } }); onPaid(); }
-      catch (x: any) { const c = x?.data?.error; setErr(c === "declined" ? tt.declined : c === "invalid_checkout" || c === "prelaunch" ? tt.invalid : c === "rate_limited" ? tt.rate : c === "busy" ? tt.busy : tt.failed); }
+      catch (x: any) { const c = x?.data?.error; if (c === "already_subscribed" && onAlready) return onAlready(); setErr(c === "declined" ? tt.declined : c === "invalid_checkout" || c === "prelaunch" ? tt.invalid : c === "rate_limited" ? tt.rate : c === "busy" ? tt.busy : tt.failed); }
     } catch (x: any) { setErr(String(x?.message || tt.tokenErr)); } finally { wipe(); lock.current = false; setBusy(false); }
   }
   // Card fields are always LTR digits (dir="ltr"), labels follow the page direction. readOnly (not disabled) while busy keeps the DOM values readable for payments.js.

@@ -80,8 +80,8 @@ try {
   r = await post('/api/checkout/charge', { identifier: IDENT, token: SUT, lang: 'he' }); j = await r.json(); assert.equal(r.status, 200); assert.equal(j.ok, true); assert.deepEqual(Object.keys(j).sort(), ['lang', 'ok']);
   assert.equal(charges().length, 1); const c = charges()[0].body; assert.equal(c.SingleUseToken, SUT); assert.equal(c.Items[0].UnitPrice, 79); assert.equal(c.Items[0].Currency, 0); assert.equal(c.Items[0].Recurrence, 0); assert.equal(c.DocumentType, 2); assert.equal(c.Customer.NoVAT, true); assert.equal(c.VATIncluded, false); assert.equal(c.Credentials.APIKey, 'PRIVATE-KEY-secret-abcdef'); assert.equal(c.Customer.EmailAddress, 'buy@t.test');
   const a = acct('buy@t.test'); assert.equal(a.plan, 'starter'); assert.equal(a.status, 'active'); assert.equal(a.subscriptionRef, '555'); assert.ok(!a.checkoutState && !a.pendingBilling);
-  r = await post('/api/checkout/charge', { identifier: IDENT, token: SUT + 'x' }); assert.equal(r.status, 400); assert.equal(charges().length, 1);
-  ok('happy path: server charges /billing/recurring/charge/ with SingleUseToken exactly (79 ILS, receipt DocumentType 2, NoVAT, ILS); replay of the identifier is rejected');
+  r = await post('/api/checkout/charge', { identifier: IDENT, token: SUT + 'x' }); assert.equal(r.status, 409); assert.equal(charges().length, 1);
+  ok('happy path: server charges /billing/recurring/charge/ with SingleUseToken exactly (79 ILS, receipt DocumentType 2, NoVAT, ILS); replay of the identifier is refused with 409');
   // wrong / forged identifiers
   r = await post('/api/checkout', { plan: 'pro', email: 'w@t.test', currency: 'USD' }); j = await r.json(); const [wid] = j.embedded.identifier.split('.');
   for (const id of [wid, `${wid}.forged`, 'nobody.x', `${wid}.`, '.', '__proto__.x', 'constructor.x']) { r = await post('/api/checkout/charge', { identifier: id, token: SUT }); assert.equal(r.status, 400, id); } assert.equal(charges().length, 1);

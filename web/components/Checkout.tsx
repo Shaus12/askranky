@@ -31,7 +31,7 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
   const [q, setQ] = useState<URLSearchParams | null>(null); const [err, setErr] = useState(""); const [bill, setBill] = useState<Billing | null>(null);
   const [pre, setPre] = useState<boolean | null>(null); const [joined, setJoined] = useState(false);
   const [siteKey, setSiteKey] = useState<string | null>(null); const [rk, setRk] = useState(0);
-  const [emb, setEmb] = useState<Embedded | null>(null); const [paid, setPaid] = useState(false);
+  const [emb, setEmb] = useState<Embedded | null>(null); const [paid, setPaid] = useState(false); const [already, setAlready] = useState(false);
   useEffect(() => { const sp = new URLSearchParams(location.search); setQ(sp); getConfig().then((c) => { setPre(!!c.prelaunch); setSiteKey(c.turnstileSiteKey); });
     // Show exactly what the server will charge (server re-prices on POST; the client never sends an amount).
     api<Pricing>(`/api/pricing?lang=${lang}`).then((j) => setBill(j.plans.find((p) => p.id === (sp.get("plan") || "starter"))?.billing || null)).catch(() => {}); }, [lang]);
@@ -66,15 +66,16 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
     e.preventDefault(); const fd = new FormData(e.currentTarget); const email = String(fd.get("email") || ""); const token = String(fd.get("cf-turnstile-response") || "");
     if (siteKey && !token) return setErr(t.form.captcha); setErr("");
     try { const j = await api<CheckoutRes>("/api/checkout", { body: { plan, email, lang, currency: bill?.displayCurrency, "cf-turnstile-response": token || undefined } }); if (j.embedded) setEmb(j.embedded); else if (j.redirectUrl) location.href = j.redirectUrl; }
-    catch (x: any) { if (x.data?.prelaunch) setPre(true); else { setErr(errMessage(x, t)); setRk((n) => n + 1); } }
+    catch (x: any) { if (x.data?.error === "already_subscribed") { setEmb(null); setAlready(true); } else if (x.data?.prelaunch) setPre(true); else { setErr(errMessage(x, t)); setRk((n) => n + 1); } }
   }
   const p = t.pricing.plans.find((x) => x.id === plan) || t.pricing.plans[1];
   if (paid) return (<main className="mx-auto max-w-lg px-4 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center sm:px-5" data-paid><div className="card pay-panel space-y-3 !p-8"><span aria-hidden="true" className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-emerald-300/30 bg-emerald-400/10 text-xl text-emerald-200">✓</span><h1 className="font-head vx-h3 !text-3xl">{payText[lang].paidTitle}</h1><p role="status" className="text-slate-300">{payText[lang].paidSub}</p></div></main>);
+  if (already) return (<main className="mx-auto max-w-lg px-4 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center sm:px-5" data-already-subscribed><div className="card pay-panel space-y-3 !p-8"><h1 className="font-head vx-h3 !text-3xl">{payText[lang].alreadyTitle}</h1><p role="status" className="text-slate-300">{payText[lang].alreadySub}</p><a className="btn-cta mt-4" href={`/${lang}/login`}>{payText[lang].alreadyCta}</a></div></main>);
   const summary = <Summary t={t} lang={lang} name={p.name} bill={bill} />;
   if (emb) return (
     <main className="mx-auto max-w-lg space-y-4 px-4 py-[clamp(2.5rem,calc(var(--u)*96),6rem)] sm:px-5" data-embedded-checkout>
       {summary}
-      <CardForm embedded={emb} lang={lang} onPaid={() => setPaid(true)} amount={bill ? fmt(bill.amount, bill.currency) : undefined} />
+      <CardForm embedded={emb} lang={lang} onPaid={() => setPaid(true)} onAlready={() => { setEmb(null); setAlready(true); }} amount={bill ? fmt(bill.amount, bill.currency) : undefined} />
     </main>);
   return (
     <main className="mx-auto max-w-lg space-y-4 px-4 py-[clamp(2.5rem,calc(var(--u)*96),6rem)] sm:px-5">
