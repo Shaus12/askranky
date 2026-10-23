@@ -66,9 +66,9 @@ try {
     assert.equal(oa.consentHistory[0].granted, true); assert.equal(oa.consentHistory[0].source, 'scan-form'); assert.match(mailsTo('optin@t.test').at(-1).html, /unsubscribe\?t=/); ok('scan-form opt-in is recorded in the history; report email also carries an unsubscribe link'); }
   // 5) EMAIL_FROM / EMAIL_REPLY_TO
   { const m = mails().at(-1); assert.equal(m.from, 'Ranky Test <hello@askranky.com>'); assert.equal(m.replyTo, 'help@askranky.com');
-    const { emailFrom, emailReplyTo } = await import('../src/email/send.js'); delete process.env.EMAIL_FROM; delete process.env.EMAIL_REPLY_TO; assert.equal(emailFrom(), 'Ranky <reports@askranky.com>'); assert.equal(emailReplyTo(), BRAND.supportEmail);
+    const { emailFrom, emailReplyTo } = await import('../src/email/send.js'); delete process.env.EMAIL_FROM; delete process.env.EMAIL_REPLY_TO; assert.equal(emailFrom(), 'Ranky <hello@askranky.com>'); assert.equal(emailReplyTo(), BRAND.supportEmail);
     process.env.EMAIL_FROM = 'Ranky Test <hello@askranky.com>'; process.env.EMAIL_REPLY_TO = 'help@askranky.com';
-    assert.ok(checkConfig({ EMAIL_MODE: 'resend', RESEND_API_KEY: 'x' }).errors.some(e => e.startsWith('UNSUBSCRIBE_SECRET'))); ok('EMAIL_FROM / EMAIL_REPLY_TO configurable (defaults: reports@askranky.com / support); live email requires UNSUBSCRIBE_SECRET'); }
+    assert.ok(checkConfig({ EMAIL_MODE: 'resend', RESEND_API_KEY: 'x' }).errors.some(e => e.startsWith('UNSUBSCRIBE_SECRET'))); ok('EMAIL_FROM / EMAIL_REPLY_TO configurable (defaults: hello@askranky.com / support); live email requires UNSUBSCRIBE_SECRET'); }
   // 6) templates
   { for (const l of ['he', 'en']) { const r = renderTx('receipt', l, { planName: 'Pro', amount: 179, currency: 'ILS', paidThrough: '2026-11-22', receiptUrl: 'javascript:alert(1)' }); assert.ok(!/javascript:/.test(r.html)); assert.ok(!/מע"מ|VAT/.test(r.html)); assert.match(r.html, /322713082/);
       const x = renderTx('failed', l, { planName: '<b>x</b>', amount: 1, currency: 'ILS' }); assert.ok(!x.html.includes('<b>x</b>')); assert.match(x.html, /7/); }
