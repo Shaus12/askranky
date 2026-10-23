@@ -5,13 +5,13 @@ const T = {
   receipt: {
     en: { subject: v => `${v.brand} receipt: ${v.planName}, ${v.amount} ${v.currency}`, body: v => [
       `Thanks! We received your payment of <b>${v.amount} ${v.currency}</b> for the ${v.brand} ${v.planName} plan.`,
-      v.receiptUrl ? `Receipt: <a href="${v.receiptUrlRaw}">${v.receiptUrl}</a>` : `Your receipt (קבלה) is issued by our payment provider and sent separately.`,
+      v.receiptUrl ? `Receipt: <a href="${v.receiptUrlRaw}">${v.receiptUrl}</a>` : `A receipt (קבלה) is issued for this payment by our billing provider, SUMIT. If it doesn't reach you, reply to this email and we'll make sure you get it.`,
       `Your plan renews monthly by standing order until you cancel.${v.paidThrough ? ` Paid through: ${v.paidThrough}.` : ''}`,
       `To cancel, use your dashboard, reply to this email or contact ${v.supportEmail}.`,
       `${v.legalEntity} is an exempt dealer (עוסק פטור); this document is a receipt.`] },
     he: { subject: v => `קבלה מ-${v.brand}: ${v.planName}, ${v.amount} ${v.currency}`, body: v => [
       `תודה! התקבל תשלום של <b>${v.amount} ${v.currency}</b> עבור מסלול ${v.planName} ב-${v.brand}.`,
-      v.receiptUrl ? `קבלה: <a href="${v.receiptUrlRaw}">${v.receiptUrl}</a>` : `הקבלה מופקת על ידי ספק התשלומים ונשלחת בנפרד.`,
+      v.receiptUrl ? `קבלה: <a href="${v.receiptUrlRaw}">${v.receiptUrl}</a>` : `קבלה על התשלום מונפקת על ידי ספק החיוב שלנו, SUMIT. אם היא לא הגיעה אליך, השב/י למייל זה ונדאג שתקבל/י אותה.`,
       `המנוי מתחדש מדי חודש בהוראת קבע עד לביטול.${v.paidThrough ? ` בתוקף עד: ${v.paidThrough}.` : ''}`,
       `לביטול: דרך הדשבורד, בתשובה למייל זה או בפנייה ל-${v.supportEmail}.`,
       `${v.legalEntityHe}, עוסק פטור ${v.entityId}; המסמך הוא קבלה.`] },
@@ -56,7 +56,7 @@ export function footer(lang) {
   return lang === 'he' ? `${esc(BRAND.name)} · ${esc(BRAND.legalEntityHe)}, עוסק פטור ${esc(BRAND.entityId)} · ${esc(BRAND.addressHe)} · ${esc(BRAND.supportEmail)}`
     : `${esc(BRAND.name)} · ${esc(BRAND.legalEntity)}, Exempt Dealer ${esc(BRAND.entityId)} · ${esc(BRAND.address)} · ${esc(BRAND.supportEmail)}`;
 }
-export function renderTx(kind, lang, vars = {}) { // receiptUrl: http(s) only, otherwise the line falls back to 'sent separately'
+export function renderTx(kind, lang, vars = {}) { // receiptUrl: http(s) only, otherwise the line says the billing provider issues it and to reply if it doesn't arrive
   const l = lang === 'he' ? 'he' : 'en'; const t = T[kind]?.[l]; if (!t) throw new Error('unknown email ' + kind);
   const safeReceipt = vars.receiptUrl && safeUrl(vars.receiptUrl) !== '#' ? vars.receiptUrl : ''; vars = { ...vars, receiptUrl: safeReceipt };
   const safeLink = vars.link && safeUrl(vars.link) !== '#' ? vars.link : ''; vars = { ...vars, link: safeLink };
