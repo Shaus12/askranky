@@ -35,7 +35,7 @@ We may also disclose data where required by law or to protect our rights.
 
 ## 5. International transfers
 Your data is held and processed outside Israel. The Ranky application runs on Render in Frankfurt, Germany. Our database (Neon, PostgreSQL) runs on Amazon Web Services in the United States (us-east-2, Ohio), so account, business, scan and billing-reference data are stored in the US. Email delivery (Resend), our CDN and bot protection (Cloudflare) and the AI providers that receive scan questions (OpenAI, Google, Perplexity) are US companies or operate from the US. The AI providers receive only a business category and a city, not your email, name or website. Apart from payment data held by SUMIT in Israel, your data is therefore held in Germany and the United States, not only in the EU.
-These transfers are subject to the Privacy Protection (Transfer of Data to Databases Abroad) Regulations, 5761-2001. We rely on each provider's contractual commitment to protect the data (data processing terms). [CONFIRM: data processing terms (DPAs) accepted with each provider listed above.]
+These transfers are subject to the Privacy Protection (Transfer of Data to Databases Abroad) Regulations, 5761-2001. We use the processors listed above to provide the service. They process data on our behalf under their own terms and privacy policies.
 
 ## 6. Retention
 Account and scan data: while your account is active and up to 24 months after closure. Billing and receipt records: for the period required by Israeli tax law. Server and CDN request logs are kept by the hosting providers for a limited period set by their plans (generally days to a few weeks). You may ask us to delete your account earlier, subject to legal retention duties.
