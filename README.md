@@ -29,13 +29,13 @@ y, the one place to change. `src/plans.js`: ILS/USD prices, caps, cost per check
 - `src/providers/`: engine interface (`ask(question) -> {text,citations,searches,usage}`): `openai.js` (Responses + web_search), `gemini.js` (Google Search grounding), `perplexity.js` (Agent API; VERIFY endpoint), `mock.js`.
 - `src/extract.js`: mentions, rank position, competitors, citations, own-site detection. `src/scan.js`: runs checks, score, summary. `src/fixes.js`: 3 fixes.
 - `src/costs.js`: per-plan monthly check budget + global daily $ cap + 80% alert event.
-- `src/payments/`: pluggable (`mock`, `sumit`). SUMIT flow: hosted tokenize page → `/billing/return` → `/billing/recurring/charge/` (USD, monthly standing order) → daily `sync()` (SUMIT sends no IPN on renewals).
+- `src/payments/`: pluggable (`mock`, `sumit`). SUMIT flow: embedded Payments JS card form on our checkout page (card → SUMIT directly, we get a SingleUseToken) → `POST /api/checkout/charge` → `/billing/recurring/charge/` (USD, monthly standing order) → daily `sync()` (SUMIT sends no IPN on renewals).
 - `src/email/`: weekly report HTML template + sender (outbox or Resend).
 - `legal/`: Terms, Privacy, Refunds, AI disclaimer (DRAFTS).
 - Storage: JSON file `$DATA_DIR/db.json` (default `data/`; swap to Postgres for production).
 
 ## Going live checklist
-Set keys in `.env` (see `.env.example`), `SCAN_MODE=live`, `PAYMENTS_PROVIDER=sumit`, `EMAIL_MODE=live`; configure the SUMIT redirect URL to `${BASE_URL}/billing/return`; verify fields marked VERIFY in `src/payments/sumit.js` and `src/providers/perplexity.js`; add a daily cron that calls `sync()` per paid account.
+Set keys in `.env` (see `.env.example`), `SCAN_MODE=live`, `PAYMENTS_PROVIDER=sumit`, `EMAIL_MODE=live`; no SUMIT redirect URL setting is needed (embedded card form); verify fields marked VERIFY in `src/payments/sumit.js` and `src/providers/perplexity.js`; add a daily cron that calls `sync()` per paid account.
 
 ## External cron (free Render plan)
 The daily billing sync is triggered from cron-job.org (a GitHub Actions example is in `docs/cron.yml.example`) via `POST /api/internal/cron/sync` with header `X-Cron-Secret` (env `CRON_SECRET`, `openssl rand -hex 32`); `GET /healthz` is the keep-warm ping. Full setup, caveats and cold-start/missed-run behaviour: **GO-LIVE.md → "External cron on the free Render plan"**.
