@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { Dict, Locale } from "@/lib/i18n";
+import { consentText } from "@/lib/i18n-consent";
+import CookieSettingsLink from "./CookieSettingsLink";
 export default function Footer({ t, lang = "en" }: { t: Dict; lang?: Locale }) {
   const base = `/${lang}`;
   const L = (doc: string, label: string) => <a href={`${base}/legal/${doc}`} className="vx-link hover:text-white">{label}</a>;
@@ -16,7 +18,7 @@ export default function Footer({ t, lang = "en" }: { t: Dict; lang?: Locale }) {
         <span className="hairline block w-full max-w-md" />
         <p className="max-w-xl text-slate-400">{t.footer.disclaimer}</p>
         <p className="max-w-2xl text-xs text-slate-500" data-seller>{t.footer.seller}</p>
-        <p className="flex flex-wrap justify-center gap-x-3 gap-y-1">© 2026 {t.brand} · <span dir="ltr">askranky.com</span> · {L("terms", t.footer.terms)} · {L("privacy", t.footer.privacy)} · {L("refunds", t.footer.refunds)} · {L("disclaimer", t.footer.aiDisclaimer)} · {L("accessibility", t.footer.accessibility)}</p>
+        <p className="flex flex-wrap justify-center gap-x-3 gap-y-1">© 2026 {t.brand} · <span dir="ltr">askranky.com</span> · {L("terms", t.footer.terms)} · {L("privacy", t.footer.privacy)} · {L("refunds", t.footer.refunds)} · {L("disclaimer", t.footer.aiDisclaimer)} · {L("accessibility", t.footer.accessibility)} · {L("cookies", consentText[lang].footerPolicy)} · <CookieSettingsLink lang={lang} /></p>
       </div>
     </footer>
   );

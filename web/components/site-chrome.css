@@ -1,0 +1,93 @@
+/* Cookie notice + accessibility menu + accessibility modes (classes on <html>). Plain stylesheet: no inline styles, CSP-safe. */
+
+/* ---------- cookie notice ---------- */
+.rc-banner { position: fixed; z-index: 9997; bottom: 8px; inset-inline: 8px; max-height: 70dvh; overflow: auto; padding: 1rem 1.1rem; border-radius: 1rem; background: #0b1f4d; color: #fff;
+  border: 1px solid #93c5fd; box-shadow: 0 18px 50px -12px rgba(0,0,0,.7); font-size: .9rem; line-height: 1.55; text-align: start; }
+@media (min-width: 900px) { .rc-banner { inset-inline-start: auto; inset-inline-end: 16px; bottom: 16px; width: 430px; } }
+.rc-title { font-size: 1rem; font-weight: 700; margin: 0 0 .25rem; color: #fff; }
+.rc-title:focus { outline: 2px solid #fff; outline-offset: 3px; border-radius: 4px; }
+.rc-sub { font-size: .9rem; font-weight: 700; margin: .75rem 0 .25rem; color: #fff; }
+.rc-text { margin: 0; color: #e2e8f0; }
+.rc-detail ul { margin: 0; padding-inline-start: 1.1rem; list-style: disc; color: #e2e8f0; }
+.rc-detail li { margin: .25rem 0; }
+.rc-meta { margin: .5rem 0 0; font-size: .8rem; color: #cbd5e1; }
+.rc-actions { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; margin-top: .85rem; }
+.rc-btn { min-height: 44px; min-width: 44px; padding: .55rem 1.25rem; border-radius: 9999px; font-weight: 700; cursor: pointer; }
+.rc-primary { background: #22c55e; color: #052e16; border: 2px solid #22c55e; }
+.rc-primary:hover { background: #4ade80; border-color: #4ade80; }
+.rc-link { display: inline-flex; align-items: center; min-height: 44px; color: #bfdbfe; text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; padding: 0 .25rem; font: inherit; cursor: pointer; }
+.rc-link:hover { color: #fff; }
+.rc-banner :is(a, button):focus-visible { outline: 3px solid #fff; outline-offset: 2px; border-radius: 8px; }
+
+/* ---------- accessibility button + panel ---------- */
+.ra-btn { position: fixed; z-index: 9998; inset-inline-start: 8px; bottom: calc(8px + var(--rc-h, 0px) + 8px); width: 48px; height: 48px; border-radius: 9999px; display: grid; place-items: center;
+  background: #1d4ed8; color: #fff; border: 2px solid #fff; box-shadow: 0 8px 24px -6px rgba(0,0,0,.65); cursor: pointer; }
+.ra-btn:hover { background: #1e40af; }
+.ra-btn:focus-visible, .ra-root :is(button, a):focus-visible { outline: 3px solid #fbbf24; outline-offset: 3px; border-radius: 10px; }
+.ra-btn:focus-visible { border-radius: 9999px; }
+@media (min-width: 900px) { .ra-btn { inset-inline-start: 16px; bottom: 16px; } }
+.ra-panel { position: fixed; z-index: 9999; inset-inline-start: 8px; bottom: calc(8px + var(--rc-h, 0px) + 64px); width: min(340px, calc(100vw - 16px)); max-height: calc(100dvh - 88px - var(--rc-h, 0px)); overflow: auto;
+  padding: 1rem; border-radius: 1rem; background: #0b1f4d; color: #fff; border: 1px solid #93c5fd; box-shadow: 0 24px 60px -12px rgba(0,0,0,.75); font-size: .95rem; line-height: 1.4; text-align: start; }
+@media (min-width: 900px) { .ra-panel { inset-inline-start: 16px; bottom: 80px; max-height: calc(100dvh - 104px); } }
+.ra-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .75rem; }
+.ra-title { font-size: 1.15rem; font-weight: 800; margin: 0; color: #fff; }
+.ra-x { min-width: 44px; min-height: 44px; border-radius: 9999px; border: 1px solid #93c5fd; background: transparent; color: #fff; font-size: 1.5rem; line-height: 1; cursor: pointer; }
+.ra-glabel { display: block; font-weight: 700; margin-bottom: .4rem; }
+.ra-group { margin-bottom: .75rem; }
+.ra-row { display: flex; gap: .5rem; }
+.ra-list { display: grid; gap: .5rem; }
+.ra-opt { display: flex; align-items: center; justify-content: space-between; gap: .75rem; width: 100%; min-height: 44px; padding: .5rem .85rem; border-radius: .75rem; background: #12306e; color: #fff; border: 1px solid #93c5fd;
+  font: inherit; font-weight: 600; text-align: start; cursor: pointer; }
+.ra-opt:hover:not([aria-disabled="true"]) { background: #1b418f; }
+.ra-opt[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
+.ra-opt[aria-pressed="true"] { background: #fff; color: #0b1f4d; border-color: #fff; }
+.ra-optlabel { display: flex; flex-direction: column; }
+.ra-optlabel small { font-weight: 400; font-size: .75rem; opacity: .9; }
+.ra-state { font-size: .8rem; font-weight: 700; white-space: nowrap; }
+.ra-sq { justify-content: center; width: auto; flex: 0 0 auto; min-width: 56px; }
+.ra-wide { flex: 1 1 auto; }
+.ra-meta { display: block; margin-top: .4rem; font-size: .8rem; color: #cbd5e1; }
+.ra-foot { display: grid; gap: .6rem; margin-top: .85rem; }
+.ra-reset { justify-content: center; background: #fff; color: #0b1f4d; border-color: #fff; }
+.ra-link { display: inline-flex; align-items: center; min-height: 44px; color: #bfdbfe; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+
+/* ---------- accessibility modes ---------- */
+html.a11y-tm1 { font-size: 90%; } html.a11y-t1 { font-size: 112.5%; } html.a11y-t2 { font-size: 125%; } html.a11y-t3 { font-size: 137.5%; } html.a11y-t4 { font-size: 150%; }
+
+html.a11y-gray { filter: grayscale(1); }
+
+html.a11y-font body, html.a11y-font body * { font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important; letter-spacing: .02em; word-spacing: .08em; }
+html.a11y-font :is(p, li, td, dd) { line-height: 1.75 !important; }
+
+html.a11y-links a:not(.ra-btn) { background: #ffff00 !important; color: #000 !important; -webkit-text-fill-color: #000 !important; text-decoration: underline !important; text-decoration-thickness: 2px; outline: 2px solid #000; outline-offset: 0; border-radius: 3px; padding-inline: .15em; }
+
+html.a11y-nomotion *, html.a11y-nomotion *::before, html.a11y-nomotion *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+html.a11y-nomotion [data-reveal] { opacity: 1 !important; transform: none !important; }
+html.a11y-nomotion [data-hair], html.a11y-nomotion .mline > span { transform: none !important; }
+
+html.a11y-cursor, html.a11y-cursor * { cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><path d='M4 2v30l8-7 6 13 6-3-6-12 11-1z' fill='black' stroke='white' stroke-width='2.5' stroke-linejoin='round'/></svg>") 4 2, auto !important; }
+html.a11y-cursor :is(a, button, summary, [role='button'], label, select, input[type='checkbox'], input[type='radio']), html.a11y-cursor :is(a, button, summary, [role='button']) * { cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><path d='M14 4c2 0 3 1 3 3v9l2-1c1.500-.5 3 0 3.500 1.500l1-.5c1.500-.5 3 .5 3.200 2l1-.2c1.600-.2 3 .8 3 2.700V30c0 5-3 8-8 8h-4c-4 0-6-2-8-5l-6-9c-1-1.500 0-3 1.500-3.500 1-.4 2.500 0 3.500 1l2 2V7c0-2 1-3 3-3z' fill='white' stroke='black' stroke-width='2.500' stroke-linejoin='round'/></svg>") 14 4, pointer !important; }
+
+/* High contrast (dark) and light contrast. Backgrounds, images, shadows and gradient text are flattened; text, links and borders get fixed high-contrast colours. */
+html.a11y-hc, html.a11y-hc body, html.a11y-lc, html.a11y-lc body { background-image: none !important; }
+html.a11y-hc, html.a11y-hc body { background-color: #000 !important; color: #fff !important; }
+html.a11y-lc, html.a11y-lc body { background-color: #fff !important; color: #000 !important; }
+html.a11y-hc body *:not(svg, svg *), html.a11y-lc body *:not(svg, svg *) { background-image: none !important; box-shadow: none !important; text-shadow: none !important; backdrop-filter: none !important; filter: none !important; opacity: 1 !important; }
+html.a11y-hc body *:not(svg, svg *) { background-color: #000 !important; color: #fff !important; -webkit-text-fill-color: #fff !important; border-color: #fff !important; }
+html.a11y-lc body *:not(svg, svg *) { background-color: #fff !important; color: #000 !important; -webkit-text-fill-color: #000 !important; border-color: #000 !important; }
+html.a11y-hc body a:not(.ra-btn), html.a11y-hc body a *:not(svg, svg *) { color: #ffff00 !important; -webkit-text-fill-color: #ffff00 !important; text-decoration: underline !important; }
+html.a11y-lc body a:not(.ra-btn), html.a11y-lc body a *:not(svg, svg *) { color: #0000cc !important; -webkit-text-fill-color: #0000cc !important; text-decoration: underline !important; }
+html.a11y-hc body :is(button, input, select, textarea, .card, .glass, .btn-cta, .btn-ghost, .btn-white), html.a11y-lc body :is(button, input, select, textarea, .card, .glass, .btn-cta, .btn-ghost, .btn-white) { border: 2px solid currentColor !important; }
+html.a11y-hc body :is(a, button, input, select, textarea, summary):focus-visible { outline: 3px solid #ffff00 !important; outline-offset: 3px; }
+html.a11y-lc body :is(a, button, input, select, textarea, summary):focus-visible { outline: 3px solid #000 !important; outline-offset: 3px; }
+html.a11y-hc canvas, html.a11y-lc canvas { visibility: hidden; }
+html.a11y-hc body .ra-btn { background-color: #000 !important; color: #fff !important; border: 3px solid #ffff00 !important; }
+html.a11y-lc body .ra-btn { background-color: #fff !important; color: #000 !important; border: 3px solid #000 !important; }
+html.a11y-hc body .ra-opt[aria-pressed="true"] { background-color: #ffff00 !important; color: #000 !important; -webkit-text-fill-color: #000 !important; }
+html.a11y-lc body .ra-opt[aria-pressed="true"] { background-color: #000 !important; color: #fff !important; -webkit-text-fill-color: #fff !important; }
+html.a11y-hc body .ra-opt[aria-pressed="true"] *, html.a11y-lc body .ra-opt[aria-pressed="true"] * { color: inherit !important; -webkit-text-fill-color: currentcolor !important; background-color: transparent !important; }
+html.a11y-hc body .ra-opt[aria-pressed="true"] *, html.a11y-hc body .ra-opt[aria-pressed="true"] { color: #000 !important; -webkit-text-fill-color: #000 !important; }
+/* "Highlight links" together with a contrast mode: black text on yellow stays readable. */
+html.a11y-links.a11y-hc body a:not(.ra-btn), html.a11y-links.a11y-lc body a:not(.ra-btn) { background-color: #ffff00 !important; color: #000 !important; -webkit-text-fill-color: #000 !important; border-color: #000 !important; }
+html.a11y-links.a11y-hc body a:not(.ra-btn) *:not(svg, svg *), html.a11y-links.a11y-lc body a:not(.ra-btn) *:not(svg, svg *) { background-color: transparent !important; color: #000 !important; -webkit-text-fill-color: #000 !important; }
+@media print { .rc-banner, .ra-root { display: none !important; } }

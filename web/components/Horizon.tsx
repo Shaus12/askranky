@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { reducedMotion } from "@/lib/motion";
+import { reducedMotion, motionStopped } from "@/lib/motion";
 
 /** Ranky's own background: a glowing horizon arc with AI "answer" bubbles drifting up from map-like city lights. Canvas, ~60 particles, paused when hidden or under reduced motion. */
 export default function Horizon() {
@@ -32,7 +32,7 @@ export default function Horizon() {
         ctx.globalAlpha = 1; b.y += b.v; if (b.y > 1) b.y = 0;
       }
     };
-    const loop = () => { t++; draw(); raf = requestAnimationFrame(loop); };
+    const loop = () => { t++; draw(); if (motionStopped()) return; raf = requestAnimationFrame(loop); };
     resize(); window.addEventListener("resize", resize);
     const still = reducedMotion();
     const io = new IntersectionObserver(([e]) => { cancelAnimationFrame(raf); if (e.isIntersecting && !still) loop(); else draw(); });
