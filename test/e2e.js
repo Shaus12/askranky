@@ -48,7 +48,7 @@ try {
   // plan cap: starter budget 225 checks/month; already used 15+45
   acct.usage[new Date().toISOString().slice(0, 7)] = 220; assert.equal(checkBudget(acct, ['chatgpt', 'gemini', 'perplexity'], 15).ok, false);
   // declined payment
-  const id2 = new URL(B + (await post('/checkout', { plan: 'starter', email: 'owner@acme.test' })).headers.get('location')).searchParams.get('account'); r = await fetch(`${B}/billing/return?Valid=0&Identifier=${encodeURIComponent(id2)}`); assert.ok((await r.text()).includes('Payment failed'));
+  const id2 = new URL(B + (await post('/checkout', { plan: 'starter', email: 'decline@acme.test' })).headers.get('location')).searchParams.get('account'); r = await fetch(`${B}/billing/return?Valid=0&Identifier=${encodeURIComponent(id2)}`); assert.ok((await r.text()).includes('Payment failed'));
   for (const d of ['terms', 'privacy', 'refunds', 'disclaimer']) { const j = await (await fetch(`${B}/api/legal/${d}`)).json(); assert.ok(j.markdown.includes('Ranky') && !j.markdown.includes('{{')); }
   assert.equal((await fetch(B + '/pricing')).status, 200);
   console.log('ALL E2E TESTS PASSED. Report:', B + reportPath, 'score', scan.summary.score, 'est cost $' + scan.summary.estCostUsd);

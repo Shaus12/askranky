@@ -50,7 +50,7 @@ try {
   assert.equal((await fetch(`${B}/billing/return?Valid=1&Token=t&Identifier=${a.id}`, { redirect: 'manual' })).status, 400);
   assert.equal((await fetch(`${B}/billing/return?Valid=1&Token=t&Identifier=${a.id}.forged`, { redirect: 'manual' })).status, 400);
   r = await fetch(`${B}/billing/return?Valid=1&Token=t&Identifier=${encodeURIComponent(ident)}`, { redirect: 'manual' }); assert.equal(r.status, 200); assert.ok(!(await r.text()).includes(a.key));
-  assert.equal((await fetch(`${B}/billing/return?Valid=1&Token=t&Identifier=${encodeURIComponent(ident)}`, { redirect: 'manual' })).status, 400);
+  assert.equal((await fetch(`${B}/billing/return?Valid=1&Token=t&Identifier=${encodeURIComponent(ident)}`, { redirect: 'manual' })).status, 409); // replay of a completed checkout: refused, never charged twice
   ok('billing return needs the per-checkout state, is single-use, and never reveals the key (emails a magic link)');
 
   // ---- 3. rate limit + Turnstile ----

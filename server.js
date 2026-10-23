@@ -1,4 +1,4 @@
-import express from 'express'; import fs from 'node:fs'; import path from 'node:path';
+import express from 'express'; import fs from 'node:fs'; import path from 'node:path'; import { createHash } from 'node:crypto';
 import { BRAND } from './src/brand.js'; import { PLANS, isPaid, CURRENCIES } from './src/plans.js'; import { detectCurrency, billingFor, publicPlans, usdBillingEnabled } from './src/currency.js';
 import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan } from './src/scan.js';
 import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail } from './src/email/report.js'; import { sendEmail, sendEmailSoft, emailIsMock } from './src/email/send.js';
@@ -234,15 +234,28 @@ app.post('/scan', scanLimiter, captcha, async (q, r) => {
 const displayCurrencyFor = q => { const c = String(q.body?.currency || '').toUpperCase(); return CURRENCIES.includes(c) ? c : detectCurrency(q, q.body?.lang).currency; };
 // Pre-launch admin test checkouts (valid ADMIN_TEST_TOKEN, mock payments only) skip the CAPTCHA; everyone else is verified.
 const captchaUnlessAdminTest = (q, r, next) => (isPrelaunch() && adminTestOk(q) ? next() : captcha(q, r, next));
+// Double-charge guard. An account "has an active subscription" while it holds a paid plan with a standing order that is active, or
+// cancelled by the customer but still inside the paid period. past_due (grace) and unpaid accounts MAY check out again: that is the
+// card-replacement flow (the old failed order is superseded, see completeCheckout). Admin test accounts are not real subscriptions.
+export const hasActiveSubscription = (a, now = Date.now()) => !!a && !a.testSubscription && !a.adminTest && isPaid(PLANS[a.plan]) && !!a.subscriptionRef && a.status !== 'past_due'
+  && !(a.status === 'cancelled' && !(a.paidThrough && Date.parse(a.paidThrough) > now)) && !['unpaid', 'cancelled_ended'].includes(a.status);
+export const ALREADY_SUBSCRIBED = { ok: false, error: 'already_subscribed', code: 'already_subscribed', message: 'You already have an active subscription. Sign in to your dashboard to manage it.', messageHe: 'כבר יש לך מנוי פעיל. היכנס/י ללוח הבקרה כדי לנהל אותו.' };
+const CHECKOUT_BUSY = { ok: false, error: 'busy', code: 'busy', message: 'A payment is already in progress for this account. Please wait a moment.', messageHe: 'תשלום כבר בתהליך בחשבון הזה. המתינו רגע.' };
+const stateHash = st => createHash('sha256').update(String(st)).digest('hex');
+const findAccountByEmail = email => Object.values(getDb().accounts).find(x => x.email === String(email || '').trim().toLowerCase());
+// Sends the structured 409 for a start/charge that was refused ('already' | 'busy').
+const refuseCheckout = (r, code) => r.status(409).json(code === 'busy' ? CHECKOUT_BUSY : ALREADY_SUBSCRIBED);
 async function startCheckout(q) {
   const adminTest = isPrelaunch() && adminTestOk(q); if (isPrelaunch() && !adminTest) return { prelaunch: true };
   const plan = Object.hasOwn(PLANS, q.body?.plan) ? PLANS[q.body.plan] : null; if (!isPaid(plan) || !q.body?.email) return null;
   const billing = billingFor(plan, displayCurrencyFor(q));
+  const existing = findAccountByEmail(q.body.email);
+  if (existing && !adminTest) { if (chargeLocks.has(existing.id)) return { refused: 'busy' }; if (hasActiveSubscription(existing)) return { refused: 'already' }; } // never overwrite checkoutState mid-charge, never open a 2nd checkout for a live subscription
   const account = findOrCreateAccount(q.body.email); account.pendingPlan = plan.id; account.pendingBilling = billing; account.pendingLang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : langOf(q); const state = account.checkoutState = token(24); if (adminTest) account.pendingAdminTest = true; else delete account.pendingAdminTest; delete account.pendingTest; save();
   // Mock provider: { redirectUrl } (stand-in card page). SUMIT: { embedded: {companyId, publicKey, identifier} } for the on-page Payments JS card form.
   const co = await getPayments().createCheckout({ account, plan, billing, state, returnUrl: `${BASE}/billing/return?lang=${account.pendingLang}` }); return { ...co, billing, lang: account.pendingLang, plan: plan.id };
 }
-app.post('/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).send(billingPage('prelaunch', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (!c) return r.status(400).send('bad plan'); r.redirect(c.redirectUrl || `/${c.lang}/checkout?plan=${encodeURIComponent(c.plan)}`); });
+app.post('/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.refused) return r.status(409).send(billingPage(c.refused === 'busy' ? 'invalid' : 'already', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (c?.prelaunch) return r.status(403).send(billingPage('prelaunch', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (!c) return r.status(400).send('bad plan'); r.redirect(c.redirectUrl || `/${c.lang}/checkout?plan=${encodeURIComponent(c.plan)}`); });
 // One checkout completion for every provider flow. via: 'return' (GET /billing/return, the mock provider's redirect), 'public'
 // (POST /api/checkout/charge, embedded SUMIT) or 'admin' (POST /api/admin/test-checkout/charge). Returns { code, lang, error } where
 // code is ok | failed | error | invalid | prelaunch | busy. The identifier is "<accountId>.<checkoutState>"; the state is an unguessable
@@ -255,7 +268,10 @@ async function completeCheckout(q, { identifier, query, via }) {
   const isTest = via !== 'public' && !!account?.pendingTest && realTestEnabled();
   if (via === 'return' && getPayments().id === 'sumit') return { code: 'invalid' }; // SUMIT no longer redirects back; tokens never travel in URLs
   if (isPrelaunch() && !(account?.pendingAdminTest && getPayments().id === 'mock') && !isTest) return { code: 'prelaunch' };
+  // A checkout that already completed (its single-use state was consumed): a repeat/second-device submit is a 409, not a charge.
+  if (account && account.lastCheckout?.h && !isTest && state && safeEqual(stateHash(state), account.lastCheckout.h)) return { code: 'already' };
   if (!account || !account.checkoutState || !safeEqual(state, account.checkoutState) || (via === 'admin' && !isTest) || (account.pendingTest && (via === 'public' || !isTest || !(Date.now() - Date.parse(account.pendingTest.at) < TEST_CHECKOUT_TTL_MS)))) return { code: 'invalid' };
+  if (!isTest && hasActiveSubscription(account)) return { code: 'already' };
   if (chargeLocks.has(account.id)) return { code: 'busy' };
   const plan = isTest ? TEST_PLAN : PLANS[account.pendingPlan || 'starter']; const lang = query.lang === 'he' || query.lang === 'en' ? query.lang : account.pendingLang || langOf(q);
   // Re-derive from PLANS (never trust stored/client amounts); keeps the currency chosen at checkout start.
@@ -265,11 +281,16 @@ async function completeCheckout(q, { identifier, query, via }) {
     const res = await getPayments().handleReturn(query, account, plan, billing);
     if (isTest) console.log(res.ok ? `[admin-test] charge ok${res.documentId ? ` doc=${Number(res.documentId) || ''}` : ''}` : '[admin-test] charge failed');
     if (!res.ok) return { code: 'failed', lang, error: res.error };
+    // Card-replacement flow: a past-due/unpaid customer subscribing again. Remember the old standing order so it can be cancelled after the new one is live.
+    const oldRef = !isTest && ['past_due', 'unpaid'].includes(account.status) && account.subscriptionRef && String(account.subscriptionRef) !== String(res.subscriptionRef) ? String(account.subscriptionRef) : null;
     Object.assign(account, { plan: isTest ? 'starter' : plan.id, subscriptionRef: res.subscriptionRef, paidAt: new Date().toISOString(), billing: { currency: billing.currency, amount: billing.amount }, status: 'active', lang, paidThrough: isTest ? new Date(Date.now() + TEST_ACCESS_MS).toISOString() : addMonth(new Date()).toISOString(), ...(account.pendingAdminTest ? { adminTest: true } : {}), ...(isTest ? { testSubscription: true, adminTest: true } : {}) }); delete account.cancelledAt; delete account.pendingAdminTest; delete account.pendingTest; delete account.pendingPlan; delete account.pendingBilling; delete account.checkoutState; delete account.pendingLang; save();
+    if (!isTest) { account.lastCheckout = { h: stateHash(state), at: new Date().toISOString() }; delete account.pastDueSince; delete account.failedNoticeAt; } // repeat submits of this checkout get 409 'already', never a 2nd charge
     db.events.push({ at: new Date().toISOString(), type: 'subscription.activated', account: account.id, plan: plan.id, currency: billing.currency, amount: billing.amount, ...(isTest ? { test: true, documentId: Number(res.documentId) || null } : {}) }); save();
     // Don't hand the dashboard key to whoever holds this URL: email a single-use magic link instead.
     await emailMagicLink(account, lang).catch(() => {});
     await sendEmailSoft({ to: account.email, ...renderTx('receipt', lang, { planName: plan.name, amount: billing.amount, currency: billing.currency, paidThrough: ymd(account.paidThrough), receiptUrl: res.receiptUrl }) });
+    // Supersede the old failed order (best effort: SUMIT normally already disabled it; the provider's own cancel path is used, errors are only recorded).
+    if (oldRef) { let ok = false; try { ok = !!(await getPayments().cancel({ ...account, subscriptionRef: oldRef }))?.ok; } catch { /* already disabled/cancelled at the provider */ } getDb().events.push({ at: new Date().toISOString(), type: 'subscription.superseded', account: account.id, cancelled: ok }); save(); }
     return { code: 'ok', lang };
   } catch (e) { if (isTest) console.error('[admin-test] charge failed'); return { code: 'error', lang, error: e.message }; }
   finally { chargeLocks.delete(account.id); }
@@ -277,6 +298,7 @@ async function completeCheckout(q, { identifier, query, via }) {
 app.get('/billing/return', async (q, r) => {
   const o = await completeCheckout(q, { identifier: q.query.Identifier, query: q.query, via: 'return' });
   if (o.code === 'prelaunch') return r.status(403).send(billingPage('prelaunch', langOf(q)));
+  if (o.code === 'already') return r.status(409).send(billingPage('already', langOf(q)));
   if (o.code === 'invalid' || o.code === 'busy') return r.status(400).send(billingPage('invalid', langOf(q)));
   if (o.code === 'failed') return r.send(billingPage('failed', o.lang, o.error));
   if (o.code === 'error') return r.status(502).send(billingPage('error', o.lang, o.error));
@@ -293,7 +315,8 @@ async function chargeJson(q, r, via) {
   if (o.code === 'ok') return r.json({ ok: true, lang: o.lang });
   if (o.code === 'prelaunch') return r.status(403).json({ ok: false, error: 'prelaunch', prelaunch: true });
   if (o.code === 'invalid') return r.status(400).json({ ok: false, error: 'invalid_checkout' });
-  if (o.code === 'busy') return r.status(409).json({ ok: false, error: 'busy' });
+  if (o.code === 'already') return refuseCheckout(r, 'already');
+  if (o.code === 'busy') return refuseCheckout(r, 'busy');
   if (o.code === 'failed') return r.status(402).json({ ok: false, error: 'declined' });
   return r.status(502).json({ ok: false, error: 'charge_error' });
 }
@@ -365,7 +388,7 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
 app.get('/api/report/:id', (q, r) => { const db = getDb(); const s = db.scans[q.params.id]; if (!s) return r.status(404).json({ error: 'not found' });
   const b = db.businesses[s.businessId]; const hist = (b.scanIds || []).map(i => db.scans[i]).filter(Boolean); const idx = hist.findIndex(x => x.id === s.id);
   r.json({ demo: !!s.mock, business: { name: b.name, category: b.category, city: b.city, website: b.website }, scan: s, previousScore: idx > 0 ? hist[idx - 1].summary.score : null, history: hist.slice(0, idx + 1).map(x => x.summary.score) }); });
-app.post('/api/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.prelaunch) return r.status(403).json({ error: 'Pre-launch: checkout is not open yet. Join the waitlist.', prelaunch: true }); if (!c) return r.status(400).json({ error: 'Choose a plan and enter your email.' }); r.json(c); });
+app.post('/api/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.refused) return refuseCheckout(r, c.refused); if (c?.prelaunch) return r.status(403).json({ error: 'Pre-launch: checkout is not open yet. Join the waitlist.', prelaunch: true }); if (!c) return r.status(400).json({ error: 'Choose a plan and enter your email.' }); r.json(c); });
 // Pricing for the UI: detected display currency + server prices + what checkout will actually charge.
 app.get('/api/pricing', (q, r) => {
   const forced = String(q.query.currency || '').toUpperCase(); const d = CURRENCIES.includes(forced) ? { currency: forced, source: 'query' } : detectCurrency(q, q.query.lang);
