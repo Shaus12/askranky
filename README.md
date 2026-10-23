@@ -40,5 +40,8 @@ Set keys in `.env` (see `.env.example`), `SCAN_MODE=live`, `PAYMENTS_PROVIDER=su
 ## External cron (free Render plan)
 The daily billing sync is triggered from cron-job.org (a GitHub Actions example is in `docs/cron.yml.example`) via `POST /api/internal/cron/sync` with header `X-Cron-Secret` (env `CRON_SECRET`, `openssl rand -hex 32`); `GET /healthz` is the keep-warm ping. Full setup, caveats and cold-start/missed-run behaviour: **GO-LIVE.md → "External cron on the free Render plan"**.
 
+## Ops status endpoint
+`GET /api/internal/status` (header `X-Status-Token`, env `STATUS_TOKEN` >= 24 chars) returns read-only aggregate numbers (sync, scans, spend vs cap, signups, subscribers/MRR in ILS, payment failures, mode flags): no PII, no SUMIT data. Disabled, missing or wrong token = the normal unknown-route 404. Details in `GO-LIVE.md`.
+
 ## Frontend
 Next.js 15 + TypeScript + Tailwind 4 in `web/` (Lenis smooth scroll, GSAP ScrollTrigger reveals, animated score gauge, scan progress, report). Copy in `web/lib/i18n.ts` (he/en). The previous React+Vite frontend was replaced; it's in `../app.backup-20261021-1743/web`.
