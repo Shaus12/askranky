@@ -9,7 +9,7 @@ the same report on startup; set `CONFIG_STRICT=1` to refuse to start on errors.
 | Var | Value | Why |
 |---|---|---|
 | `NODE_ENV` | `production` | enables Postgres store + auto pre-launch |
-| `BASE_URL` | `https://askranky.com` | magic links, report links, SUMIT return URL |
+| `BASE_URL` | `https://askranky.com` | magic links, report links |
 | `SITE_URL` | `https://askranky.com` | robots/sitemap (default already) |
 | `TRUST_PROXY` | `1` | real client IP behind Render's proxy (rate limits) |
 | `DATABASE_URL` | Neon URL (already set) | Postgres store; driver auto = `@neondatabase/serverless` for `*.neon.tech` |
@@ -42,7 +42,20 @@ After the first deploy with `DATABASE_URL`: optionally import old JSON data once
   cancellation emails are transactional and always sent (templates: ops/email-templates §4–6, HE/EN).
 
 ## 3. Payments (SUMIT, ILS only)
-- `PAYMENTS_PROVIDER=sumit`, `SUMIT_COMPANY_ID`, `SUMIT_API_KEY`, `SUMIT_PUBLIC_API_KEY`, `SUMIT_WEBHOOK_SECRET`
+- `PAYMENTS_PROVIDER=sumit`, `SUMIT_COMPANY_ID` (numeric), `SUMIT_API_KEY` (PRIVATE, server only), `SUMIT_PUBLIC_API_KEY` (the browser-safe public key; legacy alias `SUMIT_API_PUBLIC_KEY`), `SUMIT_WEBHOOK_SECRET`
+- **Embedded card form (SUMIT Payments JS), no hosted redirect page.** The card form is on our own pages (`/{lang}/checkout`, hidden `/admin/test-checkout`).
+  SUMIT's `https://app.sumit.co.il/scripts/payments.js` (needs jQuery, self-hosted at `/vendor/jquery-3.7.1.min.js`) tokenizes the card in the browser
+  straight against `https://api.sumit.co.il/creditguy/vault/tokenizesingleuse/` with the PUBLIC key; our server only receives `{identifier, token, lang}`
+  (`POST /api/checkout/charge`, admin: `POST /api/admin/test-checkout/charge`) and calls `/billing/recurring/charge/` with `SingleUseToken`.
+  Card numbers never reach our server (requests with card-like fields or values are rejected 400 and nothing is logged). The browser gets `companyId` + the
+  public key only in the response of `POST /api/checkout` (after CAPTCHA and the PRELAUNCH gate) / the token-gated admin start, never the private key
+  (startup config check refuses `SUMIT_PUBLIC_API_KEY` equal to `SUMIT_API_KEY`).
+- **No SUMIT-side redirect setting is needed any more**: the "redirect URL" / `/billing/return` setting and the catalog/payment-page success URL are unused
+  (the hosted page `/creditguy/external/tokenize` and its "no success navigation URL defined" error are gone). `GET /billing/return` only serves the mock provider.
+- CSP (`src/security/csp.js`) is sent ONLY on `/{lang}/checkout` and `/admin/test-checkout` (not site-wide): `script-src 'self' <inline-script hashes | nonce> https://app.sumit.co.il https://challenges.cloudflare.com`,
+  `connect-src 'self' https://api.sumit.co.il https://challenges.cloudflare.com`, `frame-src https://challenges.cloudflare.com`, `form-action 'self'`, `frame-ancestors 'none'`. The SUMIT origins appear only while `PAYMENTS_PROVIDER=sumit`.
+  The payments.js script is third-party code that sees the card fields: it is pinned only by origin (SUMIT sends no CORS header, so SRI is not possible).
+- Optional: `CHARGE_RATE_MAX` (default 15 charge attempts per IP per 15 min).
 - Keep `ENABLE_USD_BILLING=false`. USD stays display-only; customers are charged the ILS list price.
 - `SUMIT_WEBHOOK_SECRET` (≥16 chars) is now **mandatory**: without it every `/webhooks/payments` call is rejected (401).
   Configure the SUMIT trigger URL as `https://askranky.com/webhooks/payments?secret=<SUMIT_WEBHOOK_SECRET>` (or send header `x-webhook-secret`).
@@ -81,10 +94,10 @@ The free plan has no cron jobs and the service sleeps after ~15 min idle, so the
   timing-safe. Leave unset to disable. Remove at launch.
 
 ## 3d. Hidden admin-only REAL 1 ILS test checkout (SUMIT)
-- Only exists when `PAYMENTS_PROVIDER=sumit` **and** `ADMIN_TEST_TOKEN` (>= 16 chars) is set; otherwise 404. Page `GET /admin/test-checkout` (noindex, not linked, not in sitemap/robots), API `POST /api/admin/test-checkout {email}` -> `{redirectUrl}` and `POST /api/admin/test-checkout/login-link {email}` (test accounts only). Token only in the `x-admin-test-token` header, timing-safe, wrong tokens rate limited (`ADMIN_FAIL_MAX`, default 10 per 15 min).
-- Uses the internal plan in `src/payments/test-plan.js` (1 ILS, ILS only, `Recurrence: 1` = one payment), which is NOT in `PLANS`: public prices and `/api/checkout` are unchanged. Same real path as production (hosted card page, `/billing/return`, `recurring/charge`, DocumentType 2 receipt, NoVAT true). Works while PRELAUNCH is on; a start expires after 30 min; a real customer's active subscription is never touched.
+- Only exists when `PAYMENTS_PROVIDER=sumit` **and** `ADMIN_TEST_TOKEN` (>= 16 chars) is set; otherwise 404. Page `GET /admin/test-checkout` (noindex, not linked, not in sitemap/robots), API `POST /api/admin/test-checkout {email}` -> `{embedded: {companyId, publicKey, identifier}}`, `POST /api/admin/test-checkout/charge {identifier, token}` (the only way to complete a test checkout) and `POST /api/admin/test-checkout/login-link {email}` (test accounts only). Token only in the `x-admin-test-token` header, timing-safe, wrong tokens rate limited (`ADMIN_FAIL_MAX`, default 10 per 15 min).
+- Uses the internal plan in `src/payments/test-plan.js` (1 ILS, ILS only, `Recurrence: 1` = one payment), which is NOT in `PLANS`: public prices and `/api/checkout` are unchanged. Same real path as production (embedded Payments JS card form on the admin page, token POST, `recurring/charge`, DocumentType 2 receipt, NoVAT true). Works while PRELAUNCH is on; a start expires after 30 min; a real customer's active subscription is never touched.
 - The account gets `testSubscription: true`, plan `starter` for 24h. The daily sync never renews it or sends billing emails; 24h after the charge it confirms the standing order is inactive (cancels it if not) and ends access. Cancel works through the normal dashboard flow.
-- Logs: only `[admin-test] checkout started|charge ok doc=<id>|charge failed`. Procedure and refund notes: `TEST-CHECKOUT.he.md`. Tests: `test/admintest.js`.
+- Logs: only `[admin-test] checkout started|charge ok doc=<id>|charge failed`. Procedure and refund notes: `TEST-CHECKOUT.he.md`. Tests: `test/admintest.js`, `test/sumitjs.js`; manual browser check (fake keys, SUMIT stubbed): `CHROME=/usr/bin/google-chrome node scripts/sumit-browser-check.mjs`.
 
 ## 3c. SEO
 - JSON-LD (Organization, WebSite, SoftwareApplication, FAQPage) is in the static build. Paid `Offer`s are published only

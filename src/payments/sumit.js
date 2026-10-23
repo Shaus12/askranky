@@ -1,11 +1,15 @@
 // SUMIT (sumit.co.il) adapter. Flow:
-// 1) Redirect customer to SUMIT hosted card page (tokenize, Mode=0) -> SUMIT redirects back to the
-//    "redirect URL" configured in SUMIT app settings with ?Valid=1&Token=...&Identifier=<accountId>
+// 1) Embedded Payments JS: the card form lives on OUR page (checkout / hidden admin test page) and SUMIT's payments.js
+//    (https://app.sumit.co.il/scripts/payments.js, needs jQuery) tokenizes it in the browser straight against
+//    https://api.sumit.co.il/creditguy/vault/tokenizesingleuse/ with the PUBLIC key, returning a SingleUseToken.
+//    Card numbers never reach our server: only { identifier, token } is POSTed to /api/checkout/charge (or the admin route).
+//    (The old hosted redirect page /creditguy/external/tokenize and the SUMIT "redirect URL" setting are no longer used.)
 // 2) Server calls POST /billing/recurring/charge/ with SingleUseToken, Currency (ILS or USD), Duration_Months=1
 //    -> SUMIT creates a standing order (הוראת קבע), charges month 1 and issues a document.
 //    Owner is an עוסק פטור: the document must be a קבלה (receipt), never חשבונית מס / חשבונית מס-קבלה, and no VAT.
 // 3) SUMIT does NOT send IPN for later renewals -> run sync() daily via /billing/recurring/listforcustomer/.
-// Env: SUMIT_COMPANY_ID, SUMIT_API_KEY (private), SUMIT_PUBLIC_API_KEY (legacy alias SUMIT_API_PUBLIC_KEY), SUMIT_WEBHOOK_SECRET, ENABLE_USD_BILLING (default off).
+// Env: SUMIT_COMPANY_ID, SUMIT_API_KEY (private, server only), SUMIT_PUBLIC_API_KEY (browser-safe; legacy alias SUMIT_API_PUBLIC_KEY),
+// SUMIT_WEBHOOK_SECRET, ENABLE_USD_BILLING (default off).
 // Field names/enums verified 2026-10-22 against the official OpenAPI spec https://api.sumit.co.il/swagger/v1/swagger.json
 // Credentials authenticated via read-only POST /accounting/incomeitems/list/ (HTTP 200, Status 0).
 import { usdBillingEnabled } from '../currency.js';
@@ -17,6 +21,17 @@ export const SUMIT_CURRENCY = { ILS: 0, USD: 1 };
 export const SUMIT_DOCUMENT_TYPES = { Invoice: 0, InvoiceAndReceipt: 1, Receipt: 2 };
 export const SUMIT_DOCUMENT_TYPE = SUMIT_DOCUMENT_TYPES.Receipt;
 const publicKey = () => process.env.SUMIT_PUBLIC_API_KEY || process.env.SUMIT_API_PUBLIC_KEY;
+// The single place where the browser-side config is produced. Refuses to hand the PRIVATE key to the browser by mistake
+// (SUMIT_PUBLIC_API_KEY set to the same value as SUMIT_API_KEY).
+export function embeddedConfig(identifier) {
+  const companyId = Number(process.env.SUMIT_COMPANY_ID), pub = publicKey();
+  if (!Number.isInteger(companyId) || companyId <= 0 || !pub) throw new Error('SUMIT public config not configured');
+  if (pub === process.env.SUMIT_API_KEY) throw new Error('SUMIT_PUBLIC_API_KEY must not equal the private SUMIT_API_KEY');
+  return { identifier, companyId, publicKey: pub };
+}
+// A SingleUseToken is an opaque string from payments.js. Reject empty/oversized values and anything that looks like a raw card number.
+export const looksLikeCardNumber = v => { const d = String(v).replace(/[\s-]/g, ''); if (!/^\d{13,19}$/.test(d)) return false; let sum = 0, alt = false; for (let i = d.length - 1; i >= 0; i--) { let n = +d[i]; if (alt) { n *= 2; if (n > 9) n -= 9; } sum += n; alt = !alt; } return sum % 10 === 0; };
+export const validSingleUseToken = t => typeof t === 'string' && t.length >= 8 && t.length <= 256 && /^[^\s\"'<>\\]+$/.test(t) && !looksLikeCardNumber(t);
 const creds = () => {
   if (!process.env.SUMIT_COMPANY_ID || !process.env.SUMIT_API_KEY) throw new Error('SUMIT credentials not configured');
   return { CompanyID: Number(process.env.SUMIT_COMPANY_ID), APIKey: process.env.SUMIT_API_KEY };
@@ -51,13 +66,12 @@ export async function checkSumitConnectivity() {
 }
 export const sumitPayments = {
   id: 'sumit',
-  async createCheckout({ account, state }) {
-    const u = new URL('https://app.sumit.co.il/creditguy/external/tokenize/');
-    u.search = new URLSearchParams({ companyid: process.env.SUMIT_COMPANY_ID, apipublickey: publicKey(), mode: '0', identifier: `${account.id}.${state}` }).toString(); // VERIFY: SUMIT echoes identifier back verbatim
-    return { redirectUrl: u.toString() };
-  },
+  // Embedded flow: nothing to redirect to. Hands the client the browser-side config + the checkout identifier (<accountId>.<state>)
+  // that it echoes back, together with the SingleUseToken, to the charge route.
+  async createCheckout({ account, state }) { return { embedded: embeddedConfig(`${account.id}.${state}`) }; },
+  // Called by the charge routes with { Valid: '1', Token, Identifier } built from the POSTed { token, identifier } (never from a URL).
   async handleReturn(q, account, plan, billing) {
-    if (q.Valid !== '1' || !q.Token || String(q.Identifier).split('.')[0] !== account.id) return { ok: false, error: 'Card not tokenized' };
+    if (q.Valid !== '1' || !validSingleUseToken(q.Token) || String(q.Identifier).split('.')[0] !== account.id) return { ok: false, error: 'Card not tokenized' };
     const j = await call('/billing/recurring/charge/', buildChargeRequest({ account, plan, billing, token: q.Token }));
     const p = j.Data?.Payment || j.Payment || {};
     if (!(p.ValidPayment === true || p.Status === '000')) return { ok: false, error: p.StatusDescription || 'Charge failed' };

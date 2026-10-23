@@ -24,7 +24,7 @@ globalThis.fetch = async (u, o) => {
 const post = (p, body, h = {}) => fetch(B + p, { method: 'POST', headers: { 'content-type': 'application/json', ...h }, body: JSON.stringify(body) });
 const adm = (p, body, tok = TOKEN) => post(p, body, tok === null ? {} : { 'x-admin-test-token': tok });
 const acct = email => Object.values(getDb().accounts).find(a => a.email === email); const outbox = () => fs.existsSync(TD.outbox) ? fs.readdirSync(TD.outbox).length : 0;
-const identOf = j => new URL(j.redirectUrl).searchParams.get('identifier'); const chargeCalls = () => sumitCalls.filter(c => c.path === '/billing/recurring/charge/');
+const identOf = j => j.embedded.identifier; const chargeId = (ident, token = CARD_TOKEN) => adm('/api/admin/test-checkout/charge', { identifier: ident, token }); const chargeCalls = () => sumitCalls.filter(c => c.path === '/billing/recurring/charge/');
 try {
   // ---- mock mode (no PAYMENTS_PROVIDER): unchanged; the new endpoint and page do not exist ----
   process.env.ADMIN_TEST_TOKEN = TOKEN; process.env.PRELAUNCH = '1';
@@ -57,14 +57,14 @@ try {
 
   // ---- the flow (works while PRELAUNCH is on) ----
   const E1 = 'shai@t.test'; r = await adm('/api/admin/test-checkout', { email: 'bad' }); assert.equal(r.status, 400); r = await adm('/api/admin/test-checkout', { email: E1 }); let j = await r.json(); assert.equal(r.status, 200);
-  const u = new URL(j.redirectUrl); assert.equal(u.origin + u.pathname, 'https://app.sumit.co.il/creditguy/external/tokenize/'); assert.ok(acct(E1).pendingTest); assert.equal(sumitCalls.length, 0, 'starting does not charge');
-  r = await fetch(`${B}/billing/return?Valid=1&Token=${CARD_TOKEN}&Identifier=${encodeURIComponent(identOf(j))}&lang=he`); assert.equal(r.status, 200);
+  assert.ok(!('redirectUrl' in j), 'no hosted redirect page any more'); assert.deepEqual(Object.keys(j.embedded).sort(), ['companyId', 'identifier', 'publicKey']); assert.equal(j.embedded.companyId, 123456); assert.equal(j.embedded.publicKey, 'SUMIT-PUBLIC-KEY-xyz'); assert.ok(!JSON.stringify(j).includes('SUMIT-API-KEY-SECRET'), 'private key never sent to the browser'); assert.ok(acct(E1).pendingTest); assert.equal(sumitCalls.length, 0, 'starting does not charge');
+  r = await chargeId(identOf(j)); assert.equal(r.status, 200);
   assert.equal(chargeCalls().length, 1); const c = chargeCalls()[0].body; const it = c.Items[0];
   assert.equal(it.UnitPrice, 1); assert.equal(it.Currency, 0); assert.equal(it.Recurrence, 1); assert.equal(it.Duration_Months, 1); assert.equal(c.DocumentType, 2); assert.equal(c.Customer.NoVAT, true); assert.equal(c.VATIncluded, false); assert.equal(c.OnlyDocument, false); assert.equal(c.SingleUseToken, CARD_TOKEN); assert.equal(c.Customer.EmailAddress, E1);
   ok('flow while pre-launch: real recurring/charge payload = 1 ILS (Currency 0), Recurrence 1 (one payment), DocumentType 2 receipt, NoVAT true, VATIncluded false');
   const a = acct(E1); assert.equal(a.plan, 'starter'); assert.equal(a.testSubscription, true); assert.deepEqual(a.billing, { currency: 'ILS', amount: 1 }); assert.equal(a.subscriptionRef, '555'); assert.equal(a.status, 'active'); const hrs = (Date.parse(a.paidThrough) - Date.now()) / 36e5; assert.ok(hrs > 23 && hrs <= 24.01);
   assert.ok(!a.pendingTest && !a.checkoutState); assert.ok(getDb().events.some(e => e.type === 'subscription.activated' && e.test === true && e.documentId === 4242));
-  r = await fetch(`${B}/billing/return?Valid=1&Token=${CARD_TOKEN}&Identifier=${encodeURIComponent(identOf(j))}`); assert.ok([400, 403].includes(r.status)); assert.equal(chargeCalls().length, 1); ok('subscription: test flag, 24h access, billing 1 ILS, document id recorded; replaying the return URL is rejected (no second charge)');
+  r = await chargeId(identOf(j)); assert.ok([400, 403].includes(r.status)); assert.equal(chargeCalls().length, 1); ok('subscription: test flag, 24h access, billing 1 ILS, document id recorded; replaying the charge is rejected (no second charge)');
 
   // ---- guards ----
   r = await adm('/api/admin/test-checkout', { email: E1 }); assert.equal(r.status, 409); assert.equal((await r.json()).error, 'test_active_cancel_first');
@@ -74,22 +74,22 @@ try {
 
   // ---- expiry / stale / public override ----
   const E2 = 'old@t.test'; j = await (await adm('/api/admin/test-checkout', { email: E2 })).json(); acct(E2).pendingTest.at = new Date(Date.now() - 31 * 60e3).toISOString(); const before = chargeCalls().length;
-  r = await fetch(`${B}/billing/return?Valid=1&Token=${CARD_TOKEN}&Identifier=${encodeURIComponent(identOf(j))}`); assert.equal(r.status, 400); assert.equal(chargeCalls().length, before); assert.equal(acct(E2).plan, 'free'); ok('a started test checkout expires after 30 minutes (400, no charge)');
+  r = await chargeId(identOf(j)); assert.equal(r.status, 400); assert.equal(chargeCalls().length, before); assert.equal(acct(E2).plan, 'free'); ok('a started test checkout expires after 30 minutes (400, no charge)');
   const E3 = 'pub@t.test'; j = await (await adm('/api/admin/test-checkout', { email: E3 })).json(); const staleIdent = identOf(j); process.env.PRELAUNCH = '0';
   r = await post('/api/checkout', { plan: 'starter', email: E3, currency: 'ILS' }); const j2 = await r.json(); assert.equal(r.status, 200); assert.ok(!acct(E3).pendingTest);
-  r = await fetch(`${B}/billing/return?Valid=1&Token=${CARD_TOKEN}&Identifier=${encodeURIComponent(staleIdent)}`); assert.equal(r.status, 400);
-  r = await fetch(`${B}/billing/return?Valid=1&Token=${CARD_TOKEN}&Identifier=${encodeURIComponent(identOf(j2))}`); assert.equal(r.status, 200); const pc = chargeCalls().at(-1).body; assert.equal(pc.Items[0].UnitPrice, 79); assert.equal(pc.Items[0].Recurrence, 0); assert.ok(!acct(E3).testSubscription); assert.equal(acct(E3).billing.amount, 79); process.env.PRELAUNCH = '1';
+  r = await chargeId(staleIdent); assert.equal(r.status, 400);
+  r = await post('/api/checkout/charge', { identifier: identOf(j2), token: CARD_TOKEN }); assert.equal(r.status, 200); const pc = chargeCalls().at(-1).body; assert.equal(pc.Items[0].UnitPrice, 79); assert.equal(pc.Items[0].Recurrence, 0); assert.ok(!acct(E3).testSubscription); assert.equal(acct(E3).billing.amount, 79); process.env.PRELAUNCH = '1';
   ok('a public checkout for the same email clears a pending test: it is charged the normal 79 ILS, continuous recurrence; the stale test link is rejected');
 
   // ---- failed charge ----
   const E4 = 'fail@t.test'; j = await (await adm('/api/admin/test-checkout', { email: E4 })).json(); sumitMode.charge = 'fail';
-  r = await fetch(`${B}/billing/return?Valid=1&Token=${CARD_TOKEN}&Identifier=${encodeURIComponent(identOf(j))}`); assert.equal(r.status, 502); assert.equal(acct(E4).plan, 'free'); assert.ok(!acct(E4).testSubscription); sumitMode.charge = 'ok'; ok('declined/failed charge: nothing activated');
+  r = await chargeId(identOf(j)); assert.equal(r.status, 502); assert.equal(acct(E4).plan, 'free'); assert.ok(!acct(E4).testSubscription); sumitMode.charge = 'ok'; ok('declined/failed charge: nothing activated');
 
   // ---- cancel via the normal self-serve flow ----
   const outBefore = outbox(); r = await post(`/api/dashboard/${a.id}/cancel`, { confirm: true, lang: 'he' }, { 'x-dashboard-key': a.key }); j = await r.json(); assert.equal(r.status, 200); assert.equal(j.ok, true);
   const cc = sumitCalls.filter(x => x.path === '/billing/recurring/cancel/').at(-1).body; assert.equal(cc.RecurringCustomerItemID, 555); assert.equal(a.status, 'cancelled'); assert.ok(outbox() > outBefore, 'cancellation email'); ok('self-serve cancel works for the test subscription: SUMIT cancel for RecurringCustomerItemID 555, status cancelled, written confirmation email');
   // login link for a test account, single use
-  const E5 = 'link@t.test'; j = await (await adm('/api/admin/test-checkout', { email: E5 })).json(); await fetch(`${B}/billing/return?Valid=1&Token=${CARD_TOKEN}&Identifier=${encodeURIComponent(identOf(j))}`);
+  const E5 = 'link@t.test'; j = await (await adm('/api/admin/test-checkout', { email: E5 })).json(); await chargeId(identOf(j));
   r = await adm('/api/admin/test-checkout/login-link', { email: E5 }); j = await r.json(); assert.equal(r.status, 200); const lk = new URL(j.link); r = await fetch(B + lk.pathname + lk.search, { redirect: 'manual' }); assert.equal(r.status, 302); assert.match(r.headers.get('location'), /^\/dashboard\//);
   r = await fetch(B + lk.pathname + lk.search, { redirect: 'manual' }); assert.equal(r.status, 403); ok('login-link for a test account is a normal single-use magic link');
 
