@@ -1,7 +1,7 @@
 import express from 'express'; import fs from 'node:fs'; import path from 'node:path'; import { createHash } from 'node:crypto';
 import { BRAND } from './src/brand.js'; import { PLANS, isPaid, CURRENCIES } from './src/plans.js'; import { detectCurrency, billingFor, publicPlans, usdBillingEnabled } from './src/currency.js';
 import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan } from './src/scan.js';
-import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail } from './src/email/report.js'; import { sendEmail, sendEmailSoft, emailIsMock } from './src/email/send.js';
+import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail, reportSubject } from './src/email/report.js'; import { sendEmail, sendEmailSoft, emailIsMock } from './src/email/send.js';
 import * as V from './src/views.js'; import { isMockMode } from './src/providers/index.js';
 import { token, safeEqual, issueMagicLink, consumeMagic } from './src/security/tokens.js'; import { createRateLimiter } from './src/security/ratelimit.js';
 import { verifyTurnstile, turnstileSiteKey } from './src/security/turnstile.js'; import { esc } from './src/security/html.js';
@@ -54,8 +54,19 @@ function recordConsent(a, body) {
   setConsent(a, 'marketing', true, 'scan-form'); a.marketingConsent = { granted: true, at: a.marketingConsent.at, lang: body?.lang === 'he' ? 'he' : 'en', source: 'scan-form', version: CONSENT_VERSION };
   getDb().events.push({ at: a.marketingConsent.at, type: 'consent.marketing', account: a.id, version: CONSENT_VERSION }); save();
 }
-async function sendReportEmail(account, business, scan, lang) { const u = unsubUrl(BASE, account, 'all', lang === 'he' ? 'he' : 'en');
-  await sendEmailSoft({ to: account.email, headers: unsubHeaders(u), subject: `Your ${BRAND.name} report: ${business.name} scored ${scan.summary.score}/100`, html: renderWeeklyEmail({ business, scan, reportUrl: `${BASE}/r/${scan.id}`, unsubscribeUrl: u, variant: 'report' }) }); }
+// Language of the report email: the language of the page the scan was started from (body.lang), else the one stored on the account, else English.
+// Stored on the scan (scan.lang) and, if the account has none yet, on the account (account.lang, used by the other emails too).
+const validLang = v => (v === 'he' || v === 'en' ? v : null);
+const scanLang = (account, body) => validLang(body?.lang) || validLang(account.lang) || validLang(account.pendingLang) || 'en';
+function rememberLang(account, scan, lang) { scan.lang = lang; if (!validLang(account.lang)) account.lang = lang; save(); }
+// Per-address limit (abuse bound): at most REPORT_EMAIL_MAX_PER_DAY (default 3) report emails to one address per rolling 24h. Beyond it the email is
+// silently skipped (the scan and the on-screen report are unaffected); only a counter event without the address is recorded.
+const REPORT_EMAIL_WINDOW_MS = 864e5, reportEmailMax = () => Math.max(1, Number(process.env.REPORT_EMAIL_MAX_PER_DAY) || 3);
+function reportEmailAllowed(account) { const now = Date.now(); account.reportEmails = (account.reportEmails || []).filter(t => now - t < REPORT_EMAIL_WINDOW_MS);
+  if (account.reportEmails.length >= reportEmailMax()) { getDb().events.push({ at: new Date(now).toISOString(), type: 'email.report_rate_limited', account: account.id }); save(); return false; }
+  account.reportEmails.push(now); save(); return true; }
+async function sendReportEmail(account, business, scan, lang) { if (!reportEmailAllowed(account)) return false; const l = validLang(lang) || 'en'; const u = unsubUrl(BASE, account, 'all', l);
+  return sendEmailSoft({ to: account.email, headers: unsubHeaders(u), subject: reportSubject({ variant: 'report', lang: l, business, scan }), html: renderWeeklyEmail({ business, scan, reportUrl: `${BASE}/r/${scan.id}`, unsubscribeUrl: u, variant: 'report', lang: l }) }); }
 // Admin-only test checkout while pre-launch: ADMIN_TEST_TOKEN via x-admin-test-token header (or ?admin_token=), compared
 // timing-safe. Only ever with the mock payments provider, so no real card can be charged before launch.
 export const adminTestOk = q => { const t = process.env.ADMIN_TEST_TOKEN; if (!t || t.length < 16 || getPayments().id !== 'mock') return false;
@@ -234,8 +245,8 @@ app.post('/scan', scanLimiter, captcha, async (q, r) => {
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim() };
   db.businesses[business.id] = business; save();
   try {
-    const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1);
-    await sendReportEmail(account, business, scan, q.body?.lang);
+    const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
+    await sendReportEmail(account, business, scan, lang);
     r.redirect(`/r/${scan.id}`);
   } catch (e) { r.status(e.code === 'CAP' ? 429 : e.code === 'NO_ENGINE' ? 503 : 500).send(V.landing(e.message)); }
 });
@@ -392,8 +403,8 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim() };
   db.businesses[business.id] = business; save();
   try {
-    const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1);
-    await sendReportEmail(account, business, scan, q.body?.lang);
+    const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
+    await sendReportEmail(account, business, scan, lang);
     r.json({ reportId: scan.id });
   } catch (e) { if (e.code === 'NO_ENGINE') return r.status(503).json({ error: 'scan_unavailable', code: 'scan_unavailable', message: e.message }); r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }
 });
