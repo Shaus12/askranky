@@ -7,9 +7,11 @@
 //  - cancelled by the customer → downgrade to free once paidThrough has passed.
 // Run it with `npm run billing:sync` (Render Cron Job) or in-process with BILLING_SYNC_CRON=1 (every 24h).
 import { getDb, save, flush } from '../store.js'; import { getPayments } from '../payments/index.js'; import { PLANS } from '../plans.js';
-import { sendEmail } from '../email/send.js'; import { renderTx } from '../email/templates.js';
+import { sendEmailSoft } from '../email/send.js'; import { renderTx } from '../email/templates.js'; import { BRAND } from '../brand.js';
 export const GRACE_DAYS = 7; const DAY = 864e5;
 const addMonth = d => { const x = new Date(d), day = x.getUTCDate(); x.setUTCDate(1); x.setUTCMonth(x.getUTCMonth() + 1); x.setUTCDate(Math.min(day, new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 0)).getUTCDate())); return x; }; // clamps Jan 31 → Feb 28
+// The only way to replace a card today (no card-update flow): subscribe again at checkout with the same email.
+const resubscribeUrl = (lang, planId) => `${(process.env.BASE_URL || `https://${BRAND.domain}`).replace(/\/+$/, '')}/${lang === 'he' ? 'he' : 'en'}/checkout?plan=${encodeURIComponent(planId || 'starter')}`;
 export const ymd = d => new Date(d).toISOString().slice(0, 10);
 export async function syncAll({ payments = getPayments(), now = new Date() } = {}) {
   const db = getDb(); const out = { checked: 0, active: 0, renewed: 0, pastDue: 0, downgraded: 0, errors: 0 };
@@ -35,12 +37,14 @@ export async function syncAll({ payments = getPayments(), now = new Date() } = {
       else if (now > new Date(a.paidThrough)) {
         a.paidThrough = addMonth(a.paidThrough).toISOString(); out.renewed++;
         db.events.push({ at: now.toISOString(), type: 'subscription.renewed', account: a.id, paidThrough: a.paidThrough });
-        const m = renderTx('receipt', lang, { planName: plan?.name, amount: billing.amount, currency: billing.currency, paidThrough: ymd(a.paidThrough) }); await sendEmail({ to: a.email, ...m });
+        const m = renderTx('receipt', lang, { planName: plan?.name, amount: billing.amount, currency: billing.currency, paidThrough: ymd(a.paidThrough) }); if (!await sendEmailSoft({ to: a.email, ...m })) db.events.push({ at: now.toISOString(), type: 'billing.email_failed', account: a.id, email: 'receipt' });
       }
     } else {
       a.status = 'past_due'; a.pastDueSince ||= now.toISOString(); out.pastDue++;
       if (!a.failedNoticeAt) { a.failedNoticeAt = now.toISOString(); db.events.push({ at: now.toISOString(), type: 'billing.payment_failed', account: a.id });
-        const m = renderTx('failed', lang, { planName: plan?.name, amount: billing.amount, currency: billing.currency }); await sendEmail({ to: a.email, ...m }); }
+        const m = renderTx('failed', lang, { planName: plan?.name, amount: billing.amount, currency: billing.currency, link: resubscribeUrl(lang, a.plan) });
+        // Soft: a delivery problem is logged by sendEmail and must neither abort the sync for the other accounts nor re-send next run (failedNoticeAt is already set).
+        if (!await sendEmailSoft({ to: a.email, ...m })) db.events.push({ at: now.toISOString(), type: 'billing.email_failed', account: a.id, email: 'failed' }); }
       if (now - new Date(a.pastDueSince) > GRACE_DAYS * DAY) { downgrade(db, a, now, 'unpaid'); out.downgraded++; }
     }
   }
