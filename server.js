@@ -12,7 +12,10 @@ import { startBillingCron, ymd } from './src/jobs/billing-sync.js'; import { LEG
 const app = express(); app.disable('x-powered-by'); if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY); app.use(express.urlencoded({ extended: false })); app.use(express.json()); // noindex on private pages (meta robots is also in the HTML; the header covers redirects and server-rendered pages).
 // Which paths: NOINDEX_PATH in src/seo.js (the single source for robots.txt and these headers).
 app.use((q, r, next) => { if (NOINDEX_PATH.test(q.path)) r.set('X-Robots-Tag', 'noindex, nofollow'); next(); });
-app.use(express.static('public'));
+// Baseline security headers on every response. HSTS without `preload` (opt-in later, and it is hard to undo).
+app.use((q, r, next) => { r.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains'); r.set('X-Content-Type-Options', 'nosniff'); next(); });
+// OG/brand images change rarely: cache a day (+ a week stale-while-revalidate) instead of Express's default max-age=0.
+app.use(express.static('public', { setHeaders: (res, file) => { if (/\/(?:og-[a-z]+|logo)\.png$/.test(file)) res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800'); } }));
 const addMonth = d => { const x = new Date(d), day = x.getUTCDate(); x.setUTCDate(1); x.setUTCMonth(x.getUTCMonth() + 1); x.setUTCDate(Math.min(day, new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 0)).getUTCDate())); return x; }; // clamps Jan 31 → Feb 28
 const BASE = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
 const freeScanIps = new Map();
@@ -210,14 +213,19 @@ app.get('/api/legal/:doc', (q, r) => legal(q, r, q.params.doc, q.query.lang === 
 app.get('/api/seller', (q, r) => r.json({ name: BRAND.legalEntity, nameHe: BRAND.legalEntityHe, entityId: BRAND.entityId, entityType: BRAND.entityType, entityTypeHe: BRAND.entityTypeHe, address: BRAND.address, addressHe: BRAND.addressHe, email: BRAND.supportEmail, vat: false }));
 // ---------- Next.js frontend (static export in web/out, built with `npm run build`) ----------
 // Pages are plain HTML; dynamic segments (/r/:id, /dashboard/:id) map onto one exported page whose client code reads the id from the URL.
-const PUBLIC_CACHE = 'public, max-age=0'; const OUT = path.resolve('web/out'); const LANGS = ['he', 'en'];
+// Public pages are the same for everyone (language comes from the URL), so they carry no Set-Cookie/Vary and may be cached at a
+// CDN briefly (s-maxage short because a deploy replaces the hashed /_next chunks the HTML points at).
+const PUBLIC_CACHE = 'public, max-age=0, s-maxage=120'; const PUBLIC_PAGES = new Set(['', 'scan', 'report', 'legal']); const OUT = path.resolve('web/out'); const LANGS = ['he', 'en'];
 const prefLang = q => { const c = /(?:^|;\s*)ranky_lang=(he|en)/.exec(q.get('cookie') || ''); if (c) return c[1]; return /\bhe\b|\biw\b/i.test(q.get('accept-language') || '') ? 'he' : 'en'; };
 const qs = q => { const i = q.originalUrl.indexOf('?'); return i >= 0 ? q.originalUrl.slice(i) : ''; };
-function page(r, lang, name) {
+function page(r, lang, name, shared = PUBLIC_PAGES.has(name || '')) {
   const f = path.join(OUT, name ? `${lang}/${name}.html` : `${lang}.html`);
   if (!fs.existsSync(f)) return r.status(503).send('Frontend not built: cd web && npm install && npm run build');
-  r.set('Set-Cookie', `ranky_lang=${lang}; Path=/; SameSite=Lax; Max-Age=31536000`); r.sendFile(f);
+  // No ranky_lang cookie here: it is set client-side only when the visitor explicitly switches language (web/components/LangLink.tsx).
+  if (shared) r.set('Cache-Control', PUBLIC_CACHE); r.sendFile(f, { cacheControl: !shared });
 }
+// Language-less short links redirect by cookie / Accept-Language: say so (Vary) and keep them out of shared caches.
+app.use((q, r, next) => { if (/^\/(?:(?:r|dashboard)\/[^/]+|login|pricing|mock-checkout|legal(?:\/[^/]+)?)?\/?$/.test(q.path)) { r.vary('Cookie'); r.vary('Accept-Language'); r.set('Cache-Control', 'private, no-store'); } next(); });
 app.use(['/dashboard', '/auth', '/he/dashboard', '/en/dashboard'], (q, r, next) => { r.set('Referrer-Policy', 'no-referrer'); r.set('Cache-Control', 'no-store'); next(); });
 app.use('/_next', express.static(path.join(OUT, '_next'), { immutable: true, maxAge: '1y' }));
 app.get('/', (q, r) => r.redirect(`/${prefLang(q)}`));
@@ -240,7 +248,7 @@ app.get('/:lang/legal/:doc', (q, r, next) => {
   const h = legalPageHtml(OUT, q.params.lang, q.params.doc); if (h === undefined) return r.status(503).send('Frontend not built: cd web && npm install && npm run build');
   r.set('Cache-Control', PUBLIC_CACHE).type('html').send(h); });
 app.get('/:lang', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang) : next());
-app.get('/:lang/r/:id', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'report') : next());
+app.get('/:lang/r/:id', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'report', false) : next());
 app.get('/:lang/dashboard/:id', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'dashboard') : next());
 app.get('/:lang/:page', (q, r, next) => LANGS.includes(q.params.lang) && ['scan', 'report', 'login', 'dashboard', 'checkout'].includes(q.params.page) ? page(r, q.params.lang, q.params.page) : next());
 app.get(['/he.txt', '/en.txt', '/:lang/:page.txt'], (q, r) => { const f = path.join(OUT, q.path); return LANGS.some(l => q.path.startsWith('/' + l)) && fs.existsSync(f) && !q.path.includes('..') ? r.sendFile(f) : r.sendStatus(404); });

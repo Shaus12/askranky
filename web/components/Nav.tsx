@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LangLink from "@/components/LangLink";
 import type { Dict, Locale } from "@/lib/i18n";
 
 /** Compact sticky version of the Hero v2 masthead: sign-in · centered wordmark · language, then a hairline and the same 3 nav links + free-scan CTA. */
@@ -16,7 +17,7 @@ export default function Nav({ t, lang, path = "" }: { t: Dict; lang: Locale; pat
         <Link href={base} className="vx-link font-head text-xl font-bold tracking-tight">{t.brand}</Link>
         <div className="flex items-center justify-end gap-4 text-sm">
           {/* Legal docs are filled in by the server per request, so switching language there must be a full page load, not a client-side RSC fetch. */}
-          {path.startsWith("/legal/") ? <a href={`/${other}${path}`} hrefLang={other} className="vx-link opacity-75">{other === "he" ? "עברית" : "English"}</a> : <Link href={`/${other}${path}`} className="vx-link opacity-75">{other === "he" ? "עברית" : "English"}</Link>}
+          <LangLink to={other} hrefTo={`/${other}${path}`} hard={path.startsWith("/legal/")} className="vx-link opacity-75">{other === "he" ? "עברית" : "English"}</LangLink>
           <Link href={`${base}/scan`} className="btn-cta !px-4 !py-1.5 text-sm">{t.nav.cta}</Link>
         </div>
       </div>

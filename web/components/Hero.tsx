@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import LangLink from "@/components/LangLink";
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import type { Dict, Locale } from "@/lib/i18n";
@@ -27,7 +28,7 @@ export default function Hero({ t, lang }: { t: Dict; lang: Locale }) {
         <div className="mast flex w-full max-w-6xl items-center justify-between px-5">
           <Link href={`${base}/login`} className="vx-link text-sm opacity-75">{t.login.nav}</Link>
           <Link href={base} className="vx-link font-head text-[calc(var(--u)*22)] font-bold tracking-tight">{t.brand}</Link>
-          <Link href={`/${other}`} className="vx-link text-sm opacity-75">{other === "he" ? "עברית" : "English"}</Link>
+          <LangLink to={other} hrefTo={`/${other}`} className="vx-link text-sm opacity-75">{other === "he" ? "עברית" : "English"}</LangLink>
         </div>
         <span className="hair mt-[calc(var(--u)*16)] block h-px w-[min(88vw,calc(var(--u)*520))] bg-white/20" />
         <nav className="mast mt-[calc(var(--u)*14)] flex gap-[calc(var(--u)*32)] text-sm text-slate-300" aria-label="primary">
