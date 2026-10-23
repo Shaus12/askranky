@@ -1,3 +1,4 @@
+import { engineNote } from './engine-note.js';
 import { BRAND } from './brand.js'; import { PLANS, isPaid } from './plans.js';
 import { esc } from './security/html.js'; export { esc };
 export const layout = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -23,6 +24,7 @@ const scoreColor = s => s >= 60 ? '#16a34a' : s >= 30 ? '#ca8a04' : '#dc2626';
 export const reportPage = (business, scan) => { const s = scan.summary; return layout(`AI visibility report: ${business.name}`, `
 ${scan.mock ? '<p class="mock">MOCK MODE: sample data, no real AI engines were queried.</p>' : ''}
 <h1>AI visibility report: ${esc(business.name)}</h1><p class="sub">${esc(business.category)} · ${esc(business.city)} · ${esc(new Date(scan.at).toUTCString())}</p>
+${s.engines ? `<p class="sub">${esc(engineNote(s))}</p>` : ''}
 <div class="grid3"><div class="card big"><div class="score" style="color:${scoreColor(+s.score)}">${+s.score}<small>/100</small></div>AI Visibility Score</div>
 <div class="card big"><div class="score">${Math.round(s.mentionRate * 100)}%</div>of ${+s.checks} answers mention you</div>
 <div class="card big"><div class="score">${esc(s.avgRank ?? '–')}</div>average position when listed</div></div>

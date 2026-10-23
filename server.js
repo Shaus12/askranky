@@ -80,7 +80,7 @@ app.post('/scan', scanLimiter, captcha, async (q, r) => {
     const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1);
     await sendReportEmail(account, business, scan, q.body?.lang);
     r.redirect(`/r/${scan.id}`);
-  } catch (e) { r.status(e.code === 'CAP' ? 429 : 500).send(V.landing(e.message)); }
+  } catch (e) { r.status(e.code === 'CAP' ? 429 : e.code === 'NO_ENGINE' ? 503 : 500).send(V.landing(e.message)); }
 });
 
 
@@ -132,7 +132,7 @@ app.get('/auth/magic', loginLimiter, (q, r) => { const db = getDb(); const a = O
   if (!a.key || a.key.length < 32) a.key = token(32); save(); r.set('Referrer-Policy', 'no-referrer'); r.redirect(dashUrl(a)); });
 app.post('/dashboard/:id/rescan', async (q, r) => {
   const a = auth(q, r); if (!a) return; const b = Object.hasOwn(getDb().businesses, String(q.body.businessId)) ? getDb().businesses[q.body.businessId] : null; if (!b || b.accountId !== a.id) return r.sendStatus(404);
-  try { await runScan(a, b); r.redirect(dashUrl(a)); } catch (e) { r.status(429).send(V.message('Scan not run', '', e.message)); }
+  try { await runScan(a, b); r.redirect(dashUrl(a)); } catch (e) { r.status(e.code === 'NO_ENGINE' ? 503 : 429).send(V.message('Scan not run', '', e.message)); }
 });
 
 
@@ -176,7 +176,7 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
     const scan = await runScan(account, business); freeScanIps.set(q.ip, ipCount + 1);
     await sendReportEmail(account, business, scan, q.body?.lang);
     r.json({ reportId: scan.id });
-  } catch (e) { r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }
+  } catch (e) { if (e.code === 'NO_ENGINE') return r.status(503).json({ error: 'scan_unavailable', code: 'scan_unavailable', message: e.message }); r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }
 });
 app.get('/api/report/:id', (q, r) => { const db = getDb(); const s = db.scans[q.params.id]; if (!s) return r.status(404).json({ error: 'not found' });
   const b = db.businesses[s.businessId]; const hist = (b.scanIds || []).map(i => db.scans[i]).filter(Boolean); const idx = hist.findIndex(x => x.id === s.id);
@@ -197,7 +197,7 @@ app.get('/api/dashboard/:id', (q, r) => {
 app.post('/api/dashboard/:id/rescan', async (q, r) => {
   const a = accountFor(q); if (!a) return r.status(403).json({ error: 'forbidden' });
   const b = Object.hasOwn(getDb().businesses, String(q.body?.businessId)) ? getDb().businesses[q.body.businessId] : null; if (!b || b.accountId !== a.id) return r.status(404).json({ error: 'not found' });
-  try { const s = await runScan(a, b); r.json({ reportId: s.id }); } catch (e) { r.status(429).json({ error: e.message }); }
+  try { const s = await runScan(a, b); r.json({ reportId: s.id }); } catch (e) { if (e.code === 'NO_ENGINE') return r.status(503).json({ error: 'scan_unavailable', code: 'scan_unavailable', message: e.message }); r.status(429).json({ error: e.message }); }
 });
 // Legal docs in legal/*.md (Hebrew: *.he.md). Whitelisted names only (COMPLIANCE-NOTES.md is internal and never served).
 // Docs are pre-filled; known {{KEY}} placeholders are still substituted (Hebrew files get the Hebrew entity/address), and
