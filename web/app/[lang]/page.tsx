@@ -29,7 +29,7 @@ export default async function Landing({ params }: { params: Promise<{ lang: stri
 
         <div className="relative px-5 py-7 text-center text-sm text-slate-400">
           <span className="hairline absolute inset-x-0 top-0 block" /><span className="hairline absolute inset-x-0 bottom-0 block" />
-          {t.engines}: <span className="mx-2 font-semibold text-white">ChatGPT</span>·<span className="mx-2 font-semibold text-white">Gemini</span>·<span className="mx-2 font-semibold text-white">Perplexity</span>
+          {t.engines}: <span className="mx-2 font-semibold text-white">ChatGPT</span>·<span className="mx-2 font-semibold text-white">Gemini</span>
         </div>
 
         <Reveal as="section" id="how" className="vx-section mx-auto max-w-6xl scroll-mt-16">

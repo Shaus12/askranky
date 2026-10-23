@@ -23,7 +23,7 @@ export default function ReportView({ t, lang }: { t: Dict; lang: Locale }) {
     <>
       <Reveal className="mx-auto max-w-6xl px-5 pb-12 pt-[clamp(2.5rem,calc(var(--u)*72),4.5rem)]">
         <p data-reveal className={`inline-block rounded-full border px-3 py-1 text-xs ${r.mock ? "border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100" : "border-score-high/30 bg-score-high/10 text-emerald-200"}`}>{r.mock ? t.report.mock : t.live.real}</p>
-        {r.engines && <p data-reveal data-engines-note role="note" className="mt-3 max-w-2xl text-sm text-slate-300">{t.enginesNote.ran} {r.engines.ran.map((e) => ENG[e] || e).join(", ") || t.enginesNote.none}.{r.engines.skipped.length > 0 && <> {t.enginesNote.skipped} {r.engines.skipped.map((x) => `${ENG[x.engine] || x.engine} (${(t.enginesNote as Record<string, string>)[x.reason] || x.reason})`).join(", ")}.</>}</p>}
+        {r.engines && <p data-reveal data-engines-note role="note" className="mt-3 max-w-2xl text-sm text-slate-300">{t.enginesNote.ran} {r.engines.ran.map((e) => ENG[e] || e).join(", ") || t.enginesNote.none}.{r.engines.skipped.some((x) => x.reason !== "not_enabled") && <> {t.enginesNote.skipped} {r.engines.skipped.filter((x) => x.reason !== "not_enabled").map((x) => `${ENG[x.engine] || x.engine} (${(t.enginesNote as Record<string, string>)[x.reason] || x.reason})`).join(", ")}.</>}</p>}
         {r.live && existing && <p data-reveal data-existing-note role="note" className="mt-3 max-w-2xl text-sm text-sky-100">{t.existing.reportNote}</p>}
         {r.live && nt.reportNote && <p data-reveal data-demo-note role="note" className="mt-3 max-w-2xl text-sm text-amber-100">{nt.reportNote}</p>}
         <p data-reveal className="vx-eyebrow mt-6">{t.report.title}</p>

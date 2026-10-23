@@ -50,13 +50,13 @@
 - Cloudflare: מקדים את הדומיין (header `server: cloudflare`) + Turnstile.
 - **Google Fonts** נטען מ-`fonts.googleapis.com` (`web/app/[lang]/layout.tsx`) → כתובת ה-IP של כל מבקר נשלחת ל-Google. גילוי נאות הוכנס ל-privacy. עדיף self-host של הגופנים (שינוי קוד; ראו handoff-app-dev.md).
 - עוגיות: `ranky_lang`, `ranky_currency`, sessionStorage. אין אנליטיקס. אם יתווסף — לעדכן privacy §10.
-- יצירת קשר ציבורית: shaysho1111@gmail.com כי ל-askranky.com אין MX (נבדק ב-DNS ב-23.10.2026), ולכן support@askranky.com לא מקבל דבר.
+- יצירת קשר ציבורית: shaysho1111@gmail.com כי ל-askranky.com אין MX (נבדק ב-DNS ב-23.10.2026), ולכן כתובת support בדומיין לא מקבלת דבר (הוסרה מהאתר, נשארת רק כתובת השולח hello@askranky.com).
 - נוסח עברי גובר (ברירת מחדל שנבחרה; שי יכול לשנות).
 - החזר: "דמי ביטול של עד 5%/100 ₪" (לא נקבע ניכוי שימוש בפועל — ראו שאלות).
 - שמירת נתונים: 24 חודשים אחרי סגירה — **אין job מחיקה אוטומטי בקוד**; המחיקה ידנית לפי בקשה. או לבנות job או לשנות את הנוסח.
 
 ## 7. פערים טכניים שזוהו (לא תוקנו — קבצים בלבד)
-- `src/brand.js` / footer: האתר החי מציג `support@askranky.com` (אין תיבת מייל). להגדיר `SUPPORT_EMAIL` ו-`EMAIL_REPLY_TO` ל-Gmail של שי עד החלטה על תיבה.
+- `src/brand.js` / footer: האתר החי הציג כתובת support בדומיין (אין תיבת מייל; תוקן בענף blog-seo: ברירת המחדל היא ה-Gmail של שי). להגדיר `SUPPORT_EMAIL` ו-`EMAIL_REPLY_TO` ל-Gmail של שי עד החלטה על תיבה.
 - האתר החי (נבדק 23.10.2026) עדיין לא מגיש `/{lang}/legal/{doc}` (404) — הגרסה המקודדת בריפו (commit 9f90ff9) לא נפרסה. ראו דוח.
 - `spend.alert` נרשם רק ל-db.events — אין התראה בפועל (לבדוק מול הקוד העדכני).
 

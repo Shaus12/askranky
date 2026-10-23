@@ -3,7 +3,7 @@ export const BRAND = {
   name: process.env.BRAND_NAME || 'Ranky',
   domain: process.env.BRAND_DOMAIN || 'askranky.com',
   tagline: 'Ask Ranky if AI recommends you.',
-  supportEmail: process.env.SUPPORT_EMAIL || 'support@askranky.com',
+  supportEmail: process.env.SUPPORT_EMAIL || 'shaysho1111@gmail.com',
   legalEntity: process.env.LEGAL_ENTITY || 'Shai Shotashvili',
   legalEntityHe: process.env.LEGAL_ENTITY_HE || 'שי שוטשוילי',
   entityId: process.env.LEGAL_ENTITY_ID || '322713082',            // עוסק פטור / Exempt Dealer

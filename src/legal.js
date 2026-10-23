@@ -16,7 +16,7 @@ export function legalDoc(doc, lang) {
   return { lang: he ? 'he' : 'en', doc, markdown: fs.readFileSync(f, 'utf8').replace(/\{\{([A-Z_]+)\}\}/g, (_, k) => known[k] ?? process.env['LEGAL_' + k] ?? `[${k}]`) };
 }
 const safeHref = u => /^(https?:\/\/|mailto:|\/(?!\/))/i.test(u) ? u : null;
-function inline(s) {
+export function inline(s) {
   const out = []; const stash = h => `\u0000${out.push(h) - 1}\u0000`;
   s = s.replace(/`([^`]+)`/g, (_, c) => stash(`<code>${esc(c)}</code>`));
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, txt, url) => { const h = safeHref(url); return h ? stash(`<a href="${esc(h)}" rel="noopener">${esc(txt)}</a>`) : m; });

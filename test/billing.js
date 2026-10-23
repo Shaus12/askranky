@@ -97,7 +97,7 @@ try {
   { const he = await (await get('/he')).text(), en = await (await get('/en')).text(); const lds = h => [...h.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map(m => JSON.parse(m[1]));
     const types = h => lds(h).flatMap(o => o['@graph'] ? o['@graph'].map(g => g['@type']) : [o['@type']]);
     for (const h of [he, en]) for (const ty of ['Organization', 'WebSite', 'SoftwareApplication', 'FAQPage']) assert.ok(types(h).includes(ty), ty);
-    const app = l => lds(l).flatMap(o => o['@graph'] || []).find(g => g['@type'] === 'SoftwareApplication'); assert.equal(app(he).offers[0].priceCurrency, 'ILS'); assert.equal(app(en).offers[0].priceCurrency, 'USD'); assert.equal(app(he).offers[0].price, '0');
+    const app = l => lds(l).flatMap(o => o['@graph'] || []).find(g => g['@type'] === 'SoftwareApplication'); assert.equal(app(he).offers[0].priceCurrency, 'ILS'); assert.equal(app(en).offers[0].priceCurrency, 'ILS', 'EN structured data is ILS too (billing is ILS only)'); assert.equal(app(he).offers[0].price, '0');
     assert.equal(app(he).offers.length, 1, 'pre-launch build publishes only the free offer');
     const faq = lds(he).find(o => o['@type'] === 'FAQPage'); assert.match(faq.mainEntity[0].name, /[\u0590-\u05FF]/); ok('JSON-LD: Organization, WebSite, SoftwareApplication (offers, currency per language), FAQPage (HE text on /he)');
     const scanHe = await (await get('/he/scan')).text(); const desc = h => h.match(/<meta name="description" content="([^"]*)"/)[1];
