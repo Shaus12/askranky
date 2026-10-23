@@ -37,9 +37,10 @@ async function captcha(q, r, next) {
   return captchaFailLimiter(q, r, () => wantsJson(q) ? r.status(403).json({ error: v.code, code: v.code, message: v.error }) : r.status(403).send(V.landing(v.error)));
 }
 const dashUrl = a => `/dashboard/${encodeURIComponent(a.id)}?key=${encodeURIComponent(a.key)}`;
-async function emailMagicLink(a) {
-  const link = issueMagicLink(a, BASE); await save();
-  await sendEmail({ to: a.email, subject: `Your ${BRAND.name} dashboard link`, html: `<p>Open your ${esc(BRAND.name)} dashboard (link valid 15 minutes, single use):</p><p><a href="${esc(link)}">${esc(link)}</a></p><p>If you didn't request this, ignore this email.</p>` });
+// Sign-in link email (HE/EN via renderTx('login')). Language: explicit > the account's known language > English.
+async function emailMagicLink(a, lang) {
+  const link = issueMagicLink(a, BASE); await save(); const l = lang === 'he' ? 'he' : lang === 'en' ? 'en' : (a.lang || a.pendingLang) === 'he' ? 'he' : 'en';
+  await sendEmail({ to: a.email, ...renderTx('login', l, { link }) });
 }
 
 // Optional marketing consent from the scan form (unchecked by default). Stored only when given, with timestamp, language
@@ -51,7 +52,7 @@ function recordConsent(a, body) {
   getDb().events.push({ at: a.marketingConsent.at, type: 'consent.marketing', account: a.id, version: CONSENT_VERSION }); save();
 }
 async function sendReportEmail(account, business, scan, lang) { const u = unsubUrl(BASE, account, 'all', lang === 'he' ? 'he' : 'en');
-  await sendEmailSoft({ to: account.email, headers: unsubHeaders(u), subject: `Your ${BRAND.name} report: ${business.name} scored ${scan.summary.score}/100`, html: renderWeeklyEmail({ business, scan, reportUrl: `${BASE}/r/${scan.id}`, unsubscribeUrl: u }) }); }
+  await sendEmailSoft({ to: account.email, headers: unsubHeaders(u), subject: `Your ${BRAND.name} report: ${business.name} scored ${scan.summary.score}/100`, html: renderWeeklyEmail({ business, scan, reportUrl: `${BASE}/r/${scan.id}`, unsubscribeUrl: u, variant: 'report' }) }); }
 // Admin-only test checkout while pre-launch: ADMIN_TEST_TOKEN via x-admin-test-token header (or ?admin_token=), compared
 // timing-safe. Only ever with the mock payments provider, so no real card can be charged before launch.
 export const adminTestOk = q => { const t = process.env.ADMIN_TEST_TOKEN; if (!t || t.length < 16 || getPayments().id !== 'mock') return false;
@@ -267,7 +268,7 @@ async function completeCheckout(q, { identifier, query, via }) {
     Object.assign(account, { plan: isTest ? 'starter' : plan.id, subscriptionRef: res.subscriptionRef, paidAt: new Date().toISOString(), billing: { currency: billing.currency, amount: billing.amount }, status: 'active', lang, paidThrough: isTest ? new Date(Date.now() + TEST_ACCESS_MS).toISOString() : addMonth(new Date()).toISOString(), ...(account.pendingAdminTest ? { adminTest: true } : {}), ...(isTest ? { testSubscription: true, adminTest: true } : {}) }); delete account.cancelledAt; delete account.pendingAdminTest; delete account.pendingTest; delete account.pendingPlan; delete account.pendingBilling; delete account.checkoutState; delete account.pendingLang; save();
     db.events.push({ at: new Date().toISOString(), type: 'subscription.activated', account: account.id, plan: plan.id, currency: billing.currency, amount: billing.amount, ...(isTest ? { test: true, documentId: Number(res.documentId) || null } : {}) }); save();
     // Don't hand the dashboard key to whoever holds this URL: email a single-use magic link instead.
-    await emailMagicLink(account).catch(() => {});
+    await emailMagicLink(account, lang).catch(() => {});
     await sendEmailSoft({ to: account.email, ...renderTx('receipt', lang, { planName: plan.name, amount: billing.amount, currency: billing.currency, paidThrough: ymd(account.paidThrough), receiptUrl: res.receiptUrl }) });
     return { code: 'ok', lang };
   } catch (e) { if (isTest) console.error('[admin-test] charge failed'); return { code: 'error', lang, error: e.message }; }
@@ -307,7 +308,7 @@ const accountFor = q => { const db = getDb(); const a = Object.hasOwn(db.account
 function auth(q, r) { const a = accountFor(q); if (!a) { r.status(403).send('forbidden'); return null; } return a; }
 // Magic-link login: always answers the same way so it can't be used to probe which emails exist.
 async function login(q, r) { const email = String(q.body?.email || '').trim().toLowerCase(); const a = email && Object.values(getDb().accounts).find(x => x.email === email);
-  if (a) await emailMagicLink(a); const msg = 'If that email has an account, we sent a sign-in link.'; return wantsJson(q) ? r.json({ ok: true, message: msg }) : r.send(V.message('Check your email', '', msg)); }
+  if (a) await emailMagicLink(a, q.body?.lang); const msg = 'If that email has an account, we sent a sign-in link.'; return wantsJson(q) ? r.json({ ok: true, message: msg }) : r.send(V.message('Check your email', '', msg)); }
 app.post('/login', loginLimiter, captcha, login); app.post('/api/login', loginLimiter, captcha, login);
 app.get('/auth/magic', loginLimiter, (q, r) => { const db = getDb(); const a = Object.hasOwn(db.accounts, String(q.query.a)) ? db.accounts[q.query.a] : null;
   if (!a || !consumeMagic(a, q.query.t)) return r.status(403).send(V.message('Link expired', '', 'This sign-in link is invalid or already used. Request a new one.'));

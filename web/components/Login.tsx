@@ -15,7 +15,7 @@ export default function Login({ t, lang }: { t: Dict; lang: Locale }) {
     e.preventDefault(); const fd = new FormData(e.currentTarget); const email = String(fd.get("email") || "").trim(); if (!email) return;
     const token = String(fd.get("cf-turnstile-response") || ""); if (siteKey && !token) return setErr(t.form.captcha);
     setBusy(true); setErr("");
-    try { await api("/api/login", { body: { email, "cf-turnstile-response": token || undefined } }); setMsg(noEmail ? t.demo.loginSent : t.login.sent); } catch (x: any) { setErr(errMessage(x, t)); setRk((n) => n + 1); } finally { setBusy(false); }
+    try { await api("/api/login", { body: { email, lang, "cf-turnstile-response": token || undefined } }); setMsg(noEmail ? t.demo.loginSent : t.login.sent); } catch (x: any) { setErr(errMessage(x, t)); setRk((n) => n + 1); } finally { setBusy(false); }
   }
   return (
     <main><Reveal className="mx-auto max-w-md px-5 py-[clamp(3rem,calc(var(--u)*96),6rem)]">
