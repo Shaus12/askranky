@@ -1,0 +1,468 @@
+{
+"source": "GET https://askranky.com/api/report/KoLtrTpBrKq- (2026-10-24), answers+citations only",
+"business": {
+"name": "ritz carlton",
+"category": "מלונאות",
+"city": "תל אביב-יפו",
+"website": "https://www.ritzcarlton.com/"
+},
+"score": 0,
+"results": [
+{
+"question": "מי העסקים הטובים ביותר בתחום מלונאות בתל אביב-יפו?",
+"engine": "chatgpt",
+"answer": "1. **The Jaffa – Fattal Limited Edition** — בית מלון יוקרתי ביפו עם מבנה היסטורי, בריכה וחוויית אירוח פרימיום. ([thejaffahotel.com](https://www.thejaffahotel.com/?utm_source=openai))  \n2. **The Norman Tel Aviv** — בוטיק יוקרתי ברוטשילד עם שירות מצוין, מסעדות נחשבות ובריכה על הגג. ([hotelierschoice.com](https://hotelierschoice.com/cities/tel-aviv/?utm_source=openai))  \n3. **Brown Hotels (Brown TLV / Brown Beach House)** — רשת בוטיק מקומית מפורסמת לשירות אינטימי ואווירה עירונית-טרנדית. ([hotelchains.com](https://www.hotelchains.com/israel/tel-aviv/?utm_source=openai))  \n4. **Royal Beach Tel Aviv (Isrotel)** — מלון חוף גדול עם מתקנים מלאים, ספא וחדרי אירועים; מותג מוביל בתיירות המקומית. ([topinisrael.com](https://www.topinisrael.com/tel-aviv/best-luxury-hotels/?utm_source=openai))  \n5. **Dan Tel Aviv** — אחד המלונות הוותיקים והידועים בעיר, מותג יציב לשירות עסקי ותיירותי. ([en.wikipedia.org](https://en.wikipedia.org/wiki/Dan_Hotel%2C_Tel_Aviv?utm_source=openai))  \n6. **The Drisco, Jaffa** — שיקום של נכס היסטורי ביפו שהפך למלון בוטיק יוקרתי עם עיצוב ושירות מוקפד. ([tripadvisor.com](https://www.tripadvisor.com/Hotels-g297749-Jaffa_Tel_Aviv_Tel_Aviv_District-Hotels.html?utm_source=openai))",
+"citations": [
+{
+"url": "https://www.thejaffahotel.com/?utm_source=openai",
+"host": "thejaffahotel.com",
+"isOwnSite": false
+},
+{
+"url": "https://hotelierschoice.com/cities/tel-aviv/?utm_source=openai",
+"host": "hotelierschoice.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.hotelchains.com/israel/tel-aviv/?utm_source=openai",
+"host": "hotelchains.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.topinisrael.com/tel-aviv/best-luxury-hotels/?utm_source=openai",
+"host": "topinisrael.com",
+"isOwnSite": false
+},
+{
+"url": "https://en.wikipedia.org/wiki/Dan_Hotel%2C_Tel_Aviv?utm_source=openai",
+"host": "en.wikipedia.org",
+"isOwnSite": false
+},
+{
+"url": "https://www.tripadvisor.com/Hotels-g297749-Jaffa_Tel_Aviv_Tel_Aviv_District-Hotels.html?utm_source=openai",
+"host": "tripadvisor.com",
+"isOwnSite": false
+}
+]
+},
+{
+"question": "מי העסקים הטובים ביותר בתחום מלונאות בתל אביב-יפו?",
+"engine": "gemini",
+"answer": "להלן העסקים המובילים והמוערכים ביותר בתחום המלונאות בתל אביב-יפו:\n\n1. **מלון הנורמן (The Norman)** – מלון בוטיק יוקרתי השוכן בשני מבני באוהאוס משומרים ומציע שירות מוקפד וחוויית אירוח אירופאית בלב העיר.\n2. **מלון ג'פה (The Jaffa)** – ממוקם במבנה היסטורי משוחזר ביפו העתיקה ומציע שילוב ייחודי של עיצוב עכשווי עם ארכיטקטורה עתיקה ומרשימה.\n3. **מלון הילטון תל אביב (Hilton Tel Aviv)** – מלון איקוני הממוקם על קו החוף ומציע מתקנים ברמה עולמית, גישה ישירה לים ונוף פנורמי מרהיב.\n4. **מלון סטאי תל אביב (The Setai)** – שוכן בתוך מבנה עות'מאני משוחזר ליד כיכר השעון ביפו וכולל בריכת אינפיניטי על הגג המשקיפה לים התיכון.\n5. **מלון דה דריסקו (The Drisco)** – מלון יוקרה היסטורי במושבה האמריקאית-גרמנית המצטיין בעיצוב קלאסי עשיר, שירות אישי ומסעדת שף מוערכת.\n6. **מלון רויאל ביץ' (Royal Beach Tel Aviv)** – מלון מודרני וגדול הממוקם על הטיילת ומציע חדרים מעוצבים, ספא יוקרתי ובריכה רחבת ידיים המשקיפה לחוף.\n7. **מלון מונטיפיורי (Hotel Montefiore)** – מלון בוטיק אינטימי ואלגנטי הידוע באווירה הייחודית שלו ובמסעדה המפורסמת הממוקמת בקומת הכניסה.",
+"citations": []
+},
+{
+"question": "תמליץ לי על עסק אמין בתחום מלונאות בתל אביב-יפו.",
+"engine": "chatgpt",
+"answer": "1. **The Norman Tel Aviv** — מלון בוטיק יוקרתי עם שירות אישי ומוניטין גבוה לאירוח ועסקים.  \n2. **דן תל‑אביב (Dan Tel Aviv)** — רשת ותיקה בישראל, אמינות תפעולית ושירות הסטנדרטי לזוגות ולעסקים.  \n3. **ישראטל רויאל ביץ' תל‑אביב (Isrotel Royal Beach Tel Aviv)** — בעל מוניטין לניהול מלונאות מקצועי ושירות מלונאי מלא.  \n4. **Leonardo Plaza Tel Aviv** — חלק מרשת מבוססת, פופולרי לאירועים ולנופשים עם שירות מוכר ואמין.  \n5. **Brown TLV** — רשת מלונות בוטיק מקומית, ידועה בעיצוב מודרני ושירות מקרב צוות מנוסה.  \n6. **The Drisco Tel Aviv** — מלון בוטיק היסטורי עם שירות פרימיום וניסיון באירוח אירועים ועובדי עסקים.",
+"citations": []
+},
+{
+"question": "תמליץ לי על עסק אמין בתחום מלונאות בתל אביב-יפו.",
+"engine": "gemini",
+"answer": "1. **מלון הנורמן (The Norman)** - מלון יוקרה המפורסם בזכות רמת שירות יוצאת דופן ועיצוב מוקפד בלב העיר הלבנה.\n2. **מלון דה ג'אפה (The Jaffa)** - מלון מרשת מריוט השוכן במבנה היסטורי משוחזר ביפו ומציע סטנדרטים בינלאומיים של איכות ואמינות.\n3. **מלון מונטיפיורי (Hotel Montefiore)** - מלון בוטיק ותיק ומוערך המוכר בזכות היחס האישי והקפדנות על כל פרט בחוויית האירוח.\n4. **מלון רויאל ביץ' תל אביב (Royal Beach)** - מלון מרשת ישרוטל המציע חוויית נופש יוקרתית על קו החוף עם ניהול מקצועי ומתקנים ברמה גבוהה.\n5. **מלון הילטון תל אביב (Hilton Tel Aviv)** - מוסד מלונאי ותיק ואמין המבטיח איכות עקבית ושירות מקצועי המותאם לסטנדרטים העולמיים של הרשת.\n6. **מלון דריסקו (The Drisco)** - מלון יוקרה היסטורי במושבה האמריקאית המצטיין בשירות אישי ובחוויית אירוח שקטה ואיכותית.\n7. **מלון פבריק (Fabric Hotel)** - מלון מרשת אטלס המציע אירוח אורבני אמין, מודרני ומוקפד במיקום מרכזי.\n8. **דיוויד אינטרקונטיננטל (David InterContinental)** - מלון מוביל לאנשי עסקים ותיירים המחפשים אמינות, מקצועיות ומגוון רחב של שירותים תחת קורת גג אחת.",
+"citations": []
+},
+{
+"question": "אילו עסקים בתחום מלונאות עם הדירוג הכי גבוה יש באזור תל אביב-יפו?",
+"engine": "chatgpt",
+"answer": "1. **The Norman Tel Aviv** — בית מלון בוטיק יוקרתי בעל דירוגי אורחים גבוהים ושירות מצטיין. ([tripadvisor.com](https://www.tripadvisor.com/Hotel_Review-g293984-d5961565-Reviews-The_Norman_Tel_Aviv-Tel_Aviv_Tel_Aviv_District.html?utm_source=openai))  \n2. **Jacob / Shenkin Hotel (Shenkin Hotel)** — בוטיק פופולרי עם חוות דעת מעולות על מיקום ואווירה. ([tripadvisor.com](https://www.tripadvisor.com/Hotel_Review-g293984-d4458405-Reviews-Jacob_Shenkin_hotel_TLV-Tel_Aviv_Tel_Aviv_District.html?utm_source=openai))  \n3. **Carlton Tel Aviv** — מלון ידוע עם דירוג גבוה, מתקנים מובחרים ונגישות לחוף. ([tripadvisor.com](https://www.tripadvisor.com/Hotels-g293984-zff12-Tel_Aviv_Tel_Aviv_District-Hotels.html?utm_source=openai))  \n4. **Royal Beach Tel Aviv (Isrotel)** — מלון חוף יוקרתי המדורג גבוה ברשימות המלונות המובילים. ([tripadvisor.com](https://www.tripadvisor.com/Hotels-g293984-zff12-Tel_Aviv_Tel_Aviv_District-Hotels.html?utm_source=openai))  \n5. **Dan Tel Aviv** — רשת ותיקה עם דירוגי אורחים טובים ושירות ברמה גבוהה. ([tripadvisor.com](https://www.tripadvisor.com/Hotels-g293984-zff12-Tel_Aviv_Tel_Aviv_District-Hotels.html?utm_source=openai))  \n6. **The Setai Tel Aviv** — מלון חוף נוסף המדורג גבוה עבור מיקום, ניקיון ושירות. ([tripadvisor.com](https://www.tripadvisor.com/Hotels-g293984-zff12-Tel_Aviv_Tel_Aviv_District-Hotels.html?utm_source=openai))",
+"citations": [
+{
+"url": "https://www.tripadvisor.com/Hotel_Review-g293984-d5961565-Reviews-The_Norman_Tel_Aviv-Tel_Aviv_Tel_Aviv_District.html?utm_source=openai",
+"host": "tripadvisor.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.tripadvisor.com/Hotel_Review-g293984-d4458405-Reviews-Jacob_Shenkin_hotel_TLV-Tel_Aviv_Tel_Aviv_District.html?utm_source=openai",
+"host": "tripadvisor.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.tripadvisor.com/Hotels-g293984-zff12-Tel_Aviv_Tel_Aviv_District-Hotels.html?utm_source=openai",
+"host": "tripadvisor.com",
+"isOwnSite": false
+}
+]
+},
+{
+"question": "אילו עסקים בתחום מלונאות עם הדירוג הכי גבוה יש באזור תל אביב-יפו?",
+"engine": "gemini",
+"answer": "להלן עסקי מלונאות בולטים באזור תל אביב-יפו הזוכים לדירוגים הגבוהים ביותר מצד אורחים ומבקרים:\n\n1. **מלון נורמן (The Norman)** - מלון בוטיק יוקרתי המדורג בעקביות כאחד הטובים בישראל בזכות השירות האישי המוקפד, העיצוב האדריכלי המרהיב והקולינריה המשובחת.\n2. **מלון דה ג'אפה (The Jaffa)** - מלון הממוקם במבנה היסטורי משוחזר ביפו ומציע חוויית אירוח ברמה בינלאומית עם שילוב של היסטוריה, עיצוב מודרני ונוף לים.\n3. **מלון דיוויד קמפינסקי (The David Kempinski)** - מלון חוף חדש יחסית שביסס את מעמדו בצמרת הדירוגים בזכות סטנדרטים גבוהים של פאר, סוויטות רחבות ידיים ובריכת גג מרשימה.\n4. **מלון הסטאי תל אביב (The Setai)** - מלון יוקרה השוכן במבנה \"הקישלה\" העתיק ביפו, הידוע בבריכת האינפיניטי הצופה לים ובמתחם הספא המפואר שבו.\n5. **מלון דריסקו (The Drisco)** - מלון היסטורי במושבה האמריקאית-גרמנית שזוכה לשבחים רבים על שימור קפדני, אווירה אירופאית ומסעדת שף מהמובילות בעיר.\n6. **מלון מונטיפיורי (Hotel Montefiore)** - מלון בוטיק אינטימי המדורג גבוה בזכות השירות המקצועי, העיצוב הקלאסי והמסעדה הפופולרית המהווה מוקד משיכה לאורחים ולמקומיים.\n7. **מלון רנומה (Renoma Hotel)** - מלון מעצבים המציע חדרים וסוויטות בעיצוב אמנותי ייחודי וזוכה לציונים גבוהים במיוחד על רמת השירות ואיכות החדרים.\n8. **מלון וייט וילה (White Villa)** - מלון בוטיק השוכן בבית עירוני היסטורי ומשלב אווירה שלווה ויוקרתית בלב העיר עם הקפדה יוצאת דופן על פרטים קטנים.",
+"citations": []
+},
+{
+"question": "אני מחפש עסק בתחום מלונאות במחיר סביר בתל אביב-יפו, למי כדאי להתקשר?",
+"engine": "chatgpt",
+"answer": "1. **Abraham Hostel Tel Aviv** — הוסטל גדול ומוכר במרכז תל‑אביב עם חדרים פרטיים ומיטות מעורבות, מתאים לתקציב ומציע שירותי תיירות. ([abraham.travel](https://www.abraham.travel/tel-aviv/?utm_source=openai))  \n2. **Florentin House (Florentin House with MAMAK)** — בית מלון/אכסניה ביפו‑פלורנטין עם חדרים פרטיים ואווירה מקומית, מחיר סביר ללב העיר. ([florentinhouse.com](https://florentinhouse.com/en/?utm_source=openai))  \n3. **The Spot Hostel (Tel Aviv)** — הוסטל פופולרי עם אווירה חברתית, סיורים ופעילויות לבאים בתקציב מוגבל. ([thespothostel.com](https://www.thespothostel.com/tours/?utm_source=openai))  \n4. **WOM Beach Pod Hostel / Wom TLV** — אכסניה זולה בקרבת חוף הים המתאימה למי שמחפש מחיר נמוך ונגישות לים. ([momondo.com](https://www.momondo.com/hotels/tel-aviv?utm_source=openai))  \n5. **Jungle Jaffa Hostel** — אכסניה זולה ביפו המתמקדת בקהל צעיר (גילאים מסוימים מוגדרים באתר חלק מהזמן) ומציעה מיקום היסטורי בזול. ([en.planetofhotels.com](https://en.planetofhotels.com/israel/tel-aviv/cheap-hotels?utm_source=openai))  \n6. **Cinema Hostel / Cinema Hostel Tel Aviv** — אכסניה קטנה וכיפית באזור פלורנטין/יפו עם חדרים פרטיים ודורמי משתלמים. ([travelmyth.com](https://www.travelmyth.com/Jaffa-Tel-Aviv/Hotels/cheap?utm_source=openai))  \n7. **Hostel TLV / מגוון אכסניות מקומיות בתקציב** — רשת אכסניות ו-B&B קטנים בתל‑אביב שנותנים חלופות תקציביות לאורחים שמחפשים חדר פרטי ללא תמחור גבוה. ([budgetyourtrip.com](https://www.budgetyourtrip.com/hostels/israel/tel-aviv-293394?utm_source=openai))\n\n(המלצות מבוססות על אתרי בתי‑האירוח והרשימות הזמינות ברשת; מומלץ לבדוק זמינות ומחירים ספציפיים לתאריכים שברצונך להזמין לפני שיחת הטלפון.)",
+"citations": [
+{
+"url": "https://www.abraham.travel/tel-aviv/?utm_source=openai",
+"host": "abraham.travel",
+"isOwnSite": false
+},
+{
+"url": "https://florentinhouse.com/en/?utm_source=openai",
+"host": "florentinhouse.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.thespothostel.com/tours/?utm_source=openai",
+"host": "thespothostel.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.momondo.com/hotels/tel-aviv?utm_source=openai",
+"host": "momondo.com",
+"isOwnSite": false
+},
+{
+"url": "https://en.planetofhotels.com/israel/tel-aviv/cheap-hotels?utm_source=openai",
+"host": "en.planetofhotels.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.travelmyth.com/Jaffa-Tel-Aviv/Hotels/cheap?utm_source=openai",
+"host": "travelmyth.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.budgetyourtrip.com/hostels/israel/tel-aviv-293394?utm_source=openai",
+"host": "budgetyourtrip.com",
+"isOwnSite": false
+}
+]
+},
+{
+"question": "אני מחפש עסק בתחום מלונאות במחיר סביר בתל אביב-יפו, למי כדאי להתקשר?",
+"engine": "gemini",
+"answer": "להלן 7 בתי עסק בתחום המלונאות בתל אביב-יפו המציעים אירוח במחירים נוחים וסבירים:\n\n1. **אברהם הוסטל תל אביב** - מציע מגוון אפשרויות לינה במחירים נגישים מאוד במיקום מרכזי עם אווירה חברתית תוססת.\n2. **הספוט הוסטל (The Spot Hostels)** - מלון מודרני בנמל תל אביב המציע חדרים פרטיים ומשותפים בעיצוב עכשווי ובמחיר הוגן.\n3. **מלון סי נט (Sea Net Hotel)** - מלון פונקציונלי הממוקם סמוך לחוף הים ומספק פתרון לינה נוח במחירים תחרותיים.\n4. **אולד יפו הוסטל (Old Jaffa Hostel)** - מציע חוויית אירוח אותנטית וזולה בלב יפו העתיקה עם מרפסת גג המשקיפה לים.\n5. **ליטל תל אביב הוסטל (Little Tel Aviv Hostel)** - אכסניה נקייה ומסודרת באזור שדרות רוטשילד המתאימה למחפשים לינה בסיסית במחיר נמוך.\n6. **מלון ארבל (Arbel Suites Hotel)** - מלון דירות המציע יחידות אירוח מאובזרות באזור דיזנגוף במחיר המשתלם למשפחות או לשהות ארוכה.\n7. **סלינה נווה צדק (Selina Neve Tzedek)** - מלון המשלב עבודה ופנאי ומציע אפשרויות לינה מגוונות ברמות מחיר שונות בשכונה מבוקשת.",
+"citations": []
+},
+{
+"question": "לאילו עסקים בתחום מלונאות בתל אביב-יפו יש את הביקורות הכי טובות?",
+"engine": "chatgpt",
+"answer": "1. **The Norman Tel Aviv** — בוטיק יוקרתי עם שבחים על עיצוב, שירות וארוחת בוקר. ([booking.com](https://www.booking.com/city/il/tel-aviv.he.html?utm_source=openai))  \n2. **Royal Beach Tel Aviv (Isrotel Exclusive)** — מלון חוף גדול עם דירוגי אורחים גבוהים וניהול מקצועי של רשת Isrotel. ([tripadvisor.com](https://www.tripadvisor.com/Hotel_Review-g293984-d4123670-Reviews-Royal_Beach_Tel_Aviv_By_Isrotel_Exclusive-Tel_Aviv_Tel_Aviv_District.html?utm_source=openai))  \n3. **David Kempinski Tel Aviv** — מוערך מאוד על רמת אירוח גבוהה, מתקנים ושירות לקוחות. ([staycation.com](https://www.staycation.com/hotels/tel-aviv?utm_source=openai))  \n4. **Drisco Hotel Tel Aviv** — בוטיק היסטורי שמקבל ריכוז מחמאות על אווירה ושירות פרטי. ([hotelia.co.il](https://www.hotelia.co.il/%D7%9E%D7%9C%D7%95%D7%A0%D7%95%D7%AA-%D7%91%D7%9E%D7%A8%D7%9B%D7%96/%D7%9E%D7%9C%D7%95%D7%A0%D7%95%D7%AA-%D7%91%D7%AA%D7%9C-%D7%90%D7%91%D7%99%D7%91/%D7%94%D7%9E%D7%9C%D7%95%D7%A0%D7%95%D7%AA-%D7%94%D7%9B%D7%99-%D7%98%D7%95%D7%91%D7%99%D7%9D-%D7%91%D7%AA%D7%9C-%D7%90%D7%91%D7%99%D7%91/?utm_source=openai))  \n5. **Renoma Hotel Tel Aviv** — מקבל דירוגים מצוינים בזכות חדרים מעוצבים וניקיון. ([hotelia.co.il](https://www.hotelia.co.il/%D7%9E%D7%9C%D7%95%D7%A0%D7%95%D7%AA-%D7%91%D7%9E%D7%A8%D7%9B%D7%96/%D7%9E%D7%9C%D7%95%D7%A0%D7%95%D7%AA-%D7%91%D7%AA%D7%9C-%D7%90%D7%91%D7%99%D7%91/%D7%94%D7%9E%D7%9C%D7%95%D7%A0%D7%95%D7%AA-%D7%94%D7%9B%D7%99-%D7%98%D7%95%D7%91%D7%99%D7%9D-%D7%91%D7%AA%D7%9C-%D7%90%D7%91%D7%99%D7%91/?utm_source=openai))  \n6. **Market House – An Atlas Boutique Hotel (Jaffa/Tel Aviv)** — אופציה בוטיקית עם ביקורות חזקות על מיקום ושירות רשת אטלס. ([israel.com](https://www.israel.com/places/tel-aviv/where-to-stay?utm_source=openai))  \n7. **Brown TLV (Brown Hotels) / Brown Seaside** — רשת בוטיק עם ביקורות טובות במיוחד על סגנון ועיצוב במספר נכסים בתל‑אביב. ([israel.com](https://www.israel.com/places/tel-aviv/where-to-stay?utm_source=openai))\n\n(המקורות: Booking/Tripadvisor/אתרי מדריכים מקומיים — דירוגים וביקורות מעודכנים בגלישה ברחבי אתרי המלונות והרשימות הציבוריות.)",
+"citations": [
+{
+"url": "https://www.booking.com/city/il/tel-aviv.he.html?utm_source=openai",
+"host": "booking.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.tripadvisor.com/Hotel_Review-g293984-d4123670-Reviews-Royal_Beach_Tel_Aviv_By_Isrotel_Exclusive-Tel_Aviv_Tel_Aviv_District.html?utm_source=openai",
+"host": "tripadvisor.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.staycation.com/hotels/tel-aviv?utm_source=openai",
+"host": "staycation.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.hotelia.co.il/%D7%9E%D7%9C%D7%95%D7%A0%D7%95%D7%AA-%D7%91%D7%9E%D7%A8%D7%9B%D7%96/%D7%9E%D7%9C%D7%95%D7%A0%D7%95%D7%AA-%D7%91%D7%AA%D7%9C-%D7%90%D7%91%D7%99%D7%91/%D7%94%D7%9E%D7%9C%D7%95%D7%A0%D7%95%D7%AA-%D7%94%D7%9B%D7%99-%D7%98%D7%95%D7%91%D7%99%D7%9D-%D7%91%D7%AA%D7%9C-%D7%90%D7%91%D7%99%D7%91/?utm_source=openai",
+"host": "hotelia.co.il",
+"isOwnSite": false
+},
+{
+"url": "https://www.israel.com/places/tel-aviv/where-to-stay?utm_source=openai",
+"host": "israel.com",
+"isOwnSite": false
+}
+]
+},
+{
+"question": "לאילו עסקים בתחום מלונאות בתל אביב-יפו יש את הביקורות הכי טובות?",
+"engine": "gemini",
+"answer": "להלן 7 בתי מלון בתל אביב-יפו הזוכים לדירוגים ולביקורות הגבוהים ביותר מצד מטיילים ואורחים:\n\n1. **The Norman Tel Aviv** – מלון בוטיק יוקרתי הזוכה באופן עקבי לביקורות מצוינות על רמת השירות, העיצוב המוקפד והחוויה הקולינרית.\n2. **The Jaffa, a Luxury Collection Hotel** – מלון הממוקם במבנה היסטורי משוחזר ביפו ומקבל שבחים על שילוב של היסטוריה עם עיצוב מודרני מרהיב.\n3. **The Setai Tel Aviv** – מלון יוקרה הממוקם בכיכר השעון ביפו, המדורג גבוה בזכות בריכת האינסוף שעל הגג והנוף הפנורמי לים.\n4. **Hotel Montefiore** – מלון בוטיק אינטימי ומוערך הידוע בשירות האישי שלו ובמסעדה המפורסמת השוכנת בו.\n5. **The Drisco Hotel** – מלון היסטורי במושבה האמריקאית המקבל ביקורות מעולות על השחזור האדריכלי המרשים ואיכות האירוח.\n6. **Royal Beach Tel Aviv** – מלון מרשת ישרוטל הזוכה לדירוגים גבוהים בזכות המתקנים המודרניים, הבריכה הגדולה והמיקום המנצח על קו החוף.\n7. **Hotel BoBo** – מלון מעוצב מבית קולקציית בראון, המקבל ביקורות חיוביות מאוד על האווירה התוססת, העיצוב הייחודי והגג המפנק.",
+"citations": []
+},
+{
+"question": "איזה עסק בתחום מלונאות בתל אביב-יפו נותן שירות חירום ופתוח עכשיו?",
+"engine": "chatgpt",
+"answer": "1. **Abraham Hostel Tel Aviv** — דלפק קבלה מאויש 24/7 ולכן מספק שירות חירום וקל להגיע בכל שעה. ([abraham.travel](https://www.abraham.travel/tel-aviv/?utm_source=openai))  \n2. **The Spot Hostel (Tel Aviv Port)** — קבלה פתוחה 24 שעות ביממה, עם צוות זמין למקרי חירום. ([thespothostel.com](https://www.thespothostel.com/?utm_source=openai))  \n3. **מלון אמבסי (Embassy Hotel Tel Aviv)** — מצהירים על דלפק קבלה פעיל 24/7, מתאים לפניות דחופות בכל שעה. ([embassyhoteltelaviv.co.il](https://www.embassyhoteltelaviv.co.il/?utm_source=openai))  \n4. **Hilton Tel Aviv** — מרכז שירות לאורחים פעיל 24 שעות, כולל מענה למצבי חירום. ([teldan.com](https://www.teldan.com/images/pdf/Hilton_Tel_Aviv_Accessibility_Information_pack.pdf?utm_source=openai))  \n5. **Dan Panorama Tel Aviv** — שירות חדרים ודלפק פעילים 24/7; צוות למתן שירותים דחופים. ([danhotels.com](https://www.danhotels.com/TelAvivHotels/DanPanoramaTelAvivHotel/BusinessServices/?utm_source=openai))  \n6. **Prima City Hotel (פרימה סיטי)** — מצוין באתר המלון שדלפק הקבלה פתוח 24/7. ([prima.co.il](https://www.prima.co.il/prima-city-tel-aviv-hotel?utm_source=openai))  \n7. **INK Hotel Tel Aviv** — דלפק קבלה 24/7 ומידע על זמינות שירותים בכל שעה. ([inkhotel.com](https://inkhotel.com/he/?utm_source=openai))",
+"citations": [
+{
+"url": "https://www.abraham.travel/tel-aviv/?utm_source=openai",
+"host": "abraham.travel",
+"isOwnSite": false
+},
+{
+"url": "https://www.thespothostel.com/?utm_source=openai",
+"host": "thespothostel.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.embassyhoteltelaviv.co.il/?utm_source=openai",
+"host": "embassyhoteltelaviv.co.il",
+"isOwnSite": false
+},
+{
+"url": "https://www.teldan.com/images/pdf/Hilton_Tel_Aviv_Accessibility_Information_pack.pdf?utm_source=openai",
+"host": "teldan.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.danhotels.com/TelAvivHotels/DanPanoramaTelAvivHotel/BusinessServices/?utm_source=openai",
+"host": "danhotels.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.prima.co.il/prima-city-tel-aviv-hotel?utm_source=openai",
+"host": "prima.co.il",
+"isOwnSite": false
+},
+{
+"url": "https://inkhotel.com/he/?utm_source=openai",
+"host": "inkhotel.com",
+"isOwnSite": false
+}
+]
+},
+{
+"question": "איזה עסק בתחום מלונאות בתל אביב-יפו נותן שירות חירום ופתוח עכשיו?",
+"engine": "gemini",
+"answer": "1. **מלון שרתון תל אביב** - מפעיל דלפק קבלה מאויש 24 שעות ביממה המאפשר קליטה וסיוע מיידי בכל שעה.\n2. **מלון הילטון תל אביב** - מציע שירותי אירוח וביטחון מסביב לשעון עם צוות זמין למענה על צרכים דחופים.\n3. **דן פנורמה תל אביב** - המלון פתוח בשבתות וחגים עם מערך שירות מלא וזמינות ללינה דחופה ומידית.\n4. **אינטרקונטיננטל דויד תל אביב** - מספק מענה אנושי ושירותי קבלה 24/7 הכוללים פתרונות לינה בלוח זמנים קצר.\n5. **מלון קרלטון תל אביב** - מחזיק צוות קבלה וביטחון הפועלים ללא הפסקה ומסוגלים לתת מענה למקרי חירום.\n6. **רויאל ביץ' תל אביב** - מלון מרשת ישרוטל הפעיל בכל שעות היממה ומספק פתרונות אירוח ללא התראה מראש.\n7. **מלון סטאי תל אביב** - מציע שירותי מלונאות מלאים עם זמינות גבוהה של צוות הניהול והקבלה גם בשעות הלילה המאוחרות.",
+"citations": []
+},
+{
+"question": "אילו עסקים בתחום מלונאות בתל אביב-יפו הכי מתאימים למשפחות?",
+"engine": "chatgpt",
+"answer": "1. **Hilton Tel Aviv** — חדרים משפחתיים וסוויטות מרווחות, בריכת חוץ, מיקום חוף נוח לטיולים עם ילדים.  \n2. **Dan Panorama Tel Aviv** — חדרים משפחתיים גדולים, ארוחות בוקר עשירות, שירות ידידותי למשפחות.  \n3. **Sheraton Tel Aviv (שיין/המלון שברחוב הירקון)** — אפשרויות סוויטות ומשפחתיות, בריכה, גישה נוחה לטיילת הים.  \n4. **Carlton Tel Aviv** — סוויטות למשפחות, שירותי קונסיירז׳ ואפשרויות אוכל נוחות ליד חוף הים.  \n5. **Crowne Plaza Tel Aviv City Centre** — חדרים משפחתיים, מיקום מרכזי לנגישות לאטרקציות וקניות עם ילדים.  \n6. **Isrotel Royal Beach Tel Aviv** — חדרי משפחה וסוויטות, מתקני אירוח מתקדמים ובריכה חיצונית.  \n7. **The Jaffa, a Luxury Collection Hotel** — אווירה מרווחת בסגנון משפחתי, סוויטות גדולות ומיקום בנמל יפו קרוב לאטרקציות משפחתיות.",
+"citations": []
+},
+{
+"question": "אילו עסקים בתחום מלונאות בתל אביב-יפו הכי מתאימים למשפחות?",
+"engine": "gemini",
+"answer": "להלן 7 בתי מלון בתל אביב-יפו המציעים שירותים ומתקנים המתאימים במיוחד לאירוח משפחות:\n\n1. **מלון דן תל אביב** – מציע את מועדון \"דנילנד\" עם פעילויות לילדים, בריכה חיצונית ובריכה פנימית, וחדרים מרווחים המתאימים להורים וילדים.\n2. **מלון הילטון תל אביב** – כולל בריכת מי מלח גדולה, גישה ישירה לגן העצמאות הצמוד עם מתקני שעשועים וחדרים המותאמים למשפחות.\n3. **מלון רויאל ביץ' תל אביב** – מתאפיין בבריכה חיצונית רחבת ידיים ובסוויטות גדולות במיוחד המאפשרות לינה נוחה של מספר נפשות בחדר אחד.\n4. **מלון ישרוטל טאואר** – מלון סוויטות המציע יחידות אירוח עם חדר שינה נפרד, סלון ומטבחון מאובזר, פתרון אידיאלי למשפחות המעוניינות בפרטיות ובאפשרות להכנת ארוחות קלות.\n5. **מלון קרלטון תל אביב** – ממוקם סמוך לנמל תל אביב ולאתרים תיירותיים, ומציע בריכה על הגג המשקיפה לים ושירות אישי למשפחות.\n6. **מלון גרנד ביץ'** – מספק חדרים גדולים שיכולים להכיל עד ארבעה אורחים ובריכה על הגג, ומהווה אופציה נוחה בקרבת חוף \"מציצים\" המותאם לילדים.\n7. **אברהם הוסטל תל אביב** – מציע חדרים משפחתיים פרטיים במחירים נגישים, חללים משותפים גדולים עם משחקים ואווירה חברתית ונינוחה המתאימה למשפחות מטיילות.",
+"citations": []
+},
+{
+"question": "איזה עסק בתחום מלונאות בתל אביב-יפו הכי אמין לפי ביקורות?",
+"engine": "chatgpt",
+"answer": "1. **The Norman Tel Aviv** — מלון בוטיק יוקרתי שנוטה לקבל דירוגים גבוהים עקב שירות אישי, עיצוב איכותי ובריאות כללית של חוות דעת. ([tripadvisor.com](https://www.tripadvisor.com/Hotel_Review-g293984-d5961565-Reviews-The_Norman_Tel_Aviv-Tel_Aviv_Tel_Aviv_District.html?utm_source=openai))\n\n2. **The Jaffa, a Luxury Collection Hotel (The Jaffa)** — מלון יוקרה ביפו שמקבל ביקורות מאוד חיוביות על אותן רמות שירות, ספא ומתקנים. ([booking.com](https://www.booking.com/hotel/il/the-jaffa-a-luxury-collection-tel-aviv.html?utm_source=openai))\n\n3. **Dan Panorama Tel Aviv** — רשת ותיקה עם ביקורות אמינות, רמת שירות יציבה ושדרוגים אחרונים שהוזכרו בביקורות. ([tripadvisor.com](https://www.tripadvisor.com/Hotel_Review-g293984-d301931-Reviews-Dan_Panorama_Tel_Aviv-Tel_Aviv_Tel_Aviv_District.html?utm_source=openai))\n\n4. **David InterContinental Tel Aviv** — מותג בינלאומי עם דירוגים טובים על אמינות השירות ותנאי האירוח הכלליים. ([expedia.com](https://www.expedia.com/Tel-Aviv-Hotels-David-InterContinental-Tel-Aviv.h201031.Hotel-Information?utm_source=openai))\n\n5. **Carlton Tel Aviv** — מלון חוף מקבל דירוגים גבוהים בטיפוסי ביקורות תיירים בעיקר על המיקום והשירות. ([tripadvisor.com](https://www.tripadvisor.com/Hotels-g293984-Tel_Aviv_Tel_Aviv_District-Hotels.html?utm_source=openai))\n\n6. **Beach House Tel-Aviv by Brown Hotels (או Brown TLV)** — מלון בוטיק חוף שמקבל שבחים על חוויית אורח עקבית וביקורות טובות ברשתות. ([tripadvisor.com](https://www.tripadvisor.com/Hotels-g293984-Tel_Aviv_Tel_Aviv_District-Hotels.html?utm_source=openai))",
+"citations": [
+{
+"url": "https://www.tripadvisor.com/Hotel_Review-g293984-d5961565-Reviews-The_Norman_Tel_Aviv-Tel_Aviv_Tel_Aviv_District.html?utm_source=openai",
+"host": "tripadvisor.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.booking.com/hotel/il/the-jaffa-a-luxury-collection-tel-aviv.html?utm_source=openai",
+"host": "booking.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.tripadvisor.com/Hotel_Review-g293984-d301931-Reviews-Dan_Panorama_Tel_Aviv-Tel_Aviv_Tel_Aviv_District.html?utm_source=openai",
+"host": "tripadvisor.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.expedia.com/Tel-Aviv-Hotels-David-InterContinental-Tel-Aviv.h201031.Hotel-Information?utm_source=openai",
+"host": "expedia.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.tripadvisor.com/Hotels-g293984-Tel_Aviv_Tel_Aviv_District-Hotels.html?utm_source=openai",
+"host": "tripadvisor.com",
+"isOwnSite": false
+}
+]
+},
+{
+"question": "איזה עסק בתחום מלונאות בתל אביב-יפו הכי אמין לפי ביקורות?",
+"engine": "gemini",
+"answer": "להלן רשימת בתי המלון בתל אביב-יפו הזוכים לציונים הגבוהים ביותר ולביקורות חיוביות עקביות על רמת השירות והאמינות שלהם:\n\n1. **The Norman Tel Aviv** - נחשב באופן עקבי למלון הטוב בעיר בזכות שירות אישי ומוקפד ורמת תחזוקה ללא פשרות.\n2. **The Setai Tel Aviv** - זוכה לשבחים רבים על סטנדרט יוקרה בינלאומי גבוה ואמינות בשירות הלקוחות בלב יפו.\n3. **The Jaffa, a Luxury Collection Hotel** - מוערך מאוד בזכות המקצועיות של הצוות והשילוב המדויק בין עיצוב היסטורי לנוחות מודרנית.\n4. **מלון מונטיפיורי (Hotel Montefiore)** - מלון בוטיק בעל מוניטין רב שנים של אמינות, יחס אישי ואיכות קולינרית גבוהה.\n5. **מלון שלום אנד רילאקס (Shalom Hotel & Relax)** - דורג פעמים רבות בראש רשימות שביעות רצון הלקוחות בזכות שירות אדיב ואווירה נינוחה.\n6. **רויאל ביץ' תל אביב (Royal Beach Tel Aviv)** - מלון יוקרה המוכר בזכות ניהול מקצועי, ניקיון ברמה גבוהה ומתקנים איכותיים.\n7. **הילטון תל אביב (Hilton Tel Aviv)** - שומר על סטנדרט אמינות בינלאומי קפדני לאורך עשורים וזוכה לביקורות טובות על רמת השירות.",
+"citations": []
+},
+{
+"question": "השווה בין שלושת העסקים המובילים בתחום מלונאות בתל אביב-יפו.",
+"engine": "chatgpt",
+"answer": "ההשוואה הקצרה בין שלושת השחקנים המובילים במלונאות בתל־אביב-יפו (בהנחה שכוונתך לגדולים ולבולטים בשוק):  \n- Hilton Tel Aviv — רשת בינלאומית עם מיקום מרכזי על חוף הים, מתמקדת בשירות גבוה, מתקני כנסים ושירותים לעסקים ולתיירים.  \n- Sheraton Tel Aviv — מלון גדול המיועד גם לקהל עסקים ותיירות, שטח כנסים גדול, פרופיל בינלאומי ותדמית יציבה לעסקים ואירועים.  \n- Dan Tel Aviv (Dan Hotels) — מותג מקומי ותיק עם דגש על אירוח פרימיום ושירות מוכר, מחבר בין נוחות לשירות ישראלי מוכר.\n\nמצאתי הבדלים עיקריים: ה־Hilton מדגיש יוקרה בינלאומית ומיקום חוף; ה־Sheraton בולט בעדיפות למתן שירותי כנסים ואירועים גדולים; ה־Dan מציע תחושה מקומית פרימיום ושירות ארגונומי ללקוחות חוזרים ולתיירות יוקרה. מבחינת קהל יעד — Hilton ו‑Sheraton מושכים הרבה עסקים ותיירים חוץ‑ארציים, בעוד Dan מאזן בין קהל מקומי לזר.\n\n1. **Hilton Tel Aviv** — נוכחות בינלאומית, חוויית יוקרה ומתקני כנסים נרחבים.  \n2. **Sheraton Tel Aviv Hotel** — ניסיון ארוך באירוח עסקי ואירועים גדולים; פרופיל יציב.  \n3. **Dan Tel Aviv (Dan Hotels)** — מותג ישראלי ותיק עם דגש על שירות פרימיום וניחוח מקומי.  \n4. **The Norman Tel Aviv** — בוט",
+"citations": []
+},
+{
+"question": "השווה בין שלושת העסקים המובילים בתחום מלונאות בתל אביב-יפו.",
+"engine": "gemini",
+"answer": "להלן בתי המלון המובילים בתל אביב-יפו, המייצגים את פסגת האירוח בעיר דרך שילוב של היסטוריה, יוקרה מודרנית ומיקום אסטרטגי:\n\n1. **The Norman Tel Aviv** - מלון בוטיק יוקרתי השוכן בשני מבנים היסטוריים משומרים, המציע חוויית אירוח אינטימית עם בריכה על הגג ומסעדות עילית.\n2. **The David Kempinski Tel Aviv** - המלון החדש והמפואר ביותר על קו החוף, המציע סטנדרט שירות בינלאומי גבוה במיוחד, סוויטות רחבות ידיים ונוף ישיר לים.\n3. **The Jaffa** - מלון יוקרה הממוקם במבנה היסטורי של מנזר ובית חולים לשעבר ביפו, המשלב עיצוב עכשווי עם ארכיטקטורה עתיקה ומרשימה.\n4. **The Setai Tel Aviv** - מלון הממוקם במבנה הקישלה העות'מאני המשוחזר ליד כיכר השעון, הידוע בבריכת האינפיניטי הצופה לנמל ובאווירה השלווה שלו.\n5. **Hilton Tel Aviv** - המלון הוותיק והאייקוני הממוקם בתוך פארק העצמאות, המציע את המיקום הטוב ביותר על הצוק וגישה פרטית לחוף הים.\n6. **The Royal Beach Tel Aviv** - מלון מודרני המצטיין בעיצוב עכשווי, בריכה חיצונית גדולה ומרכז ספא יוקרתי, המתאים לאנשי עסקים ולתיירים כאחד.\n7. **Hotel Montefiore** - מלון בוטיק בלב העיר הלבנה המציע חוויה תרבותית וקולינרית ייחודית בתוך מבנה אקלקטי משומר עם דגש על שירות אישי.",
+"citations": []
+},
+{
+"question": "איזה עסק בתחום מלונאות בתל אביב-יפו מקבל את הציון הכי גבוה בגוגל?",
+"engine": "chatgpt",
+"answer": "1. **Abratel Sea View Hotel (Abratel Sea View)** – מדורג בין הגבוהים ביותר בגוגל/ביקורות אונליין (דירוג אורחים יוצא דופן 4.9 בסקירות מאגרי מלונות). ([hotelsvetted.com](https://hotelsvetted.com/israel/tel-aviv/?utm_source=openai))\n\n2. **The Norman Tel Aviv** – מלון בוטיק מפורסם עם ציון גבוה וביקורות איכותיות שמופיעות ברשימות הטובות של תל‑אביב. ([fm.cnbc.com](https://fm.cnbc.com/applications/cnbc.com/resources/editorialfiles/2022/09/28/CNBC_BEST_HOTELS_ME_2_small.pdf?utm_source=openai))\n\n3. **The Drisco Hotel** – מלון יוקרתי ביפו עם הרבה ביקורות חיוביות ונראות גבוהה בגוגל ובפורומים של מטיילים. ([reddit.com](https://www.reddit.com/r/TravelIsrael/comments/1t6buzx/i_stayed_at_the_drisco_in_tel_aviv_and_it_might/?utm_source=openai))\n\n4. **Market House – An Atlas Boutique Hotel** – דגל ברשת בוטיק עם ציון מבקרים גבוה והמלצות ברשימות תיירות. ([staycation.com](https://www.staycation.com/hotels/tel-aviv?utm_source=openai))\n\n5. **Brown Beach House / Brown Hotels (למשל Brown Seaside/Brown Beach House)** – רשת בוטיק חוף המופיעה בתוצאות ובדירוגי גוגל של מלונות תל‑אביב. ([israel.com](https://www.israel.com/he/places/tel-aviv/where-to-stay?utm_source=openai))\n\n6. **Port Tower by Isrotel Design / Isrotel Sea Tower** – מלונות עיצוב של קבוצת ישרוטל עם דירוגי אורחים גבוהים ופופולריות בחוף. ([staycation.com](https://www.staycation.com/hotels/tel-aviv?utm_source=openai))\n\n7. **Cucu Hotel / Coco Hotel (מלון קוקו תל‑אביב)** – מלון בוטיק קטן עם ציון גבוה יחסית בגוגל ותמיכה בביקורות מקומיות. ([vizoryo.com](https://www.vizoryo.com/en/business/hotel/tel-aviv-yafo/cucuhotel?utm_source=openai))\n\nסיכום קצר: על פי מקורות סקירה של מל",
+"citations": [
+{
+"url": "https://hotelsvetted.com/israel/tel-aviv/?utm_source=openai",
+"host": "hotelsvetted.com",
+"isOwnSite": false
+},
+{
+"url": "https://fm.cnbc.com/applications/cnbc.com/resources/editorialfiles/2022/09/28/CNBC_BEST_HOTELS_ME_2_small.pdf?utm_source=openai",
+"host": "fm.cnbc.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.reddit.com/r/TravelIsrael/comments/1t6buzx/i_stayed_at_the_drisco_in_tel_aviv_and_it_might/?utm_source=openai",
+"host": "reddit.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.staycation.com/hotels/tel-aviv?utm_source=openai",
+"host": "staycation.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.israel.com/he/places/tel-aviv/where-to-stay?utm_source=openai",
+"host": "israel.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.vizoryo.com/en/business/hotel/tel-aviv-yafo/cucuhotel?utm_source=openai",
+"host": "vizoryo.com",
+"isOwnSite": false
+}
+]
+},
+{
+"question": "איזה עסק בתחום מלונאות בתל אביב-יפו מקבל את הציון הכי גבוה בגוגל?",
+"engine": "gemini",
+"answer": "להלן רשימת מלונות בתל אביב-יפו הזוכים לציונים הגבוהים ביותר בגוגל (4.7 ו-4.8 כוכבים):\n\n1. **מלון דריסקו (The Drisco)** - מחזיק בציון 4.8 בזכות שירות אישי יוצא דופן, עיצוב היסטורי משוחזר וחוויית אירוח יוקרתית במושבה האמריקאית.\n2. **וייט וילה תל אביב (White Villa)** - זוכה לציון 4.8 בזכות האווירה האינטימית והשקטה בבית עירוני משוחזר המעניק תחושת יוקרה ביתית בלב העיר.\n3. **מלון בקסטייג' (Backstage Hotel)** - מדורג בציון 4.8 בזכות קונספט ייחודי בהשראת עולם התיאטרון, ארוחת בוקר מצוינת ומיקום מרכזי ליד כיכר דיזנגוף.\n4. **מלון הנורמן (The Norman)** - נחשב לאחד המלונות המוערכים בעיר עם ציון 4.7 בזכות סטנדרט שירות בינלאומי, בריכת גג יוקרתית ועיצוב מוקפד.\n5. **מלון פבריק (Fabric Hotel)** - זוכה לציון 4.7 בזכות האווירה האורבנית הצעירה, הבר הפעיל בקומת הכניסה והעיצוב התעשייתי המודרני.\n6. **מלון הוטל מונטיפיורי (Hotel Montefiore)** - מחזיק בציון 4.7 בזכות השילוב בין אירוח בוטיק קלאסי בבניין לשימור לבין מסעדה יוקרתית מהמובילות בעיר.\n7. **מלון דה ג'אפה (The Jaffa)** - מדורג בציון 4.7 בזכות האדריכלות המרהיבה המשלבת ישן וחדש, הבריכה המרשימה והשירות המקצועי ביפו העתיקה.",
+"citations": []
+},
+{
+"question": "יש עסק טוב בתחום מלונאות בתל אביב-יפו שמציע ייעוץ ראשוני חינם?",
+"engine": "chatgpt",
+"answer": "1. **בראשית קפיטל (Bereshit Capital)** — משרדי תיווך וליווי עסקים בתחום האירוח והמכירה/קנייה של בתי מלון; באתר מצוין 'ייעוץ ראשוני — חינם'. ([bereshit-capital.com](https://bereshit-capital.com/asakim-lemkira-melonot.html?utm_source=openai))  \n2. **טסיטו – כוח אדם (Tasito)** — מספקת פתרונות כוח‑אדם להעסקה (כולל למגזרים אירוח/שירותים) ומציעה שיחת ייעוץ ראשונית חינם. ([tasito-siud.co.il](https://tasito-siud.co.il/?utm_source=openai))  \n3. **בית הספר הארצי לתיירות / שלוחת תל‑אביב** — מרכז הדרכה מקצועי למינהל מלונאי; באתר מצוין שניתן לקבל ייעוץ חינם בטלפון. ([tostudy.co.il](https://www.tostudy.co.il/mosad-masluldetails.aspx?id=397&maslul=5964&utm_source=openai))  \n4. **פרייברג ושות' – משרד עו\"ד (Freiberg)** — משרד המתמחה בנזיקין ונושאים עסקיים עם פעילות בתל‑אביב; מפרסם ייעוץ ראשוני חינם (יכול לסייע גם בפן המשפטי/חוזים בענף המלונאות). ([freiberg-law.co.il](https://www.freiberg-law.co.il/tel-aviv.html?utm_source=openai))  \n5. **בראשׁית – ליווי למכירת נכסי אירוח (בראשית תיווך עסקי)** — שירותי ליווי וייעוץ למכירה/קנייה והערכת שווי נכסי אירוח; מציין ייעוץ ראשוני חינם באתר השירות. ([bereshit-capital.com](https://bereshit-capital.com/asakim-lemkira-melonot.html?utm_source=openai))\n\nהערה: לרוב חברות ויועצים בתחום המלונאות מציעים פגישת היכרות/ייעוץ ראשוני ללא עלות טלפונית או קצרה",
+"citations": [
+{
+"url": "https://bereshit-capital.com/asakim-lemkira-melonot.html?utm_source=openai",
+"host": "bereshit-capital.com",
+"isOwnSite": false
+},
+{
+"url": "https://tasito-siud.co.il/?utm_source=openai",
+"host": "tasito-siud.co.il",
+"isOwnSite": false
+},
+{
+"url": "https://www.tostudy.co.il/mosad-masluldetails.aspx?id=397&maslul=5964&utm_source=openai",
+"host": "tostudy.co.il",
+"isOwnSite": false
+},
+{
+"url": "https://www.freiberg-law.co.il/tel-aviv.html?utm_source=openai",
+"host": "freiberg-law.co.il",
+"isOwnSite": false
+}
+]
+},
+{
+"question": "יש עסק טוב בתחום מלונאות בתל אביב-יפו שמציע ייעוץ ראשוני חינם?",
+"engine": "gemini",
+"answer": "בתל אביב-יפו פועלים מספר יועצים וחברות ייעוץ המתמחים בענף המלונאות והתיירות, המציעים פגישת היכרות או אבחון ראשוני ללא עלות. להלן 7 עסקים בולטים בתחום:\n\n1. **לוי יועצים** – חברה הממוקמת בתל אביב ומציעה פגישת ייעוץ ראשונה ללא עלות וללא התחייבות ליזמים ובעלי מלונות בתחומי התוכנית העסקית והרווחיות.\n2. **דוד בוקר ייעוץ מלונאי** – מומחה לניהול ותפעול מלונאי המציע פגישת היכרות \"על קפה\" ללא התחייבות לבחינת צרכי המלון בתחומי הטכנולוגיה והשירות.\n3. **פורוורד (4ward)** – חברת ייעוץ המציעה שיחה ראשונית של 20 דקות ללא עלות לבחינת פתרונות תפעול, חדשנות ושיפור הכנסות לבתי מלון ועסקי תיירות.\n4. **ערן בוכריס - רואה חשבון וייעוץ עסקי** – משרד הממוקם בתל אביב ומציע ייעוץ ראשוני חינם ליזמים בתחום המלונאות והאירוח בדגש על היבטים פיננסיים ואסטרטגיים.\n5. **מעוף תל אביב** – זרוע הסיוע של משרד הכלכלה המציעה פגישות מיפוי עסקי ללא תשלום ליזמים חדשים וקיימים בעיר, כולל ליווי ייעודי לענף המלונאות.\n6. **רון יריב - Yariv Consulting** – יועץ מלונאי בכיר המלווה יזמים ובעלי נכסים בתל אביב בשלבי הקמה ותפעול, ומקיים פגישות ראשוניות לבחינת היתכנות פרויקטים.\n7. **קופלנד ייעוץ מלונאי** – חברה תל אביבית מובילה המתמחה במלונות בוטיק וספא, המציעה ליווי ראשוני לבחינת קונספטים ושיווק אסטרטגי ליזמים בתחום.",
+"citations": [
+{
+"url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF_uqmBhq31-iuMzadsPJxgWUTb2oNix4hDsJ45zkoKb7IrhV6HJ8eUe89LDAYfmWEt0oct4ShOUC8xOLR31MlKwLXKQ-krZJH9Ra3P3IIQqirTi0GT_nOMWkpfoDtylTvM3MQbSux3e9YJ9mZv9uKAccKPGfnelDsHKsAUw5-TWr1HjgyFEJQsB4edSNvkBu3ecNgtNQybQXoQ7-Q3naRTFPN1Vzr_hXMmmE7y7WOOYbqBj-VQxAbBFShHsQV38pk2IT3qAYIfo83yNUgQFsoluje_rICSPtFs1JYilj7iBUC4UWzCz7ej8c2GkYcJMrmikiuKLx4wc4jt8PsugMD0pWNC7cM_jZY3GqqBbrE=",
+"host": "levyfinance.co.il",
+"isOwnSite": false
+},
+{
+"url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFf2iG0bsRhJj-tWQitu0aZ0QGEJwLa7hon3OW1JSYIXd__aaKL6nCg0MwFUiFtvuFyIO1AM8c9pl13Ontd_DYLyaGPzKo0BudeUpehWQX1sWvapdSIB4EBN5FaR3TntRyIUcA9-aBX4G-gNvwEb4j0F9tgN9bheaRmxye38bcHQskB-wIzKs9vm5gB8xoMI4MOT3faRWVElBsUMbPGNGeXnooG_Kl-cpfUD7eD-WmVhln5akbU7xlc3_qtW4l-QsNOt0HLSAca1YAjq09H_bl7Cgm0oUtS2bkr9RCMWmKmla5g_CUvv4T3jmupQgG_IRKFug==",
+"host": "4ward.co.il",
+"isOwnSite": false
+}
+]
+},
+{
+"question": "אילו עסקים בתחום מלונאות בתל אביב-יפו התושבים ממליצים עליהם?",
+"engine": "chatgpt",
+"answer": "",
+"citations": []
+},
+{
+"question": "אילו עסקים בתחום מלונאות בתל אביב-יפו התושבים ממליצים עליהם?",
+"engine": "gemini",
+"answer": "להלן רשימה של בתי מלון בתל אביב-יפו הזוכים להמלצות רבות מצד תושבי העיר והמבקרים בה:\n\n1. **מלון נורמן (The Norman)** - מלון יוקרה השוכן בשני מבנים היסטוריים לשימור ומציע בריכת גג וקולינריה ברמה בינלאומית.\n2. **מלון מונטיפיורי (Hotel Montefiore)** - מלון בוטיק אינטימי בעיצוב קלאסי המפורסם בזכות המסעדה המצוינת שלו והאווירה האירופאית בלב העיר.\n3. **מלון דריסקו (The Drisco)** - מלון היסטורי מפואר במושבה האמריקאית המציע שירות מוקפד, עיצוב מרהיב ומסעדת שף מוערכת.\n4. **מלון ג'אפה (The Jaffa)** - מלון יוקרה הממוקם במבנה יפו עתיק ששימש כבית חולים, המשלב אדריכלות עתיקה עם עיצוב מודרני ונועז.\n5. **מלון בקסטייג' (Backstage Hotel)** - מלון קונספט ייחודי הממוקם במבנה שהיה בעבר תיאטרון, ומציע חוויית אירוח אמנותית ומקורית ליד כיכר דיזנגוף.\n6. **מלון פולי האוס (Poli House)** - מלון בוטיק במבנה באוהאוס איקוני בכיכר מגן דוד, הידוע בבריכת הגג שלו המשקיפה על שוק הכרמל.\n7. **מלון ווייט וילה (White Villa)** - וילה עירונית משוחזרת בלב העיר המציעה אירוח שקט, יוקרתי ואישי באווירה של אחוזה פרטית.\n8. **מלון לייטהאוס (Lighthouse)** - מלון מודרני ותוסס הממוקם במגדל משרדים לשעבר, עם בר גג פופולרי המציע נוף פנורמי לים ולעיר.",
+"citations": []
+},
+{
+"question": "איזה עסק בתחום מלונאות בתל אביב-יפו נותן את התמורה הכי טובה למחיר?",
+"engine": "chatgpt",
+"answer": "1. **Market House – An Atlas Boutique Hotel (יפו)** — מלון בוטיק בלב יפו שמקבל דירוגים גבוהים על \"value for money\" בזכות מיקום מצוין, שירות טוב ואווירה אותנטית. ([booking.com](https://www.booking.com/hotel/il/market-house-an-atlas-boutique.en-gb.html?utm_source=openai))\n\n2. **Brown TLV (לב תל‑אביב)** — רשת Brown ידועה בעיצובים עדכניים ובחבילה של שירותים ונוחות שמרשים יחסית למחיר; דפי הזמנות ומבקרים מציינים תמורה טובה למחיר. ([agoda.com](https://www.agoda.com/brown-tlv-hotel/hotel/tel-aviv-il.html?utm_source=openai))\n\n3. **The Drisco Hotel (יפו/דרום תל‑אביב)** — מלון בוטיק היסטורי יוקרתי יחסית אך רבים מדווחים כי איכות החוויה (עיצוב, מטבח ושירות) מצדיקים את המחיר — תחושת \"תמורה\" גבוהה לשוהים שמחפשים חוויה מיוחדת. \n\n4. **Abraham Hostel (מרכז תל‑אביב)** — אכסנייה פופולרית במיוחד אצל מטיילים צעירים; פרטיים וחדרים משותפים במחירים נמוכים יחסית עם שירותים טובים ואווירה חברתית — מצוין לתמורה תקציבית. ([topinisrael.com](https://www.topinisrael.com/tel-aviv/best-hostels/?utm_source=openai))\n\n5. **Hayarkon 48 Boutique Hotel (חוף/מרכז)** — מלון קטן ליד החוף שמופיע ברשימות \"best hostels/hotels\" כבחירה בעלת ערך טוב עבור המחיר, בעיקר בזכות מיקום ושירות בסיסי איכותי. ([topinisrael.com](https://www.topinisrael.com/tel-aviv/best-hostels/?utm_source=openai))\n\n6. **Florentin House (פלורנטין)** — אכסנייה בוטיק בשכונת פלורנטין עם עיצוב מודרני, חדרים פרטיים זולים ותמורה טובה לפי מדריכי תיירים וביקורות עדכניות. ([topinisrael.com](https://www.topinisrael.com/tel-aviv/best-hostels/?utm_source=openai))\n\nהערה מעשית: תנאי מחירים ודירוגים משתנים לפי תאריכים ומבצעים; כדאי להשוות תאריכים ספציפיים באתרי הזמנות (Booking/Agoda/Tripadvisor) לפני הזמנה.",
+"citations": [
+{
+"url": "https://www.booking.com/hotel/il/market-house-an-atlas-boutique.en-gb.html?utm_source=openai",
+"host": "booking.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.agoda.com/brown-tlv-hotel/hotel/tel-aviv-il.html?utm_source=openai",
+"host": "agoda.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.topinisrael.com/tel-aviv/best-hostels/?utm_source=openai",
+"host": "topinisrael.com",
+"isOwnSite": false
+}
+]
+},
+{
+"question": "איזה עסק בתחום מלונאות בתל אביב-יפו נותן את התמורה הכי טובה למחיר?",
+"engine": "gemini",
+"answer": "להלן 7 עסקים בתחום המלונאות בתל אביב-יפו המציעים את התמורה הטובה ביותר למחיר:\n\n1. **Abraham Hostel Tel Aviv** – מציע לינה נקייה ומסודרת במיקום מרכזי, עם חללים משותפים רחבים ואווירה חברתית במחיר נגיש מאוד.\n2. **The Spot Hostel** – ממוקם בנמל תל אביב ומספק חוויית אירוח מודרנית ומעוצבת המשלבת חדרים פרטיים וקפסולות במחירים נוחים.\n3. **Market House Hotel** – מלון בוטיק ביפו המציע חוויה איכותית הכוללת ארוחת בוקר עשירה וכיבוד אחר הצהריים הכלול במחיר החדר.\n4. **Fabric Hotel** – מלון מעוצב בלב העיר המעניק חוויה אורבנית אופנתית ושירות מצוין במחירים הוגנים ביחס לרמת האירוח.\n5. **Dave Levinsky** – מלון מקבוצת בראון המתמקד בעיצוב רטרו ייחודי ובלינה פונקציונלית וזולה משמעותית מהמלונות הגדולים על קו החוף.\n6. **65 Hotel - Rothschild** – מספק חוויית יוקרה במיקום מבוקש בשדרות רוטשילד, עם דגש על שירות אישי ואירוח הכולל הטבות קולינריות משתלמות.\n7. **Selina Beach** – מציע שילוב של לינה מול הים בקרבת נווה צדק עם אווירה צעירה ותוססת ומגוון אפשרויות לינה לכל תקציב.",
+"citations": []
+},
+{
+"question": "אילו עסקים בתחום מלונאות בתל אביב-יפו מומלצים ללקוח חדש?",
+"engine": "chatgpt",
+"answer": "1. **The Norman Tel Aviv** — בוטיק יוקרה עם שירות פרסונלי, עיצוב קלאסי ונחשבת לאחת הבחירות הטובות לאורחים שמחפשים חוויה שקטה ואלגנטית במרכז העיר.  \n2. **Royal Beach Tel Aviv by Isrotel** — רשת מהימנה עם מתקנים מלאים וחדרים מרווחים; מצוין לאורחי עסקים וללקוחות שמעדיפים סטנדרט גבוה ושירות מקצועי.  \n3. **Brown Beach House, Tel Aviv** — מלון בוטיק אווירי וספוג אופי תל־אביבי; מתאים ללקוחות שמחפשים אווירה צעירה, עיצוב מודרני ונגישות לחוף.  \n4. **Dan Tel Aviv** — מלון ותיק ומוכר עם מתקנים מתקדמים ושירות סולידי; מתאים לאורחים שמעדיפים אמינות, ניהול מסורתי ותמיכה לאירועים ועסקים.  \n5. **Sheraton Tel Aviv Hotel & Towers** — אופציה לרשת בינלאומית עם חדרים נוחים ושירותי כנסים, מתאימה ללקוחות שצריכים תשתית ארגונית ורוחב שירותים.  \n6. **The Jaffa, a Luxury Collection Hotel, Tel Aviv** — מלון יוקרה משולב בעיר העתיקה של יפו עם עיצוב ייחודי וחוויה קולינרית מרשימה; מתאים לאורחים שמחפשים שילוב של היסטוריה ופינוקים.  \n7. **The Setai Tel Aviv** — מלון בוטיק בעיצוב מתוחכם ושלווה יחסית; מומלץ ללקוחות שמעריכים פרטיות, עיצוב מוקפד ושירות אישי.",
+"citations": []
+},
+{
+"question": "אילו עסקים בתחום מלונאות בתל אביב-יפו מומלצים ללקוח חדש?",
+"engine": "gemini",
+"answer": "להלן 7 עסקים מומלצים בתחום המלונאות בתל אביב-יפו המתאימים ללקוח חדש המחפש חוויות אירוח שונות:\n\n1. **מלון דה נורמן (The Norman)** - מלון בוטיק יוקרתי השוכן במבנים היסטוריים לשימור ומציע שירות אישי ומוקפד בסטנדרט בינלאומי.\n2. **מלון דה ג'אפה (The Jaffa)** - מלון המשלב עיצוב מודרני מרהיב בתוך מבנה היסטורי ביפו, המעניק חוויה תרבותית ויוקרתית ייחודית.\n3. **מלון מונטיפיורי (Hotel Montefiore)** - מלון אינטימי הממוקם בבית טמפלרי משופץ, המפורסם בסגנון אירופי קלאסי ובמסעדה מצוינת.\n4. **מלון קרלטון תל אביב (Carlton Tel Aviv)** - מלון הממוקם על קו החוף ומציע חוויית אירוח עסקית ויוקרתית עם בריכה על הגג וארוחת בוקר עשירה במיוחד.\n5. **מלון פבריק (Fabric Hotel)** - מלון מרשת אטלס המציע אווירה אורבנית, צעירה ומעוצבת בלב אזור הבילויים של נחלת בנימין.\n6. **מלון רויאל ביץ' תל אביב (Royal Beach)** - מלון מודרני וגדול מרשת ישרוטל המציע חדרים עם נוף לים, מתחם ספא יוקרתי ובריכה רחבת ידיים.\n7. **מלון בראון TLV (Brown TLV)** - מלון בוטיק בעיצוב רטרו-שיקי המציע אווירה תל-אביבית טיפוסית וגג עם נוף פנורמי לעיר.",
+"citations": []
+},
+{
+"question": "את מי כדאי לשכור בתחום מלונאות בתל אביב-יפו?",
+"engine": "chatgpt",
+"answer": "1. **Orion Manpower Services (Orion)** — סוכנות גיוס והתמחות בכוח אדם למלונאות בת־עשייה בתל־אביב; מנוסה בגיוס צוותים לחזית, ניקיון, מטבח ופתרונות מיקור חוץ למלונות. ([orionservice.net](https://www.orionservice.net/en?utm_source=openai))\n\n2. **Arman Consultants** — חברת גיוס בינלאומית שפועלת בישראל ומספקת עובדים מיומנים לבית מלון (housekeeping, F&B, מטבח ותחזוקת מבנים). ([armanconsultants.com](https://armanconsultants.com/israel-recruitment?utm_source=openai))\n\n3. **HR Search Recruitment (IL)** — משרד גיוס מקומי שמפרסם וממלא תפקידי ניהול ומרכזי הזמנות במלונאות; מתאים לגיוס תפקידי שורה ומנהלה. ([il.linkedin.com](https://il.linkedin.com/jobs/view/reservation-center-manager-8388-at-hr-search-recruitment-il-accounting-finance-hospitality-3970586147?utm_source=openai))\n\n4. **Oman Agencies / OmanAgencies (חברת גיוס)** — נותנת שירותי גיוס רחבים לישראל כולל קטגוריות מלונאות וקייטרינג; מתאימה לפרויקטים רחבי היקף. ([omanagencies.com](https://www.omanagencies.com/recruitment-agency-in-israel/?utm_source=openai))\n\n5. **Image J / Jomba HR (נכללת ברשימות מקצועיות של חברות כ\"א למלונאות בישראל)** — סוכנויות גיוס המופיעות ברשימות ענף ומיועדות לשוק התל‑אביבי; שימושיות כשמחפשים פתרונות מהירים וממוקדים. ([revenuebase.ai](https://revenuebase.ai/companies/hospitality-staffing-agencies/israel?utm_source=openai))\n\nאם תרצה, אפשר לפנות ישירות לחברות הנ״ל לפי האתר/אימייל המוצהר אצלן.",
+"citations": [
+{
+"url": "https://www.orionservice.net/en?utm_source=openai",
+"host": "orionservice.net",
+"isOwnSite": false
+},
+{
+"url": "https://armanconsultants.com/israel-recruitment?utm_source=openai",
+"host": "armanconsultants.com",
+"isOwnSite": false
+},
+{
+"url": "https://il.linkedin.com/jobs/view/reservation-center-manager-8388-at-hr-search-recruitment-il-accounting-finance-hospitality-3970586147?utm_source=openai",
+"host": "il.linkedin.com",
+"isOwnSite": false
+},
+{
+"url": "https://www.omanagencies.com/recruitment-agency-in-israel/?utm_source=openai",
+"host": "omanagencies.com",
+"isOwnSite": false
+},
+{
+"url": "https://revenuebase.ai/companies/hospitality-staffing-agencies/israel?utm_source=openai",
+"host": "revenuebase.ai",
+"isOwnSite": false
+}
+]
+},
+{
+"question": "את מי כדאי לשכור בתחום מלונאות בתל אביב-יפו?",
+"engine": "gemini",
+"answer": "להלן 8 בתי עסק מובילים בתחום המלונאות בתל אביב-יפו שכדאי לשכור את שירותיהם לצרכי אירוח, אירועים או לינה:\n\n1. **The Norman** - מלון בוטיק יוקרתי המציע סטנדרט שירות בינלאומי מוקפד וחוויית אירוח אישית ברמה הגבוהה ביותר.\n2. **The Jaffa** - מלון יוקרה המשלב היסטוריה ואדריכלות מרהיבה עם שירותי מלונאות מודרניים בלב יפו.\n3. **The Setai Tel Aviv** - ממוקם במבנה היסטורי ומציע חווית נופש ואירועים אקסקלוסיבית עם דגש על איכות ופרטיות.\n4. **Royal Beach Tel Aviv** - מלון מבית רשת ישרוטל המצטיין בתשתיות רחבות לכנסים, אירועים עסקיים ושהות יוקרתית על קו החוף.\n5. **The Drisco** - מלון בוטיק היסטורי במושבה האמריקאית המציע שירות אישי ומוקפד באווירה אירופאית קלאסית.\n6. **Hilton Tel Aviv** - מוסד ותיק ומוערך המתמחה באירוח עסקי בינלאומי ובלוגיסטיקה מורכבת של כנסים ואירועים גדולים.\n7. **The Carlton Tel Aviv** - מלון יוקרה המתמחה בקולינריה עילית ובמתן פתרונות מותאמים אישית לאנשי עסקים ולאירועי בוטיק.\n8. **מלונות בראון (Brown Hotels)** - קבוצת מלונות קונספט המעניקה חוויה אורבנית מעוצבת וייחודית המתאימה לקהל יצירתי ומחפש חדשנות.",
+"citations": []
+}
+]
+}

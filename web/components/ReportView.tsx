@@ -29,6 +29,7 @@ export default function ReportView({ t, lang }: { t: Dict; lang: Locale }) {
         <p data-reveal className="vx-eyebrow mt-6">{t.report.title}</p>
         <div className="mt-3"><MaskHeading as="h1" className="vx-h2" text={r.business.name} grad center={false} /></div>
         <span data-hair className="hairline mt-6 block w-[min(80vw,calc(var(--u)*420))] origin-left rtl:origin-right" />
+        {r.live && r.score === 0 && r.competitors?.length > 0 && <p data-reveal data-zero-notice role="note" className="mt-5 max-w-2xl rounded-lg border border-[#e8b04b]/40 bg-[#e8b04b]/10 px-4 py-3 text-sm text-amber-100">{t.accuracy.zero.replaceAll("{cat}", r.business.category).replaceAll("{city}", r.business.city)} <Link href={`/${lang}/scan`} className="vx-link underline">{t.accuracy.rescan}</Link></p>}
         <p data-reveal className="mt-5 text-slate-300">{r.business.category} · {r.business.city} · <span dir="ltr">{r.date || "2026-10-21"}</span></p>
       </Reveal>
       <main className="mx-auto max-w-6xl px-5 pb-20">

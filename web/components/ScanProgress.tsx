@@ -15,7 +15,7 @@ import MaskHeading from "./MaskHeading";
 
 
 const TICK_MS = 500;
-type Pending = { name: string; website?: string; category: string; city: string; email: string; turnstileToken?: string };
+type Pending = { name: string; otherNames?: string; website?: string; category: string; city: string; email: string; turnstileToken?: string };
 
 // Shows the scan form when nothing is pending; otherwise POSTs /api/scan and animates progress until the real report id comes back.
 // ?step=N freezes a demo state (used for screenshots).

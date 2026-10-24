@@ -1,4 +1,4 @@
-import { engineNote } from '../engine-note.js'; import { BRAND } from '../brand.js'; import { esc, safeUrl } from '../security/html.js';
+import { engineNote } from '../engine-note.js'; import { zeroNotice } from '../summary.js'; import { BRAND } from '../brand.js'; import { esc, safeUrl } from '../security/html.js';
 // Text for the scan-report / weekly emails, HE + EN. All values are escaped where they are interpolated.
 const T = {
   en: { h2: { report: 'AI visibility report', weekly: 'weekly report' }, subject: { report: (b, sc) => `Your ${BRAND.name} report: ${b} scored ${sc}/100`, weekly: (b, sc) => `${BRAND.name} weekly: ${b} ${sc}/100` },
@@ -21,6 +21,7 @@ export function renderWeeklyEmail({ business, scan, prev, reportUrl, unsubscribe
 <p style="font-size:40px;margin:0"><span dir="ltr"><b>${+s.score}</b>/100</span> ${delta === null ? '' : `<span dir="ltr" style="font-size:18px;color:${delta >= 0 ? 'green' : 'red'}">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}</span>`}</p>
 <p>${t.mention(Math.round(s.mentionRate * 100), +s.checks, s.avgRank === undefined || s.avgRank === null ? null : esc(s.avgRank))}</p>
 <p style="color:#555;font-size:13px">${esc(engineNote(s, l))}</p>
+${zeroNotice(s, business, l) ? `<p data-zero-notice style="background:#fff7e6;border:1px solid #f0c36d;padding:10px;border-radius:6px">${esc(zeroNotice(s, business, l))}</p>` : ''}
 <table border="1" cellpadding="6" style="border-collapse:collapse"><tr><th>${t.th[0]}</th><th>${t.th[1]}</th><th>${t.th[2]}</th></tr>${eng}</table>
 <h3>${t.instead}</h3><ol>${s.topCompetitors.map(c => `<li>${esc(c.name)} (<span dir="ltr">${+c.count}${t.times}</span>)</li>`).join('')}</ol>
 <h3>${t.fixes[v]}</h3>${scan.fixes.map((f, i) => `<p dir="auto"><b>${i + 1}. ${esc(f.title)}</b><br>${esc(f.why)}</p><pre dir="auto" style="background:#f4f4f5;padding:8px;white-space:pre-wrap">${esc(f.copy)}</pre>`).join('')}

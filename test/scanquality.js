@@ -12,7 +12,7 @@ let n = 0; const ok = m => { n++; console.log('  ✓', m); };
   assert.equal(TEMPLATES.he.length, 15); assert.equal(TEMPLATES.en.length, 15);
   const jew = buildQuestions({ name: 'מייסון מאנא', category: 'תכשיטים', city: 'Tel Aviv-Yafo' }, 5);
   assert.equal(jew.length, 5);
-  assert.equal(jew[0], 'מי העסקים הטובים ביותר בתחום תכשיטים בתל אביב-יפו?'); assert.equal(jew[1], 'תמליץ לי על עסק אמין בתחום תכשיטים בתל אביב-יפו.');
+  assert.equal(jew[0], 'מהן החנויות הטובות ביותר בתחום תכשיטים בתל אביב-יפו?'); assert.equal(jew[1], 'איפה כדאי לקנות בתחום תכשיטים בתל אביב-יפו?'); // retail set (category-specific questions)
   for (const q of jew) { assert.ok(!/מי התכשיטים|ה\{|\{/.test(q), q); assert.ok(!/(^|\s)ה(תכשיטים|אינסטלטור)\s/.test(q), q); }
   const sing = buildQuestions({ name: 'א', category: 'מספרה', city: 'חיפה' }, 15); assert.ok(sing.every(q => /בתחום מספרה/.test(q) && !q.includes('{'))); assert.ok(sing.every(q => q.includes('בחיפה') || q.includes('באזור חיפה')));
   const latin = buildQuestions({ name: 'א', category: 'מספרה', city: 'Dubai', lang: 'he' }, 15); assert.ok(latin.filter(q => q.includes('ב-Dubai')).length >= 10); assert.ok(latin.every(q => !/בDubai/.test(q)));

@@ -16,3 +16,11 @@ export function summarizeResults(results, { plan, engines, skipped = [], cost = 
     engines: { ran: engines, skipped }, ownSiteCited: ok.some(r => r.ownSiteCited), checks: ok.length, ...(ok.some(r => r.clarifying) ? { clarifyingAnswers: ok.filter(r => r.clarifying).length } : {}), errors: results.length - ok.length, estCostUsd: +cost.toFixed(3),
   };
 }
+// Score 0 while the engines did name other businesses: most often a wrong city/category was entered (e.g. a Herzliya hotel
+// scanned as "Tel Aviv"). Shown on the report page and in the report email.
+export const ZERO_NOTICE = {
+  en: (cat, city) => `Check the city and category you entered: the answers were about ${cat} in ${city}. If your business is elsewhere or in a different field, run the scan again with the right details.`,
+  he: (cat, city) => `כדאי לבדוק את העיר והתחום שהזנת: התשובות עסקו ב${cat} ב${city}. אם העסק נמצא במקום אחר או בתחום אחר, הריצו את הסריקה שוב עם הפרטים הנכונים.`,
+};
+export const showZeroNotice = summary => !!summary && +summary.score === 0 && (summary.topCompetitors || []).length > 0;
+export const zeroNotice = (summary, business, lang) => showZeroNotice(summary) ? ZERO_NOTICE[lang === 'he' ? 'he' : 'en'](String(business.category || '').trim(), String(business.city || '').trim()) : null;

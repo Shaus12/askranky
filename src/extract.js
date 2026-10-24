@@ -1,3 +1,4 @@
+import { nameVariants, domainStem, skeleton, skeletonOk, isPlatformHost } from './names.js';
 // Pull mentions, rank position, competitors and citations out of an engine answer (English or Hebrew).
 // Strips bidi control marks, Hebrew niqqud and geresh/gershayim, keeps Unicode letters, and tolerates
 // Hebrew one-letter prefixes (ה/ו/ב/ל/מ/ש/כ) glued to a business name ("באינסטלציה אקמה").
@@ -69,27 +70,50 @@ export function extractNamedEntities(text, { category = '' } = {}) {
   return [...new Set(names)];
 }
 const PREFIX = /^[הובלמשכ]{1,2}(?=\p{L})/u;
-function sameBusiness(entity, target) {
-  const e = norm(entity); if (!e || !target) return false;
-  if (e.includes(target) || target.includes(e)) return true;
-  const e2 = e.split(' ').map(w => w.replace(PREFIX, '')).join(' '), t2 = target.split(' ').map(w => w.replace(PREFIX, '')).join(' ');
-  return /[\u05D0-\u05EA]/.test(e + target) && t2.length > 2 && (e2.includes(t2) || t2.includes(e2));
+const dePrefix = s => s.split(' ').map(w => w.replace(PREFIX, '')).join(' ');
+// One target variant (already normalized). Reverse containment (entity inside the target) needs the entity to cover
+// most of the target, so "Carlton" or "קרלטון" alone never matches "ritz carlton".
+function sameOne(e, target) {
+  if (!e || !target) return false;
+  if (e.includes(target)) return true;
+  if (target.includes(e) && e.length >= Math.max(4, 0.6 * target.length)) return true;
+  const e2 = dePrefix(e), t2 = dePrefix(target);
+  if (/[\u05D0-\u05EA]/.test(e + target) && t2.length > 2 && (e2.includes(t2) || (t2.includes(e2) && e2.length >= 0.6 * t2.length))) return true;
+  // Cross-script / spelling variants: the target's consonant skeleton as consecutive words of the entity.
+  if (skeletonOk(target)) { const ts = skeleton(target), n = target.split(' ').length, ew = e.split(' ');
+    for (let i = 0; i + n <= ew.length; i++) { const win = ew.slice(i, i + n); if (skeleton(win.join(' ')) === ts || skeleton([win[0].replace(PREFIX, ''), ...win.slice(1)].join(' ')) === ts) return true; } }
+  return false;
 }
+export function sameBusiness(entity, targets) { const e = norm(entity); const ts = Array.isArray(targets) ? targets : [targets]; return !!e && ts.some(t => sameOne(e, t)); }
+// Domain stem ("ritzcarlton") written in the answer: as a URL/host, or as 1-3 joined words ("Ritz Carlton", "Ritz-Carlton").
+export function stemInText(text, stem) {
+  if (!stem) return false; const low = clean(text).toLowerCase();
+  if (new RegExp(`(?:^|[^a-z0-9])${stem}(?:\\.[a-z]{2,}|[^a-z0-9]|$)`).test(low)) return true;
+  const w = norm(text).split(' '); for (let i = 0; i < w.length; i++) for (let n = 2; n <= 3 && i + n <= w.length; n++) if (w.slice(i, i + n).join('') === stem) return true;
+  return false;
+}
+export const stemInHost = (host, stem) => !!stem && String(host || '').toLowerCase().replace(/^www\./, '').split('.').some(l => l.replace(/-/g, '') === stem);
 export function analyzeAnswer(answer, business) {
-  const target = norm(business.name);
-  const domain = (business.website || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase();
+  const targets = nameVariants(business); const target = targets[0] || norm(business.name);
+  const domain0 = (business.website || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase();
+  const domain = isPlatformHost(domain0) ? '' : domain0;
+  const stem = domainStem(business.website);
   const entities = extractNamedEntities(answer.text, { category: business.category });
   const clarifying = isClarifying(answer.text, entities);
   let rank = null;
-  entities.forEach((e, i) => { if (rank === null && sameBusiness(e, target)) rank = i + 1; });
-  const body = norm(answer.text);
+  entities.forEach((e, i) => { if (rank === null && (sameBusiness(e, targets) || (stem && stemInText(e, stem)))) rank = i + 1; });
+  const body = norm(answer.text); const words = body.split(' ');
   // Real engines often name the top pick in prose before the list: rank by order of first mention.
   const pos = n => { const k = norm(n).split(' ').slice(0, 3).join(' '); return k ? body.indexOf(k) : -1; };
-  const tPos = [norm(business.name), ...(business.aliases || []).map(norm)].map(t => t && body.indexOf(t)).filter(i => i >= 0).sort((a, b) => a - b)[0];
-  if (tPos !== undefined && entities.length) rank = 1 + entities.filter(e => !sameBusiness(e, target)).map(pos).filter(i => i >= 0 && i < tPos).length;
-  const mentioned = !clarifying && (rank !== null || (!!target && (body.includes(target) || body.split(' ').some((w, i, ws) => sameBusiness(ws.slice(i, i + target.split(' ').length).join(' '), target)))));
-  const competitors = entities.filter(e => !sameBusiness(e, target));
+  const tPos = targets.map(t => t && body.indexOf(t)).filter(i => i >= 0).sort((a, b) => a - b)[0];
+  const isOwn = e => sameBusiness(e, targets) || (stem && stemInText(e, stem));
+  if (tPos !== undefined && entities.length) rank = 1 + entities.filter(e => !isOwn(e)).map(pos).filter(i => i >= 0 && i < tPos).length;
+  const inBody = targets.some(t => body.includes(t) || words.some((w, i, ws) => sameOne(ws.slice(i, i + t.split(' ').length).join(' '), t)));
   // A citation is a URL string or {url, host} (Gemini: the real site's domain when only a redirect link is available).
-  const citations = (answer.citations || []).map(c => { const u = typeof c === 'string' ? c : c.url; let host = (typeof c === 'object' && c.host) || u; if (!(typeof c === 'object' && c.host)) try { host = new URL(u).hostname.replace(/^www\./, ''); } catch {} return { url: u, host, isOwnSite: !!domain && host.endsWith(domain), ...(isOpaqueHost(host) ? { opaque: true } : {}) }; });
+  const citations = (answer.citations || []).map(c => { const u = typeof c === 'string' ? c : c.url; let host = (typeof c === 'object' && c.host) || u; if (!(typeof c === 'object' && c.host)) try { host = new URL(u).hostname.replace(/^www\./, ''); } catch {} return { url: u, host, isOwnSite: (!!domain && host.endsWith(domain)) || stemInHost(host, stem), ...(isOpaqueHost(host) ? { opaque: true } : {}) }; });
+  const byStem = !!stem && (stemInText(answer.text, stem) || citations.some(c => c.isOwnSite));
+  const mentioned = !clarifying && (rank !== null || (!!target && inBody) || byStem);
+  const competitors = entities.filter(e => !isOwn(e));
+  // A citation is a URL string or {url, host} (Gemini: the real site's domain when only a redirect link is available).
   return { mentioned, rank: clarifying ? null : rank, competitors, citations, ownSiteCited: citations.some(c => c.isOwnSite), ...(clarifying ? { clarifying: true } : {}) };
 }

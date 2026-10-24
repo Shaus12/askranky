@@ -1,3 +1,4 @@
+import { parseOtherNames } from './src/names.js';
 import express from 'express'; import fs from 'node:fs'; import path from 'node:path'; import { createHash } from 'node:crypto';
 import { BRAND } from './src/brand.js'; import { PLANS, isPaid, CURRENCIES } from './src/plans.js'; import { detectCurrency, billingFor, publicPlans, usdBillingEnabled } from './src/currency.js';
 import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan } from './src/scan.js'; import { utmFrom, applyUtm } from './src/utm.js';
@@ -239,6 +240,8 @@ app.post('/api/waitlist', loginLimiter, captcha, (q, r) => { const email = Strin
 // Free plan = one scan per email. Looked up BEFORE any engine call or spend, from the account's own stored businesses (email-based account).
 // Same business (name + city, case/space-insensitive) again -> the existing report is returned as before (existing:true). A different
 // business -> 409 free_scan_used with a pointer to the report this email already owns.
+const blank = v => typeof v !== 'string' || !v.trim();
+const CITY_REQUIRED = { en: 'Please enter the city where the business is located.', he: 'נא להזין את העיר שבה העסק נמצא.' };
 const norm = v => String(v ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
 export function freeScanLookup(db, account, body) {
   if (account.plan !== 'free') return null;
@@ -251,13 +254,14 @@ const freeUsedBody = (hit, lang) => ({ error: 'free_scan_used', code: 'free_scan
 
 app.post('/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body;
-  if (!name || !category || !city || !email) return r.status(400).send(V.landing('Please fill all required fields.'));
+  if (!blank(name) && !blank(category) && !blank(email) && blank(city)) return r.status(400).send(V.landing(CITY_REQUIRED.en));
+  if (blank(name) || blank(category) || blank(city) || blank(email)) return r.status(400).send(V.landing('Please fill all required fields.'));
   const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).send(V.landing('Free scan limit reached for today.'));
   const db = getDb(); const account = findOrCreateAccount(email); recordConsent(account, q.body); if (applyUtm(account, q.body)) save();
   const hit = freeScanLookup(db, account, q.body);
   if (hit && hit.same) return r.redirect(`/r/${hit.reportId}`);
   if (hit) return r.status(409).send(V.landing(`${FREE_USED_MSG} Your existing report: ${BASE}/r/${hit.reportId}`));
-  const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim() };
+  const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim().slice(0, 80), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
   db.businesses[business.id] = business; save();
   try {
     const scan = await runScan(account, business, { utm: utmFrom(q.body) }); freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
@@ -409,13 +413,15 @@ const pub = a => ({ id: a.id, email: a.email, plan: a.plan, active: !!a.subscrip
 app.get('/api/config', (q, r) => r.json({ brand: BRAND, plans: publicPlans(), usdBilling: usdBillingEnabled(), mock: isMockMode(), prelaunch: isPrelaunch(), emailMock: emailIsMock(), turnstileSiteKey: turnstileSiteKey() }));
 app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body || {};
-  if (!name || !category || !city || !email) return r.status(400).json({ error: 'Please fill all required fields.' });
+  // City is required (no default anywhere): a scan for the wrong city scores 0 and looks like a broken product.
+  if (blank(city)) return r.status(400).json({ error: q.body?.lang === 'he' ? CITY_REQUIRED.he : CITY_REQUIRED.en, code: 'city_required', message: CITY_REQUIRED.en });
+  if (blank(name) || blank(category) || blank(email)) return r.status(400).json({ error: 'Please fill all required fields.' });
   const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).json({ error: 'free_limit_reached', code: 'free_limit_reached', message: 'Free scan limit reached for today.' });
   const db = getDb(); const account = findOrCreateAccount(email); recordConsent(account, q.body); if (applyUtm(account, q.body)) save();
   const hit = freeScanLookup(db, account, q.body);
   if (hit && hit.same) return r.json({ reportId: hit.reportId, existing: true });
   if (hit) return r.status(409).json(freeUsedBody(hit, q.body?.lang));
-  const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim() };
+  const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim().slice(0, 80), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
   db.businesses[business.id] = business; save();
   try {
     const scan = await runScan(account, business, { utm: utmFrom(q.body) }); freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
@@ -425,7 +431,7 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
 });
 app.get('/api/report/:id', (q, r) => { const db = getDb(); const s = db.scans[q.params.id]; if (!s) return r.status(404).json({ error: 'not found' });
   const b = db.businesses[s.businessId]; const hist = (b.scanIds || []).map(i => db.scans[i]).filter(Boolean); const idx = hist.findIndex(x => x.id === s.id);
-  r.json({ demo: !!s.mock, business: { name: b.name, category: b.category, city: b.city, website: b.website }, scan: (({ utm, ...pubScan }) => pubScan)(s), previousScore: idx > 0 ? hist[idx - 1].summary.score : null, history: hist.slice(0, idx + 1).map(x => x.summary.score) }); });
+  r.json({ demo: !!s.mock, business: { name: b.name, category: b.category, city: b.city, website: b.website, ...(b.aliases?.length ? { aliases: b.aliases } : {}) }, scan: (({ utm, ...pubScan }) => pubScan)(s), previousScore: idx > 0 ? hist[idx - 1].summary.score : null, history: hist.slice(0, idx + 1).map(x => x.summary.score) }); });
 app.post('/api/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.refused) return refuseCheckout(r, c.refused); if (c?.prelaunch) return r.status(403).json({ error: 'Pre-launch: checkout is not open yet. Join the waitlist.', prelaunch: true }); if (!c) return r.status(400).json({ error: 'Choose a plan and enter your email.' }); r.json(c); });
 // Pricing for the UI: detected display currency + server prices + what checkout will actually charge.
 app.get('/api/pricing', (q, r) => {
