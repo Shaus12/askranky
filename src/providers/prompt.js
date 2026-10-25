@@ -8,3 +8,7 @@ export const ANSWER_INSTRUCTION = [
   'Do not list categories, styles, price ranges, streets or tips as list items.',
   'Reply in the same language as the question.',
 ].join(' ');
+
+// Gemini 3 decides per prompt whether to call Google Search; with only ANSWER_INSTRUCTION ("answer directly and immediately")
+// it searched in ~2 of 50 Hebrew/US checks (day-1 + Ritz scans) vs 3 of 5 before the instruction existed. Ask it to search first.
+export const GEMINI_SEARCH_INSTRUCTION = 'Before answering, always run a Google Search for current, real, open businesses matching the question and base your list on the search results.';

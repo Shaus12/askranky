@@ -1,4 +1,4 @@
-import { ANSWER_INSTRUCTION } from './prompt.js';
+import { ANSWER_INSTRUCTION, GEMINI_SEARCH_INSTRUCTION } from './prompt.js';
 // Google AI proxy: Gemini Flash + Google Search grounding (5k free/mo, then $14/1k search queries).
 const DOMAIN = /^(?:[a-z0-9-]+\.)+[a-z]{2,}$/i;
 const isRedirect = u => { try { return new URL(u).hostname === 'vertexaisearch.cloud.google.com'; } catch { return false; } };
@@ -25,7 +25,7 @@ export const geminiProvider = {
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: ANSWER_INSTRUCTION }] }, contents: [{ parts: [{ text: question }] }], tools: [{ google_search: {} }] }),
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: ANSWER_INSTRUCTION + ' ' + GEMINI_SEARCH_INSTRUCTION }] }, contents: [{ parts: [{ text: question }] }], tools: [{ google_search: {} }] }),
     });
     if (!r.ok) throw new Error(`Gemini ${r.status}: ${await r.text()}`);
     const j = await r.json();
@@ -33,6 +33,9 @@ export const geminiProvider = {
     const text = (cand.content?.parts || []).map(p => p.text || '').join('');
     const gm = cand.groundingMetadata || {};
     const citations = await groundingCitations(gm.groundingChunks);
-    return { text, citations, searches: (gm.webSearchQueries || []).length, usage: { input: j.usageMetadata?.promptTokenCount, output: j.usageMetadata?.candidatesTokenCount } };
+    // grounded = Google Search actually ran (queries or grounding chunks/supports returned); otherwise the answer is from model memory.
+    const searches = (gm.webSearchQueries || []).length;
+    const grounded = searches > 0 || (gm.groundingChunks || []).length > 0 || (gm.groundingSupports || []).length > 0;
+    return { text, citations, searches, grounded, usage: { input: j.usageMetadata?.promptTokenCount, output: j.usageMetadata?.candidatesTokenCount } };
   },
 };

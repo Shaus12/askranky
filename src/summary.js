@@ -13,7 +13,7 @@ export function summarizeResults(results, { plan, engines, skipped = [], cost = 
     score, mentionRate: +mentionRate.toFixed(2), avgRank: avgRank && +avgRank.toFixed(1), byEngine,
     topCompetitors: Object.entries(compCount).sort((a, b) => b[1] - a[1]).slice(0, plan.competitors).map(([name, count]) => ({ name, count })),
     topCitedHosts: Object.values(hostCount).sort((a, b) => b.count - a.count).slice(0, 8),
-    engines: { ran: engines, skipped }, ownSiteCited: ok.some(r => r.ownSiteCited), checks: ok.length, ...(ok.some(r => r.clarifying) ? { clarifyingAnswers: ok.filter(r => r.clarifying).length } : {}), errors: results.length - ok.length, estCostUsd: +cost.toFixed(3),
+    engines: { ran: engines, skipped }, ownSiteCited: ok.some(r => r.ownSiteCited), checks: ok.length, ...(ok.some(r => r.clarifying) ? { clarifyingAnswers: ok.filter(r => r.clarifying).length } : {}), ...(ok.some(r => r.grounded === false) ? { ungroundedChecks: ok.filter(r => r.grounded === false).length } : {}), errors: results.length - ok.length, estCostUsd: +cost.toFixed(3),
   };
 }
 // Score 0 while the engines did name other businesses: most often a wrong city/category was entered (e.g. a Herzliya hotel

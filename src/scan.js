@@ -23,7 +23,7 @@ export async function runScan(account, business, { engines = ENGINES, maxQuestio
     const p = getProvider(e);
     try {
       const ans = await p.ask(q, { business });
-      results.push({ question: q, engine: e, engineLabel: p.label, mock: !!p.mock, answer: ans.text, usage: ans.usage, searches: ans.searches, ...analyzeAnswer(ans, business) });
+      results.push({ question: q, engine: e, engineLabel: p.label, mock: !!p.mock, answer: ans.text, usage: ans.usage, searches: ans.searches, ...(typeof ans.grounded === 'boolean' ? { grounded: ans.grounded } : {}), ...analyzeAnswer(ans, business) });
       if (!p.mock) cost += COST_PER_CHECK[e];
     } catch (err) { results.push({ question: q, engine: e, error: String(err.message).slice(0, 300) }); }
   }

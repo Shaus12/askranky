@@ -43,7 +43,7 @@ let n = 0; const ok = m => { n++; console.log('  ✓', m); };
   const realFetch = globalThis.fetch; const seen = [];
   globalThis.fetch = async (u, o) => { seen.push({ u: String(u), body: JSON.parse(o.body) }); return String(u).includes('openai') ? { ok: true, json: async () => ({ output: [], usage: {} }) } : { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: 'x' }] } }] }) }; };
   try { process.env.OPENAI_API_KEY = 'k'; process.env.GEMINI_API_KEY = 'k'; await openaiProvider.ask('q'); await geminiProvider.ask('q'); } finally { globalThis.fetch = realFetch; delete process.env.OPENAI_API_KEY; delete process.env.GEMINI_API_KEY; }
-  assert.equal(seen[0].body.instructions, inst); assert.equal(seen[0].body.max_tool_calls, 1); assert.equal(seen[0].body.input, 'q'); assert.equal(seen[1].body.systemInstruction.parts[0].text, inst); assert.deepEqual(seen[1].body.tools, [{ google_search: {} }]); assert.equal(seen.length, 2);
+  assert.equal(seen[0].body.instructions, inst); assert.equal(seen[0].body.max_tool_calls, 1); assert.equal(seen[0].body.input, 'q'); assert.ok(seen[1].body.systemInstruction.parts[0].text.startsWith(inst + ' ') && /Google Search/.test(seen[1].body.systemInstruction.parts[0].text)); assert.deepEqual(seen[1].body.tools, [{ google_search: {} }]); assert.equal(seen.length, 2);
   ok('ChatGPT (instructions) and Gemini (systemInstruction) get the answer-directly prompt; same single call and 1-search cap, so cost estimates are unchanged');
 }
 
