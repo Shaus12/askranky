@@ -1,4 +1,5 @@
 "use client";
+import { paidLoginText } from "@/lib/i18n-free";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Dict, Locale } from "@/lib/i18n";
@@ -37,6 +38,7 @@ export default function Dashboard({ t, lang }: { t: Dict; lang: Locale }) {
     <main className="mx-auto max-w-5xl px-5 py-[clamp(3rem,calc(var(--u)*80),5rem)]">
       <h1 className="font-head vx-h3">{t.dash.title}</h1>
       <span className="hairline mt-6 block w-40" /><p className="mt-5 text-slate-300"><span dir="ltr">{d.account.email}</span> · {t.dash.plan}: <b className="text-white">{d.account.plan}</b> · {t.dash.usage}: <span dir="ltr">{d.usage.used}/{d.usage.cap}</span></p>
+      {d.account.plan !== "free" && <p data-back-to-scan className="mt-4"><a href={`/${lang}/scan`} className="btn-cta !py-2">{paidLoginText[lang].returnScan} <span aria-hidden className="rtl:rotate-180">→</span></a></p>}
       {err && <p role="alert" className="mt-4 text-red-200">{err}</p>}
       {d.account.plan !== "free" && d.account.status && (
         <section className="card mt-8 p-6" data-subscription aria-labelledby="sub-h">
