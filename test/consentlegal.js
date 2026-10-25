@@ -31,7 +31,7 @@ try {
   // conflicts removed
   for (const t of [en, he]) assert.ok(!/hosted page|בעמוד המאובטח של הסולק|בעמוד המאובטח של SUMIT|מופעל על ידי סולק התשלומים SUMIT, ונגישותו/.test(t), 'old hosted-page wording gone');
   assert.ok(!/gets that report back|מקבלת בחזרה את אותו דוח/.test(en + he), 'free scan wording matches one-scan-per-email'); assert.match(md('terms', 'en'), /one scan per email address/); assert.match(md('terms', 'he'), /סריקה אחת לכל כתובת מייל/);
-  for (const d of LEGAL_DOCS) { assert.match(md(d, 'en'), /Last updated: 2026-10-23 \(version \d+\.\d+\)|Statement last updated/, d); assert.match(md(d, 'he'), /עדכון אחרון: 23\.10\.2026 \(גרסה \d+\.\d+\)/, d); }
+  for (const d of LEGAL_DOCS) { assert.match(md(d, 'en'), /Last updated: 2026-10-2[35] \(version \d+\.\d+\)|Statement last updated/, d); assert.match(md(d, 'he'), /עדכון אחרון: 2[35]\.10\.2026 \(גרסה \d+\.\d+\)/, d); }
   ok('in-app legal copy: old hosted-card-page wording gone (embedded SUMIT fields), one free scan per email, version stamps on every doc');
   // ---- cookies doc content matches what the code really stores ----
   const ck = md('cookies', 'en') + md('cookies', 'he'); for (const k of ['ranky_lang', 'ranky_currency', 'ranky-pending-scan', 'ranky-key-', 'ranky_consent_v1', 'ranky_a11y_v1', 'Turnstile', 'SUMIT', 'Google Fonts', 'Global Privacy Control']) assert.ok(ck.includes(k), k);
