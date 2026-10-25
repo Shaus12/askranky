@@ -28,14 +28,14 @@ db.events.push({ at: iso(3 * 3600e3), type: 'billing.payment_failed', account: '
   { at: iso(7200e3), type: 'spend.alert', pct: 0.85 }, { at: iso(3600e3), type: 'spend.alert', pct: 0.9 }, { at: iso(1800e3), type: 'spend.capped', cap: 10, spent: 9.99 }, { at: iso(40 * 3600e3), type: 'spend.capped' },
   { at: iso(4 * 3600e3), type: 'billing.sync', checked: 5, errors: 1 }, { at: iso(4 * 3600e3 - 1000), type: 'billing.sync_error', account: 'ACCID_SECRET_01', error: 'SUMIT 500 for pii.owner@secret-mail.test card 4111111111111111 token abcdefghijklmnopqrstuvwxyz0123456789 ' + 'x'.repeat(300) });
 const noSecrets = (text, what) => { for (const p of [...PII, TOKEN, 'KEY_SECRET', 'secret-mail', '127.0.0.1', 'Secret Bakery', 'Rivka', '4111111111111111', 'abcdefghijklmnopqrstuvwxyz0123456789']) assert.ok(!text.includes(p), `${what} leaks ${p}`); };
-const shapeKeys = j => { assert.deepEqual(Object.keys(j), ['ok', 'generatedAt', 'dayBasis', 'sync', 'scans', 'spend', 'signups', 'subscribers', 'payments', 'config']);
+const shapeKeys = j => { assert.deepEqual(Object.keys(j), ['ok', 'generatedAt', 'dayBasis', 'sync', 'scans', 'spend', 'signups', 'subscribers', 'payments', 'sources', 'config']);
   assert.deepEqual(Object.keys(j.sync), ['lastRunAt', 'lastOk', 'lastError', 'running']); assert.deepEqual(Object.keys(j.scans), ['today', 'last24h', 'total', 'liveLast24h', 'byEngine', 'errorsLast24h', 'clarifyingAnswersLast24h']);
   assert.deepEqual(Object.keys(j.spend), ['todayUsd', 'capUsd', 'pctOfCap', 'last7Days', 'estimated', 'cappedEventsLast24h', 'alertState', 'resetsAt', 'resetsAtAsiaJerusalem', 'resetBasis']); assert.deepEqual(Object.keys(j.spend.alertState), ['threshold', 'reached', 'capReached', 'lastAlertLoggedAt']);
   assert.deepEqual(Object.keys(j.signups), ['today', 'last24h', 'total']); assert.deepEqual(Object.keys(j.subscribers), ['paying', 'byPlan', 'mrrIls', 'trialOrFree', 'cancelledInPeriod']); assert.deepEqual(Object.keys(j.payments), ['failuresLast24h', 'failuresLast7d', 'pastDue', 'graceActive']);
   assert.deepEqual(Object.keys(j.config), ['paymentsProvider', 'scanMode', 'emailMode', 'prelaunch']); };
 const check = (j) => { // numbers derived from the seed above
   shapeKeys(j); assert.equal(j.ok, true); assert.ok(Math.abs(Date.parse(j.generatedAt) - Date.now()) < 5000); assert.equal(j.dayBasis, 'UTC');
-  assert.equal(j.scans.total, 2); assert.equal(j.scans.last24h, 1); assert.equal(j.scans.liveLast24h, 1); assert.equal(j.scans.errorsLast24h, 1); assert.equal(j.scans.clarifyingAnswersLast24h, 2); assert.deepEqual(j.scans.byEngine, { chatgpt: { last24h: 1, total: 2 }, gemini: { last24h: 1, total: 1 } });
+  assert.equal(j.scans.total, 2); assert.equal(j.scans.last24h, 1); assert.equal(j.scans.liveLast24h, 1); assert.equal(j.scans.errorsLast24h, 1); assert.equal(j.scans.clarifyingAnswersLast24h, 2); assert.deepEqual(j.scans.byEngine, { chatgpt: { last24h: 1, total: 2, live: 1 }, gemini: { last24h: 1, total: 1, live: 1 } });
   assert.equal(j.spend.todayUsd, 8.5); assert.equal(j.spend.capUsd, 10); assert.equal(j.spend.pctOfCap, 85); assert.equal(j.spend.last7Days.length, 7); assert.equal(j.spend.last7Days[6].day, today); assert.equal(j.spend.last7Days[6].usd, 8.5); assert.equal(j.spend.last7Days[5].usd, 3.25); assert.ok(!j.spend.last7Days.some(d => d.usd === 99));
   assert.equal(j.spend.cappedEventsLast24h, 1); assert.deepEqual(j.spend.alertState, { threshold: 0.8, reached: true, capReached: false, lastAlertLoggedAt: iso(3600e3).slice(0, 16) + j.spend.alertState.lastAlertLoggedAt.slice(16) });
   assert.equal(j.spend.resetBasis, 'UTC midnight'); assert.match(j.spend.resetsAt, /T00:00:00\.000Z$/); assert.ok(Date.parse(j.spend.resetsAt) > Date.now() && Date.parse(j.spend.resetsAt) - Date.now() <= DAY); assert.match(j.spend.resetsAtAsiaJerusalem, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2} Asia\/Jerusalem$/); assert.equal(j.spend.estimated, true);
@@ -104,6 +104,22 @@ try {
   assert.equal(S.scrub('a@b.co https://x.y/z?q=1 12345 AAAAAAAAAAAAAAAAAAAAAAAAAAAA ok'), '[email] [url] [num] [token] ok'); ok('config:check warns for a short STATUS_TOKEN (never prints it); scrub() unit');
   // ---- docs ----
   const env = fs.readFileSync('.env.example', 'utf8'), go = fs.readFileSync('GO-LIVE.md', 'utf8'), rd = fs.readFileSync('README.md', 'utf8'); assert.match(env, /^STATUS_TOKEN=$/m); for (const s of ['/api/internal/status', 'X-Status-Token', 'STATUS_TOKEN', '404']) assert.ok(go.includes(s) && (s === '404' || rd.includes(s) || s === 'X-Status-Token'), s); ok('.env.example (empty value), GO-LIVE.md and README document it');
+  { const now = new Date(); const at = h => new Date(now - h * 36e5).toISOString();
+    const db = { accounts: { A: { id: 'A', email: 'a-secret@x.test', plan: 'starter', subscriptionRef: '9', status: 'active', utm: { source: 'Facebook', campaign: 'c1' } },
+      B: { id: 'B', email: 'b-secret@x.test', plan: 'free' }, C: { id: 'C', email: 'c-secret@x.test', plan: 'free' }, D: { id: 'D', email: 'wl-secret@x.test', plan: 'pro', subscriptionRef: '3', status: 'past_due' },
+      T: { id: 'T', email: 't@x.test', plan: 'starter', subscriptionRef: '1', testSubscription: true, utm: { source: 'facebook' } } },
+      scans: { s1: { accountId: 'A', at: at(2), utm: { source: 'google' } }, s2: { accountId: 'A', at: at(50) }, s3: { accountId: 'B', at: at(30), utm: { source: 'google' } }, s4: { accountId: 'B', at: at(1), utm: { source: 'tiktok' } },
+        s5: { accountId: 'C', at: at(3) }, s6: { accountId: 'T', at: at(1) }, s7: { accountId: 'GONE', at: at(1), utm: { source: '<script>' } } },
+      waitlist: [{ email: 'wl-secret@x.test', utm: { source: 'instagram' } }, { email: 'other@x.test' }, null] };
+    const so = S.buildStatus({ db, now }).sources;
+    assert.deepEqual(so.facebook, { scansLast24h: 1, scansTotal: 2, signups: 1, paying: 1, waitlist: 0 }, 'account.utm first touch wins over later scan.utm; test accounts excluded');
+    assert.deepEqual(so.google, { scansLast24h: 1, scansTotal: 2, signups: 1, paying: 0, waitlist: 0 }, 'no account.utm: earliest scan.utm is the first touch');
+    assert.deepEqual(so.instagram, { scansLast24h: 0, scansTotal: 0, signups: 1, paying: 0, waitlist: 1 }, 'falls back to the waitlist utm; past_due is not paying');
+    assert.deepEqual(so.direct, { scansLast24h: 2, scansTotal: 2, signups: 1, paying: 0, waitlist: 1 }, 'none -> direct; invalid utm -> direct');
+    assert.ok(!('tiktok' in so) && !Object.keys(so).some(k => /[<@]/.test(k))); assert.equal(Object.keys(so)[0], 'direct');
+    const txt = JSON.stringify(so); for (const x of ['secret', '@', 'A"', 'GONE', 'c1']) assert.ok(!txt.includes(x), x);
+    assert.equal(S.buildStatus({ db: {} }).sources && Object.keys(S.buildStatus({ db: {} }).sources).length, 0);
+    ok('sources: first-touch utm_source (account.utm > earliest scan.utm > waitlist utm > direct), scans 24h/total, signups, paying, waitlist per source; names + counts only'); }
   Object.assign(console, orig); rawLog(`ALL STATUS TESTS PASSED (${n})`);
 } finally { crypto.timingSafeEqual = keepTimingSafe; Object.assign(console, orig); srv.close(); TD.done(); }
 process.exit(0);

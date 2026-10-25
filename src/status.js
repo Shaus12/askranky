@@ -5,7 +5,7 @@
 // Every section is computed independently: a missing table/field yields null for that field (never an exception, never invented data).
 import { getDb } from './store.js'; import { PLANS, isPaid } from './plans.js'; import { dailyCapUsd } from './costs.js';
 import { getPayments } from './payments/index.js'; import { isMockMode } from './providers/index.js'; import { emailIsMock } from './email/send.js'; import { isPrelaunch } from './prelaunch.js';
-import { GRACE_DAYS } from './jobs/billing-sync.js';
+import { GRACE_DAYS } from './jobs/billing-sync.js'; import { cleanUtm } from './utm.js';
 const DAY = 864e5, HOUR = 36e5;
 const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0); const r2 = v => Math.round(num(v) * 100) / 100;
 // Short, scrubbed text: strips anything that looks like an email, URL, long token, or run of digits (ids, phone/card/amount-like numbers).
@@ -22,6 +22,10 @@ const resetInfo = now => { const next = new Date(Date.UTC(now.getUTCFullYear(), 
 const safe = (f) => { try { return f(); } catch { return null; } };
 const ts = v => { const t = Date.parse(v); return Number.isFinite(t) ? t : NaN; };
 const isTestAcc = a => !!(a.testSubscription || a.pendingTest);
+// Paying = a paid plan with a live subscription that is not cancelled / past_due (same rule as subscribers.paying).
+const isPayingAcc = a => { const plan = PLANS[a.plan]; return !!plan && isPaid(plan) && !!a.subscriptionRef && a.status !== 'cancelled' && a.status !== 'past_due'; };
+// First-touch utm_source key: validated, lower-cased; 'direct' when none. Only the source name is ever output (never emails / ids / IPs).
+const srcKey = v => { const c = cleanUtm(v); return c ? c.toLowerCase().slice(0, 40) : null; };
 export function buildStatus({ now = new Date(), db = getDb(), running = false } = {}) {
   const T = now.getTime(), t24 = T - DAY, t7 = T - 7 * DAY, today = now.toISOString().slice(0, 10);
   const accounts = Object.values(db?.accounts || {}).filter(a => a && typeof a === 'object' && !isTestAcc(a));
@@ -37,7 +41,7 @@ export function buildStatus({ now = new Date(), db = getDb(), running = false } 
     const list = Object.values(db?.scans || {}).filter(Boolean); const out = { today: 0, last24h: 0, total: list.length, liveLast24h: 0, byEngine: {}, errorsLast24h: 0, clarifyingAnswersLast24h: 0 };
     for (const s of list) { const t = ts(s.at), recent = t >= t24, sum = s.summary || {};
       const ran = Array.isArray(sum.engines?.ran) ? sum.engines.ran : Object.keys(sum.byEngine || {});
-      for (const e of ran) { const b = out.byEngine[e] ||= { last24h: 0, total: 0 }; b.total++; if (recent) b.last24h++; }
+      for (const e of ran) { const b = out.byEngine[e] ||= { last24h: 0, total: 0, live: 0 }; b.total++; if (recent) b.last24h++; if (!s.mock) b.live++; }
       if (String(s.at).slice(0, 10) === today) out.today++;
       if (recent) { out.last24h++; if (!s.mock) out.liveLast24h++; out.errorsLast24h += num(sum.errors); out.clarifyingAnswersLast24h += num(sum.clarifyingAnswers); } }
     return out;
@@ -66,6 +70,19 @@ export function buildStatus({ now = new Date(), db = getDb(), running = false } 
     for (const a of accounts) if (a.status === 'past_due') { o.pastDue++; if (T - ts(a.pastDueSince) <= GRACE_DAYS * DAY) o.graceActive++; }
     return o;
   });
+  // Acquisition by FIRST-TOUCH utm_source: account.utm (first touch, never overwritten) > the account's earliest scan.utm > its waitlist entry's utm > 'direct'.
+  // Scans are attributed to their account's first touch (a scan whose account is unknown uses its own scan.utm). Waitlist-only emails count under waitlist.
+  const sources = safe(() => {
+    const out = {}; const row = k => (out[k] ||= { scansLast24h: 0, scansTotal: 0, signups: 0, paying: 0, waitlist: 0 });
+    const scans = Object.values(db?.scans || {}).filter(s => s && typeof s === 'object'); const wl = Array.isArray(db?.waitlist) ? db.waitlist.filter(w => w && typeof w === 'object') : [];
+    const firstScanSrc = {}; for (const s of [...scans].sort((a, b) => (ts(a.at) || 0) - (ts(b.at) || 0))) { const k = srcKey(s.utm?.source); if (k && s.accountId && !firstScanSrc[s.accountId]) firstScanSrc[s.accountId] = k; }
+    const wlSrc = {}; for (const w of wl) { const k = srcKey(w.utm?.source); if (k && w.email && !wlSrc[w.email]) wlSrc[w.email] = k; }
+    const accSrc = {}; const testIds = new Set(Object.values(db?.accounts || {}).filter(a => a && typeof a === 'object' && isTestAcc(a)).map(a => a.id));
+    for (const a of accounts) { const k = accSrc[a.id] = srcKey(a.utm?.source) || firstScanSrc[a.id] || wlSrc[a.email] || 'direct'; const r = row(k); r.signups++; if (isPayingAcc(a)) r.paying++; }
+    for (const s of scans) { if (testIds.has(s.accountId)) continue; const r = row(accSrc[s.accountId] || srcKey(s.utm?.source) || 'direct'); r.scansTotal++; if (ts(s.at) >= t24) r.scansLast24h++; }
+    for (const w of wl) row(srcKey(w.utm?.source) || 'direct').waitlist++;
+    return Object.fromEntries(Object.entries(out).sort((a, b) => b[1].scansTotal - a[1].scansTotal || b[1].signups - a[1].signups || a[0].localeCompare(b[0])));
+  });
   const config = safe(() => ({ paymentsProvider: getPayments().id, scanMode: isMockMode() ? 'mock' : 'live', emailMode: emailIsMock() ? 'mock' : 'live', prelaunch: !!isPrelaunch() }));
-  return { ok: true, generatedAt: now.toISOString(), dayBasis: 'UTC', sync, scans, spend, signups, subscribers: subs && { ...subs, mrrIls: Math.round(subs.mrrIls) }, payments, config };
+  return { ok: true, generatedAt: now.toISOString(), dayBasis: 'UTC', sync, scans, spend, signups, subscribers: subs && { ...subs, mrrIls: Math.round(subs.mrrIls) }, payments, sources, config };
 }
