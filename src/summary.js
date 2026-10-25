@@ -6,7 +6,8 @@ export function summarizeResults(results, { plan, engines, skipped = [], cost = 
   for (const r of ok) { for (const c of r.competitors.slice(0, plan.competitors + 2)) compCount[c] = (compCount[c] || 0) + 1; for (const c of r.citations) { if (c.opaque || isOpaqueHost(c.host)) continue; const k = c.host; hostCount[k] = hostCount[k] || { host: k, count: 0, isOwnSite: c.isOwnSite }; hostCount[k].count++; } }
   const byEngine = Object.fromEntries(engines.map(e => { const rs = ok.filter(r => r.engine === e); const m = rs.filter(r => r.mentioned); return [e, { checks: rs.length, mentions: m.length, avgRank: m.length ? +(m.reduce((s, r) => s + (r.rank || 5), 0) / m.length).toFixed(1) : null, mock: rs.every(r => r.mock) }]; }));
   const mentionRate = ok.length ? ok.filter(r => r.mentioned).length / ok.length : 0;
-  const ranks = ok.filter(r => r.rank).map(r => r.rank);
+  // Same rule as byEngine: every mentioned check counts, a mention without a list position counts as rank 5.
+  const ranks = ok.filter(r => r.mentioned).map(r => r.rank || 5);
   const avgRank = ranks.length ? ranks.reduce((a, b) => a + b, 0) / ranks.length : null;
   const score = Math.round(100 * (0.7 * mentionRate + 0.3 * (avgRank ? Math.max(0, (6 - avgRank) / 5) : 0)));
   return {

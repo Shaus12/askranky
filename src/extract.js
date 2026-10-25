@@ -105,10 +105,13 @@ export function analyzeAnswer(answer, business) {
   const body = norm(answer.text); const words = body.split(' ');
   // Real engines often name the top pick in prose before the list: rank by order of first mention.
   const pos = n => { const k = norm(n).split(' ').slice(0, 3).join(' '); return k ? body.indexOf(k) : -1; };
-  const tPos = targets.map(t => t && body.indexOf(t)).filter(i => i >= 0).sort((a, b) => a - b)[0];
+  // Prose matching (position + inBody) only with the main name or multi-word variants: a one-word alias such as "דיוק"
+  // is often a dictionary word ("precision") and matched descriptions of competitors (scan EP-gH7iPGUvY). One-word aliases still match list entities above.
+  const proseTargets = targets.filter((t, i) => i === 0 || t.includes(' '));
+  const tPos = proseTargets.map(t => t && body.indexOf(t)).filter(i => i >= 0).sort((a, b) => a - b)[0];
   const isOwn = e => sameBusiness(e, targets) || (stem && stemInText(e, stem));
   if (tPos !== undefined && entities.length) rank = 1 + entities.filter(e => !isOwn(e)).map(pos).filter(i => i >= 0 && i < tPos).length;
-  const inBody = targets.some(t => body.includes(t) || words.some((w, i, ws) => sameOne(ws.slice(i, i + t.split(' ').length).join(' '), t)));
+  const inBody = proseTargets.some(t => body.includes(t) || words.some((w, i, ws) => sameOne(ws.slice(i, i + t.split(' ').length).join(' '), t)));
   // A citation is a URL string or {url, host} (Gemini: the real site's domain when only a redirect link is available).
   const citations = (answer.citations || []).map(c => { const u = typeof c === 'string' ? c : c.url; let host = (typeof c === 'object' && c.host) || u; if (!(typeof c === 'object' && c.host)) try { host = new URL(u).hostname.replace(/^www\./, ''); } catch {} return { url: u, host, isOwnSite: (!!domain && host.endsWith(domain)) || stemInHost(host, stem), ...(isOpaqueHost(host) ? { opaque: true } : {}) }; });
   const byStem = !!stem && (stemInText(answer.text, stem) || citations.some(c => c.isOwnSite));
