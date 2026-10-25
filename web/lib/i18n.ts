@@ -24,6 +24,7 @@ const en = {
     ["Get your score + 3 fixes", "See your rank, the competitors named instead of you, the sources AI cites, and ready-to-paste fixes."],
   ] },
   sample: { title: "A report you can act on", sub: "Not just charts: concrete, ready-to-use changes.", open: "Open the full sample report" },
+  growth: { sampleLabel: "Sample report", maskedName: "Hotel (name hidden, example)", sampleNote: "Example data for illustration: not a real customer or a real scan.", freeScan: "Free scan" },
   pricing: { title: "Simple pricing", sub: "Monthly, cancel anytime. No VAT added.", popular: "Most popular", mo: "/mo", currency: "Currency",
     vatNote: "Prices are final: we're a VAT-exempt dealer (עוסק פטור), so no VAT is added. You get a receipt (קבלה) for every payment.",
     plans: [
@@ -83,6 +84,7 @@ const he: Dict = {
     ["מקבלים ציון ו־3 תיקונים", "הדירוג שלך, המתחרים שנבחרו במקומך, המקורות ש־AI מצטט, ותיקונים מוכנים להדבקה."],
   ] },
   sample: { title: "דוח שאפשר לפעול לפיו", sub: "לא רק גרפים: שינויים מעשיים ומוכנים ליישום.", open: "לדוח המלא לדוגמה" },
+  growth: { sampleLabel: "דוגמה לדוח", maskedName: "מלון (השם מוסתר, דוגמה)", sampleNote: "נתוני דוגמה להמחשה בלבד: לא לקוח אמיתי ולא סריקה אמיתית.", freeScan: "סריקה חינם" },
   pricing: { title: "מחירים פשוטים", sub: "חודשי, ביטול בכל עת. בלי מע\"מ.", popular: "הכי פופולרי", mo: "/חודש", currency: "מטבע",
     vatNote: "המחיר סופי: אנחנו עוסק פטור, ולכן לא מתווסף מע\"מ. על כל תשלום תקבלו קבלה.",
     plans: [
