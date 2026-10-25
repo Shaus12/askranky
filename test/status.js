@@ -28,7 +28,9 @@ db.events.push({ at: iso(3 * 3600e3), type: 'billing.payment_failed', account: '
   { at: iso(7200e3), type: 'spend.alert', pct: 0.85 }, { at: iso(3600e3), type: 'spend.alert', pct: 0.9 }, { at: iso(1800e3), type: 'spend.capped', cap: 10, spent: 9.99 }, { at: iso(40 * 3600e3), type: 'spend.capped' },
   { at: iso(4 * 3600e3), type: 'billing.sync', checked: 5, errors: 1 }, { at: iso(4 * 3600e3 - 1000), type: 'billing.sync_error', account: 'ACCID_SECRET_01', error: 'SUMIT 500 for pii.owner@secret-mail.test card 4111111111111111 token abcdefghijklmnopqrstuvwxyz0123456789 ' + 'x'.repeat(300) });
 const noSecrets = (text, what) => { for (const p of [...PII, TOKEN, 'KEY_SECRET', 'secret-mail', '127.0.0.1', 'Secret Bakery', 'Rivka', '4111111111111111', 'abcdefghijklmnopqrstuvwxyz0123456789']) assert.ok(!text.includes(p), `${what} leaks ${p}`); };
-const shapeKeys = j => { assert.deepEqual(Object.keys(j), ['ok', 'generatedAt', 'dayBasis', 'sync', 'scans', 'spend', 'signups', 'subscribers', 'payments', 'sources', 'config']);
+// recentScans deliberately lists report ids / business names, but never full emails, account ids/keys/names, IPs, answers, SUMIT refs or tokens.
+const noRS = (text, what) => { for (const p of ['pii.owner@secret-mail.test', 'pii.second@secret-mail.test', 'secret-mail', 'ACCID_SECRET', 'BIZID_SECRET', 'KEY_SECRET', 'Rivka', 'Hidden Dentist', 'SUMIT-REF', TOKEN, '127.0.0.1']) assert.ok(!text.includes(p), `${what} leaks ${p}`); };
+const shapeKeys = j => { assert.deepEqual(Object.keys(j), ['ok', 'generatedAt', 'dayBasis', 'sync', 'scans', 'spend', 'signups', 'subscribers', 'payments', 'sources', 'config', 'recentScans']);
   assert.deepEqual(Object.keys(j.sync), ['lastRunAt', 'lastOk', 'lastError', 'running']); assert.deepEqual(Object.keys(j.scans), ['today', 'last24h', 'total', 'liveLast24h', 'byEngine', 'errorsLast24h', 'clarifyingAnswersLast24h']);
   assert.deepEqual(Object.keys(j.spend), ['todayUsd', 'capUsd', 'pctOfCap', 'last7Days', 'estimated', 'cappedEventsLast24h', 'alertState', 'resetsAt', 'resetsAtAsiaJerusalem', 'resetBasis']); assert.deepEqual(Object.keys(j.spend.alertState), ['threshold', 'reached', 'capReached', 'lastAlertLoggedAt']);
   assert.deepEqual(Object.keys(j.signups), ['today', 'last24h', 'total']); assert.deepEqual(Object.keys(j.subscribers), ['paying', 'byPlan', 'mrrIls', 'trialOrFree', 'cancelledInPeriod']); assert.deepEqual(Object.keys(j.payments), ['failuresLast24h', 'failuresLast7d', 'pastDue', 'graceActive']);
@@ -60,14 +62,14 @@ try {
   // ---- authorized ----
   statusFailLimiter.reset(); const t0 = Date.now(); const r = await get({ 'X-Status-Token': TOKEN }); const ms = Date.now() - t0; assert.equal(r.status, 200); const text = await r.text(); const j = JSON.parse(text);
   assert.equal(r.headers.get('cache-control'), 'no-store'); assert.match(r.headers.get('content-type'), /application\/json/); assert.equal(r.headers.get('x-robots-tag'), 'noindex, nofollow'); assert.ok(ms < 500, `took ${ms} ms`);
-  check(j); noSecrets(text, 'response'); ok(`200 with the token: exact field shape, numbers match the seeded data (test subscription excluded, past_due/cancelled not paying, grace window, 24h/7d windows), ${ms} ms, Cache-Control no-store`);
-  ok('no PII: none of the seeded emails, names, business names, scan/account/report ids, SUMIT refs, card number, tokens or the caller IP appear in the JSON; sync.lastError is scrubbed (email/url/number/token) and <= 80 chars');
+  check(j); noSecrets(JSON.stringify({ ...j, recentScans: 0 }), 'response'); noRS(JSON.stringify(j.recentScans), 'recentScans'); ok(`200 with the token: exact field shape, numbers match the seeded data (test subscription excluded, past_due/cancelled not paying, grace window, 24h/7d windows), ${ms} ms, Cache-Control no-store`);
+  ok('no PII outside recentScans (and none there beyond report id/business): none of the seeded emails, names, business names, scan/account/report ids, SUMIT refs, card number, tokens or the caller IP appear in the JSON; sync.lastError is scrubbed (email/url/number/token) and <= 80 chars');
   // valid token never exhausts the limiter
   for (let i = 0; i < 20; i++) assert.equal((await get({ 'X-Status-Token': TOKEN })).status, 200); ok('valid requests are not rate limited (hit refunded)');
   // ---- store modes: JSON store (above, FORCE_JSON_STORE) and Postgres (pg-mem) give the same numbers ----
   const P = await import('../src/store-pg.js'); const mem = newDb(); const { Pool } = mem.adapters.createPg(); const URLPG = 'postgres://u@h/db?sslmode=disable';
   const a = await P.createPgStore(URLPG, { Pool }); const pdb = a.db(); for (const k of ['accounts', 'businesses', 'scans', 'spend']) Object.assign(pdb[k], JSON.parse(JSON.stringify(db[k]))); pdb.events.push(...JSON.parse(JSON.stringify(db.events))); await a.save();
-  const b = await P.createPgStore(URLPG, { Pool }); const jp = S.buildStatus({ db: b.db() }); check(JSON.parse(JSON.stringify(jp))); noSecrets(JSON.stringify(jp), 'postgres response'); assert.deepEqual({ ...jp, generatedAt: 0 }, { ...S.buildStatus({ db }), generatedAt: 0 }); await a.close(); await b.close();
+  const b = await P.createPgStore(URLPG, { Pool }); const jp = S.buildStatus({ db: b.db() }); check(JSON.parse(JSON.stringify(jp))); noSecrets(JSON.stringify({ ...jp, recentScans: 0 }), 'postgres response'); noRS(JSON.stringify(jp.recentScans), 'postgres recentScans'); assert.deepEqual({ ...jp, generatedAt: 0 }, { ...S.buildStatus({ db }), generatedAt: 0 }); await a.close(); await b.close();
   ok('works on both stores: the Postgres store (pg-mem, reloaded from tables) yields the identical result as the JSON store');
   // ---- tolerant of missing tables / fields (null), never throws ----
   const empty = S.buildStatus({ db: {} }); shapeKeys(empty); assert.equal(empty.scans.total, 0); assert.equal(empty.spend.todayUsd, 0); assert.equal(empty.sync.lastRunAt, null); assert.equal(empty.sync.lastOk, null);
@@ -120,6 +122,25 @@ try {
     const txt = JSON.stringify(so); for (const x of ['secret', '@', 'A"', 'GONE', 'c1']) assert.ok(!txt.includes(x), x);
     assert.equal(S.buildStatus({ db: {} }).sources && Object.keys(S.buildStatus({ db: {} }).sources).length, 0);
     ok('sources: first-touch utm_source (account.utm > earliest scan.utm > waitlist utm > direct), scans 24h/total, signups, paying, waitlist per source; names + counts only'); }
+  { const now = new Date(); const at = m => new Date(now - m * 60e3).toISOString(); process.env.BASE_URL = 'https://example.test/';
+    const accounts = { U1: { id: 'U1', email: 'adir.levi@gmail.com', key: 'KEY_X', name: 'Adir Levi', lang: 'he', utm: { source: 'WhatsApp', campaign: 'secretcamp' }, lastIp: '10.9.8.7' }, U2: { id: 'U2', email: 'yuval@company.co.il' }, TT: { id: 'TT', email: 'test@x.test', testSubscription: true } };
+    const businesses = { B1: { id: 'B1', name: 'Ritz Carlton', website: 'https://www.ritzcarlton.com/en/hotels/herzliya?x=1', city: 'הרצליה', category: 'hotel' }, B2: { id: 'B2', name: 'Pizza Yuval', website: 'pizza.co.il/menu', city: 'Haifa', category: 'restaurant' } };
+    const R = (e, o = {}) => ({ engine: e, mentioned: true, answer: 'ANSWER TEXT SECRET', ...o });
+    const scans = { old: { id: 'old', accountId: 'U2', businessId: 'B2', at: at(90), lang: 'en', summary: { score: 0, errors: 1, engines: { ran: ['chatgpt'], skipped: [{ engine: 'gemini', reason: 'failed' }, { engine: 'perplexity', reason: 'not_enabled' }] }, byEngine: { chatgpt: { checks: 1, mentions: 0 } } }, results: [R('chatgpt'), { engine: 'gemini', error: 'boom' }] },
+      newest: { id: 'newest', accountId: 'U1', businessId: 'B1', at: at(5), summary: { score: 100, errors: 0, ungroundedChecks: 1, engines: { ran: ['chatgpt', 'gemini'], skipped: [] }, byEngine: { chatgpt: { checks: 1, mentions: 1 }, gemini: { checks: 2, mentions: 2 } } }, results: [R('chatgpt'), R('gemini', { grounded: true }), R('gemini', { grounded: false })] },
+      test: { id: 'testscan', accountId: 'TT', businessId: 'B1', at: at(1), summary: { score: 50 } }, bad: { id: 'bad', accountId: 'U2', at: 'garbage' } };
+    for (let i = 0; i < 30; i++) scans['f' + i] = { id: 'f' + i, accountId: 'U2', businessId: 'B2', at: at(200 + i), summary: { score: i } };
+    const rs = S.buildStatus({ db: { accounts, businesses, scans }, now }).recentScans;
+    assert.equal(rs.length, 25); assert.deepEqual(rs.slice(0, 3).map(x => x.reportId), ['newest', 'old', 'f0']); assert.ok(!rs.some(x => ['testscan', 'bad'].includes(x.reportId)), 'test accounts and undated scans excluded');
+    assert.ok(rs.every((x, i) => !i || Date.parse(rs[i - 1].createdAt) >= Date.parse(x.createdAt)), 'newest first');
+    assert.deepEqual(rs[0], { reportId: 'newest', createdAt: scans.newest.at, lang: 'he', businessName: 'Ritz Carlton', website: 'ritzcarlton.com', city: 'הרצליה', category: 'hotel', score: 100, mock: false,
+      engines: { chatgpt: { status: 'ok', checks: 1, errors: 0, mentions: 1 }, gemini: { status: 'ok', checks: 2, errors: 0, mentions: 2, grounded: 1, ungrounded: 1 } }, ungroundedChecks: 1, errors: 0, emailMasked: 'a***@g***.com', source: 'whatsapp', reportUrl: 'https://example.test/he/r/newest' });
+    assert.equal(rs[1].website, 'pizza.co.il'); assert.equal(rs[1].emailMasked, 'y***@c***.il'); assert.equal(rs[1].reportUrl, 'https://example.test/en/r/old');
+    assert.deepEqual(rs[1].engines, { chatgpt: { status: 'ok', checks: 1, errors: 0, mentions: 0 }, gemini: { status: 'failed', reason: 'failed' }, perplexity: { status: 'skipped', reason: 'not_enabled' } });
+    const t = JSON.stringify(rs); for (const x of ['adir.levi', 'yuval@', 'gmail', 'company', 'KEY_X', 'Adir Levi', '10.9.8.7', 'secretcamp', 'ANSWER', '/hotels/', '/menu']) assert.ok(!t.includes(x), x);
+    assert.equal(S.maskEmail('adir@gmail.com'), 'a***@g***.com'); assert.equal(S.maskEmail('not-an-email'), null); assert.equal(S.maskEmail(undefined), null);
+    assert.deepEqual(S.buildStatus({ db: {} }).recentScans, []); assert.deepEqual(S.buildStatus({ db: { scans: {} } }).recentScans, []); delete process.env.BASE_URL;
+    ok('recentScans: last 25 non-test scans newest first; report id/url (BASE_URL + /lang/r/id), host-only website, per-engine ok/skipped/failed + grounded counts, masked email, source name only; no scans -> []'); }
   Object.assign(console, orig); rawLog(`ALL STATUS TESTS PASSED (${n})`);
 } finally { crypto.timingSafeEqual = keepTimingSafe; Object.assign(console, orig); srv.close(); TD.done(); }
 process.exit(0);

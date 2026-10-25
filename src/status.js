@@ -1,5 +1,6 @@
-// Read-only operational status for GET /api/internal/status (token-protected, see server.js). AGGREGATE NUMBERS ONLY: no emails,
-// names, business names, report ids, IPs, per-customer amounts, SUMIT data or tokens ever enter the result. Works on the store's
+// Read-only operational status for GET /api/internal/status (token-protected, see server.js). Aggregates, plus ONE deliberate exception:
+// recentScans (last 25 non-test scans: report id/url, business name, city, category, website host, masked email) for ops accuracy checks.
+// Never: full emails, account names, IPs, per-customer amounts, SUMIT data or tokens ever enter the result. Works on the store's
 // in-memory document (getDb()), which is the live data in BOTH backends (Postgres loads it at boot and writes through; the JSON
 // store is the file), so no extra SQL is needed and the call is a single pass over accounts / scans / events (milliseconds).
 // Every section is computed independently: a missing table/field yields null for that field (never an exception, never invented data).
@@ -26,6 +27,17 @@ const isTestAcc = a => !!(a.testSubscription || a.pendingTest);
 const isPayingAcc = a => { const plan = PLANS[a.plan]; return !!plan && isPaid(plan) && !!a.subscriptionRef && a.status !== 'cancelled' && a.status !== 'past_due'; };
 // First-touch utm_source key: validated, lower-cased; 'direct' when none. Only the source name is ever output (never emails / ids / IPs).
 const srcKey = v => { const c = cleanUtm(v); return c ? c.toLowerCase().slice(0, 40) : null; };
+// Masked email for ops: first char of local part and of the domain's first label, TLD kept: "adir@gmail.com" -> "a***@g***.com".
+export const maskEmail = e => { const m = /^([^@\s]+)@([^@\s]+)$/.exec(String(e ?? '').trim()); if (!m) return null; const parts = m[2].split('.'); const tld = parts.length > 1 ? '.' + parts.at(-1).replace(/[^a-z0-9-]/gi, '').slice(0, 10) : '';
+  return `${m[1][0]}***@${parts[0][0] || ''}***${tld}`; };
+const hostOnly = w => { const v = String(w ?? '').trim(); if (!v) return null; try { return new URL(/^https?:\/\//i.test(v) ? v : 'http://' + v).hostname.replace(/^www\./, '').slice(0, 100) || null; } catch { return null; } };
+const txt = (v, max = 120) => (v == null ? null : String(v).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max) || null);
+const baseUrl = () => String(process.env.BASE_URL || 'https://askranky.com').replace(/\/+$/, '');
+const engineSummary = s => { const sum = s.summary || {}, out = {}; const ran = Array.isArray(sum.engines?.ran) ? sum.engines.ran : Object.keys(sum.byEngine || {}); const res = Array.isArray(s.results) ? s.results : [];
+  for (const e of ran) { const rs = res.filter(r => r && r.engine === e), okr = rs.filter(r => !r.error), g = okr.filter(r => typeof r.grounded === 'boolean');
+    out[e] = { status: 'ok', checks: okr.length || num(sum.byEngine?.[e]?.checks), errors: rs.length - okr.length, mentions: num(sum.byEngine?.[e]?.mentions), ...(g.length ? { grounded: g.filter(r => r.grounded).length, ungrounded: g.filter(r => !r.grounded).length } : {}) }; }
+  for (const k of Array.isArray(sum.engines?.skipped) ? sum.engines.skipped : []) if (k?.engine && !out[k.engine]) out[k.engine] = { status: k.reason === 'failed' ? 'failed' : 'skipped', reason: txt(k.reason, 40) };
+  return out; };
 export function buildStatus({ now = new Date(), db = getDb(), running = false } = {}) {
   const T = now.getTime(), t24 = T - DAY, t7 = T - 7 * DAY, today = now.toISOString().slice(0, 10);
   const accounts = Object.values(db?.accounts || {}).filter(a => a && typeof a === 'object' && !isTestAcc(a));
@@ -83,6 +95,12 @@ export function buildStatus({ now = new Date(), db = getDb(), running = false } 
     for (const w of wl) row(srcKey(w.utm?.source) || 'direct').waitlist++;
     return Object.fromEntries(Object.entries(out).sort((a, b) => b[1].scansTotal - a[1].scansTotal || b[1].signups - a[1].signups || a[0].localeCompare(b[0])));
   });
+  const recentScans = safe(() => { const accs = db?.accounts || {}, biz = db?.businesses || {};
+    return Object.values(db?.scans || {}).filter(s => s && typeof s === 'object' && s.id && Number.isFinite(ts(s.at)) && !(accs[s.accountId] && isTestAcc(accs[s.accountId])))
+      .sort((a, b) => ts(b.at) - ts(a.at)).slice(0, 25).map(s => { const b = biz[s.businessId] || {}, a = accs[s.accountId] || {}, sum = s.summary || {}, lang = s.lang === 'he' ? 'he' : s.lang === 'en' ? 'en' : (a.lang === 'he' ? 'he' : 'en');
+        return { reportId: s.id, createdAt: new Date(ts(s.at)).toISOString(), lang, businessName: txt(b.name), website: hostOnly(b.website), city: txt(b.city, 80), category: txt(b.category, 80), score: Number.isFinite(sum.score) ? sum.score : null,
+          mock: !!s.mock, engines: engineSummary(s), ungroundedChecks: num(sum.ungroundedChecks), errors: num(sum.errors), emailMasked: maskEmail(a.email), source: srcKey(a.utm?.source) || srcKey(s.utm?.source) || 'direct', reportUrl: `${baseUrl()}/${lang}/r/${encodeURIComponent(s.id)}` }; });
+  });
   const config = safe(() => ({ paymentsProvider: getPayments().id, scanMode: isMockMode() ? 'mock' : 'live', emailMode: emailIsMock() ? 'mock' : 'live', prelaunch: !!isPrelaunch() }));
-  return { ok: true, generatedAt: now.toISOString(), dayBasis: 'UTC', sync, scans, spend, signups, subscribers: subs && { ...subs, mrrIls: Math.round(subs.mrrIls) }, payments, sources, config };
+  return { ok: true, generatedAt: now.toISOString(), dayBasis: 'UTC', sync, scans, spend, signups, subscribers: subs && { ...subs, mrrIls: Math.round(subs.mrrIls) }, payments, sources, config, recentScans };
 }
