@@ -42,7 +42,7 @@ export default function Hero({ t, lang }: { t: Dict; lang: Locale }) {
         </h1>
         <p className="mx-auto mt-[calc(var(--u)*24)] max-w-[36rem] text-[clamp(1rem,calc(var(--u)*18),1.25rem)] leading-relaxed text-slate-300"><BlurText text={h.lede} delay={0.85} /></p>
         <div className="hact mt-[calc(var(--u)*36)] flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-8">
-          <Link href={`${base}/scan`} className="btn-white">{h.cta}</Link>
+          <Link href={`${base}/scan`} className="btn-cta !px-7 !py-4 text-base" data-cta="hero">{h.cta} <span aria-hidden className="rtl:rotate-180">→</span></Link>
           <a href="#scan-form" className="vx-link inline-flex items-center gap-2 text-sm font-medium text-slate-200">{h.discover} <span aria-hidden className="vx-arrow">↓</span></a>
         </div>
       </section>

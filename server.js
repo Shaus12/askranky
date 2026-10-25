@@ -49,7 +49,8 @@ async function emailMagicLink(a, lang) {
 
 // Optional marketing consent from the scan form (unchecked by default). Stored only when given, with timestamp, language
 // and the notice version shown; scanning never requires it. Transactional report emails are sent regardless.
-export const CONSENT_VERSION = 'scan-form-2026-10-22';
+// 2026-10-25: checkbox text now says "tips and offers" (was "tips and product news"); only this version unlocks the optional offer line in the follow-up.
+export const CONSENT_VERSION = 'scan-form-2026-10-25';
 function recordConsent(a, body) {
   const v = body?.marketingConsent; if (!(v === true || v === 'on' || v === '1' || v === 'true')) return;
   setConsent(a, 'marketing', true, 'scan-form'); a.marketingConsent = { granted: true, at: a.marketingConsent.at, lang: body?.lang === 'he' ? 'he' : 'en', source: 'scan-form', version: CONSENT_VERSION };
@@ -85,8 +86,8 @@ app.get('/healthz', (q, r) => r.set('Cache-Control', 'no-store').json({ ok: true
 // Disabled (404) unless CRON_SECRET (>= 16 chars) is set. Requires header X-Cron-Secret, compared timing-safe (sha256 + timingSafeEqual).
 // Not behind the CAPTCHA. Only wrong-secret attempts are rate limited (CRON_FAIL_MAX per 15 min per IP). Concurrent runs are collapsed
 // by an in-process lock (the second caller gets 202 {running:true}). The sync is idempotent. Responses never include sync data.
-import { runWeekly } from './src/weekly.js';
-export const cronHooks = { sync: syncAll, weekly: () => runWeekly({ base: BASE }) };
+import { runWeekly } from './src/weekly.js'; import { runFollowup, followupEmailsEnabled } from './src/followup.js';
+export const cronHooks = { sync: syncAll, weekly: () => runWeekly({ base: BASE }), followup: () => runFollowup({ base: BASE, send: sendEmailSoft, allow: reportEmailAllowed }) };
 const cronFailLimiter = createRateLimiter({ max: Number(process.env.CRON_FAIL_MAX || 10), windowMs: 15 * 60 * 1000, onLimit: (q, r) => r.status(429).json({ ok: false }) });
 // Same semantics for every cron endpoint: 404 disabled, 401 wrong secret, 202 already running, 500 {ok:false}, 200 {ok, ranAt}. `enabled` (optional)
 // is an extra opt-in flag; when it is off the endpoint answers 200 {ok:true, skipped} after authenticating and runs nothing.
@@ -107,6 +108,9 @@ app.post('/api/internal/cron/sync', cronEndpoint('sync', 'billing sync', { recor
 // and emails the customers, so it only runs once the owner has approved automated weekly emails.
 export const weeklyEmailsEnabled = () => process.env.WEEKLY_EMAILS_ENABLED === '1';
 app.post('/api/internal/cron/weekly', cronEndpoint('weekly', 'weekly reports', { enabled: weeklyEmailsEnabled, skipped: 'weekly_disabled' }));
+// Scan follow-up email (src/followup.js): NOT scheduled anywhere, inert unless FOLLOWUP_EMAILS_ENABLED=1; opted-in addresses only, one per address ever.
+export { followupEmailsEnabled };
+app.post('/api/internal/cron/followup', cronEndpoint('followup', 'scan follow-up emails', { enabled: followupEmailsEnabled, skipped: 'followup_disabled' }));
 // Read-only ops status (aggregate numbers, no PII / SUMIT data): GET /api/internal/status with header X-Status-Token (env STATUS_TOKEN, >= 24 chars).
 // Disabled, missing or wrong token: the request falls through to the normal unknown-route 404 (same status, body and headers as any other
 // unknown /api/ path: no 401/403, no hint that it exists). The token is only ever read from the header (never URL/body), compared timing-safe

@@ -3,7 +3,8 @@ import { dict, isLocale, type Locale } from "@/lib/i18n";
 import Hero from "@/components/Hero";
 import Footer from "@/components/Footer";
 import Reveal from "@/components/Reveal";
-import ReportBody from "@/components/ReportBody";
+import SampleReportHome from "@/components/SampleReportHome";
+import StickyScanCta from "@/components/StickyScanCta";
 import ScanForm from "@/components/ScanForm";
 import Pricing from "@/components/Pricing";
 import MaskHeading from "@/components/MaskHeading";
@@ -48,7 +49,7 @@ export default async function Landing({ params }: { params: Promise<{ lang: stri
           <span className="hairline absolute inset-x-0 top-0 block" />
           <div className="mx-auto max-w-6xl">
             <Reveal><SectionHead eyebrow={t.nav.sample} title={t.sample.title} sub={t.sample.sub} /></Reveal>
-            <div className="mt-14"><ReportBody t={t} lang={lang} compact /></div>
+            <div className="mt-14"><SampleReportHome t={t} lang={lang} /></div>
             <div className="mt-10 text-center"><Link href={`/${lang}/report`} className="btn-outline">{t.sample.open} <span aria-hidden className="inline-block rtl:rotate-180">→</span></Link></div>
           </div>
         </section>
@@ -83,6 +84,7 @@ export default async function Landing({ params }: { params: Promise<{ lang: stri
         </Reveal>
       </main>
       <Footer t={t} lang={lang} />
+      <StickyScanCta lang={lang} label={t.growth.freeScan} />
     </>
   );
 }
