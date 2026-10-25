@@ -10,11 +10,18 @@ import { demoNotices } from "@/lib/notices";
 import { creepPct, stepForPct, isSlow } from "@/lib/progress";
 import ScanForm, { PENDING } from "./ScanForm";
 import FreeLimitNotice from "./FreeLimitNotice";
+import LoginRequiredNotice from "./LoginRequiredNotice";
 import Reveal from "./Reveal";
 import MaskHeading from "./MaskHeading";
 
 
 const TICK_MS = 500;
+// Signed-in session (dashboard key saved by Dashboard.tsx in this tab's sessionStorage as ranky-key-<accountId>), sent so a paid
+// account can scan its own businesses. Only the server decides whether it matches the typed email.
+function sessionHeaders(): Record<string, string> {
+  try { for (let i = 0; i < sessionStorage.length; i++) { const k = sessionStorage.key(i) || ""; if (k.startsWith("ranky-key-")) { const v = sessionStorage.getItem(k); if (v) return { "x-account-id": k.slice(10), "x-dashboard-key": v }; } } } catch {}
+  return {};
+}
 type Pending = { name: string; otherNames?: string; website?: string; category: string; city: string; email: string; turnstileToken?: string };
 
 // Shows the scan form when nothing is pending; otherwise POSTs /api/scan and animates progress until the real report id comes back.
@@ -23,11 +30,12 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   const s = t.scan; const n = s.steps.length; const router = useRouter();
   const [mode, setMode] = useState<"init" | "form" | "run" | "demo">("init");
   const [biz, setBiz] = useState<Pending | null>(null); const [cfg, setCfg] = useState<Config | null>(null); const nt = demoNotices(cfg, t);
-  const [step, setStep] = useState(0); const [reportId, setReportId] = useState(""); const [existing, setExisting] = useState(false); const [error, setError] = useState(""); const [used, setUsed] = useState<{ reportId?: string } | null>(null);
+  const [step, setStep] = useState(0); const [reportId, setReportId] = useState(""); const [existing, setExisting] = useState(false); const [error, setError] = useState(""); const [used, setUsed] = useState<{ reportId?: string } | null>(null); const [loginReq, setLoginReq] = useState<{ loginUrl?: string } | null>(null);
   const started = useRef(false); const t0 = useRef(0); const maxPct = useRef(0); const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     getConfig().then(setCfg);
     const q = new URLSearchParams(window.location.search);
+    if (q.get("demo") === "login") { setLoginReq({}); setMode("form"); return; }
     if (q.has("step")) { setMode("demo"); setBiz({ name: lang === "he" ? "אינסטלציה אקמה" : "Acme Plumbing", category: lang === "he" ? "אינסטלטור" : "Plumber", city: lang === "he" ? "תל אביב-יפו" : "Austin, TX", email: "" }); setStep(Math.min(Number(q.get("step")), n)); return; }
     const raw = sessionStorage.getItem(PENDING); if (!raw) { setMode("form"); return; }
     if (started.current) return; started.current = true;
@@ -35,10 +43,10 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   }, [lang, n]);
   // Starts the scan (from the stored pending form after /[lang] → /[lang]/scan, or directly from the form shown on this page).
   function run(p: Pending) {
-    t0.current = Date.now(); maxPct.current = 0; setElapsed(0); setBiz(p); setStep(0); setReportId(""); setExisting(false); setError(""); setUsed(null); setMode("run");
-    api<{ reportId: string; existing?: boolean }>("/api/scan", { body: { ...p, lang, ...getUtm() } })
+    t0.current = Date.now(); maxPct.current = 0; setElapsed(0); setBiz(p); setStep(0); setReportId(""); setExisting(false); setError(""); setUsed(null); setLoginReq(null); setMode("run");
+    api<{ reportId: string; existing?: boolean }>("/api/scan", { body: { ...p, lang, ...getUtm() }, headers: sessionHeaders() })
       .then((j) => { sessionStorage.removeItem(PENDING); setExisting(!!j.existing); setReportId(j.reportId); })
-      .catch((e) => { sessionStorage.removeItem(PENDING); if (e?.code === "free_scan_used") setUsed({ reportId: typeof e.data?.reportId === "string" ? e.data.reportId : undefined }); else setError(errMessage(e, t)); });
+      .catch((e) => { sessionStorage.removeItem(PENDING); if (e?.code === "login_required") setLoginReq({ loginUrl: typeof e.data?.loginUrl === "string" ? e.data.loginUrl : undefined }); else if (e?.code === "free_scan_used") setUsed({ reportId: typeof e.data?.reportId === "string" ? e.data.reportId : undefined }); else setError(errMessage(e, t)); });
   }
   // Progress creeps asymptotically (never visibly stalls while a real scan takes 1-2 min); it finishes only once the server answered.
   useEffect(() => {
@@ -53,6 +61,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   }, [mode, reportId, n]);
   useEffect(() => { if (mode === "run" && step >= n && reportId) { const id = setTimeout(() => location.assign(`/${lang}/r/${reportId}${existing ? "?existing=1" : ""}`), 900); return () => clearTimeout(id); } }, [mode, step, n, reportId, lang, router, existing]);
 
+  if (loginReq) return <LoginRequiredNotice lang={lang} loginUrl={loginReq.loginUrl} onOther={() => { setLoginReq(null); setMode("form"); }} />;
   if (mode === "init") return <main className="min-h-[60vh]" />;
   if (mode === "form") return (
     <main><Reveal className="mx-auto max-w-xl px-5 py-[clamp(3rem,calc(var(--u)*80),5rem)]">

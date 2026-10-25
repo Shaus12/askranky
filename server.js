@@ -252,12 +252,25 @@ export function freeScanLookup(db, account, body) {
 const FREE_USED_MSG = 'Free plan includes one scan per email.';
 const freeUsedBody = (hit, lang) => ({ error: 'free_scan_used', code: 'free_scan_used', message: FREE_USED_MSG, reportId: hit.reportId, reportUrl: `/${lang === 'he' ? 'he' : 'en'}/r/${hit.reportId}` });
 
+
+// Paid-account scan guard (CEO decision). A scan for an email that belongs to an account with a paid plan (active, cancelled but still
+// inside the paid period, past-due in grace: any paid plan) needs that account's own signed-in session: the dashboard key from the magic
+// link, sent as x-account-id + x-dashboard-key headers (or accountId + dashboardKey form fields), compared timing-safe. Without it nothing
+// is created, scanned, spent or emailed. Free / unknown emails are untouched. Admin test accounts are exempt as elsewhere. The message is
+// neutral (it does not say "paid"); the response still reveals the email has an account, behind captcha + scan rate limits.
+export const needsPaidLogin = a => !!a && !a.testSubscription && !a.adminTest && isPaid(PLANS[a.plan]);
+const sessionAccountId = q => String(q.get('x-account-id') ?? q.body?.accountId ?? '');
+const sessionKey = q => String(q.get('x-dashboard-key') ?? q.body?.dashboardKey ?? '');
+export const paidScanAllowed = (q, a) => !needsPaidLogin(a) || (sessionAccountId(q) === a.id && !!a.key && safeEqual(sessionKey(q), a.key));
+const LOGIN_REQ = { en: 'This email is linked to an existing account. Please sign in to that account to scan with it.', he: 'האימייל הזה משויך לחשבון קיים. כדי לסרוק איתו, יש להתחבר לחשבון הזה.' };
+const loginRequiredBody = lang => { const l = lang === 'he' ? 'he' : 'en'; return { error: 'login_required', code: 'login_required', message: LOGIN_REQ.en, messageHe: LOGIN_REQ.he, loginUrl: `/${l}/login` }; };
 app.post('/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body;
   if (!blank(name) && !blank(category) && !blank(email) && blank(city)) return r.status(400).send(V.landing(CITY_REQUIRED.en));
   if (blank(name) || blank(category) || blank(city) || blank(email)) return r.status(400).send(V.landing('Please fill all required fields.'));
   const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).send(V.landing('Free scan limit reached for today.'));
-  const db = getDb(); const account = findOrCreateAccount(email); recordConsent(account, q.body); if (applyUtm(account, q.body)) save();
+  const db = getDb(); const known = findAccountByEmail(email); if (known && !paidScanAllowed(q, known)) { const b = loginRequiredBody(q.body?.lang); return r.status(401).send(V.landing(`${q.body?.lang === 'he' ? b.messageHe : b.message} ${BASE}${b.loginUrl}`)); }
+  const account = findOrCreateAccount(email); recordConsent(account, q.body); if (applyUtm(account, q.body)) save();
   const hit = freeScanLookup(db, account, q.body);
   if (hit && hit.same) return r.redirect(`/r/${hit.reportId}`);
   if (hit) return r.status(409).send(V.landing(`${FREE_USED_MSG} Your existing report: ${BASE}/r/${hit.reportId}`));
@@ -417,7 +430,8 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   if (blank(city)) return r.status(400).json({ error: q.body?.lang === 'he' ? CITY_REQUIRED.he : CITY_REQUIRED.en, code: 'city_required', message: CITY_REQUIRED.en });
   if (blank(name) || blank(category) || blank(email)) return r.status(400).json({ error: 'Please fill all required fields.' });
   const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).json({ error: 'free_limit_reached', code: 'free_limit_reached', message: 'Free scan limit reached for today.' });
-  const db = getDb(); const account = findOrCreateAccount(email); recordConsent(account, q.body); if (applyUtm(account, q.body)) save();
+  const db = getDb(); const known = findAccountByEmail(email); if (known && !paidScanAllowed(q, known)) return r.status(401).json(loginRequiredBody(q.body?.lang));
+  const account = findOrCreateAccount(email); recordConsent(account, q.body); if (applyUtm(account, q.body)) save();
   const hit = freeScanLookup(db, account, q.body);
   if (hit && hit.same) return r.json({ reportId: hit.reportId, existing: true });
   if (hit) return r.status(409).json(freeUsedBody(hit, q.body?.lang));

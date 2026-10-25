@@ -8,3 +8,11 @@ export const freeText = {
     view: "לדוח הקיים", upgradeTitle: "רוצים לסרוק עוד עסקים?", upgradeSoon: "המסלולים בתשלום ייפתחו בקרוב. השאירו אימייל ונעדכן אתכם ברגע שהם נפתחים.", upgradeLive: "המסלולים בתשלום עוקבים אחרי הנראות שלך באופן שוטף (דוחות שבועיים בקרוב) וכוללים יותר עסקים.",
     notify: "עדכנו אותי כשהמסלולים נפתחים", upgrade: "שדרוג המסלול", other: "להשתמש באימייל אחר" },
 } satisfies Record<Locale, Record<string, string>>;
+
+// Strings for the "sign in to scan with this email" notice (POST /api/scan 401 login_required: the email belongs to an existing paid account).
+export const paidLoginText = {
+  en: { title: "Please sign in to continue", body: "This email is linked to an existing account. To scan with it, sign in to that account first. We didn't run a scan and nothing was charged.",
+    login: "Sign in", back: "After signing in, use “Back to the scan form” on your dashboard and submit again.", other: "Use a different email", returnScan: "Back to the scan form" },
+  he: { title: "יש להתחבר כדי להמשיך", body: "האימייל הזה משויך לחשבון קיים. כדי לסרוק איתו, יש להתחבר קודם לחשבון הזה. לא הרצנו סריקה ולא נגבה תשלום.",
+    login: "התחברות", back: "אחרי ההתחברות, לחצו על ״חזרה לטופס הסריקה״ בלוח הבקרה ושלחו שוב.", other: "להשתמש באימייל אחר", returnScan: "חזרה לטופס הסריקה" },
+} satisfies Record<Locale, Record<string, string>>;
