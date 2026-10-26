@@ -302,8 +302,7 @@ const captchaUnlessAdminTest = (q, r, next) => (isPrelaunch() && adminTestOk(q) 
 // Double-charge guard. An account "has an active subscription" while it holds a paid plan with a standing order that is active, or
 // cancelled by the customer but still inside the paid period. past_due (grace) and unpaid accounts MAY check out again: that is the
 // card-replacement flow (the old failed order is superseded, see completeCheckout). Admin test accounts are not real subscriptions.
-export const hasActiveSubscription = (a, now = Date.now()) => !!a && !a.testSubscription && !a.adminTest && isPaid(PLANS[a.plan]) && !!a.subscriptionRef && a.status !== 'past_due'
-  && !(a.status === 'cancelled' && !(a.paidThrough && Date.parse(a.paidThrough) > now)) && !['unpaid', 'cancelled_ended'].includes(a.status);
+export { hasActiveSubscription } from './src/subscription.js'; import { hasActiveSubscription } from './src/subscription.js';
 export const ALREADY_SUBSCRIBED = { ok: false, error: 'already_subscribed', code: 'already_subscribed', message: 'You already have an active subscription. Sign in to your dashboard to manage it.', messageHe: 'כבר יש לך מנוי פעיל. היכנס/י ללוח הבקרה כדי לנהל אותו.' };
 const CHECKOUT_BUSY = { ok: false, error: 'busy', code: 'busy', message: 'A payment is already in progress for this account. Please wait a moment.', messageHe: 'תשלום כבר בתהליך בחשבון הזה. המתינו רגע.' };
 const stateHash = st => createHash('sha256').update(String(st)).digest('hex');

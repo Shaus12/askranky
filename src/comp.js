@@ -2,8 +2,9 @@
 // Idempotent: creates the account if missing, sets plan + comp:true. A comp account has NO subscriptionRef, so the SUMIT billing sync,
 // status MRR / subscriber counts and cancel flows ignore it, and hasActiveSubscription() never blocks a real checkout for it. Weekly
 // auto-scans skip comp accounts (no unattended API spend); a manual "Run scan now" stays allowed within the plan's caps.
-// An account that already pays (has a subscriptionRef) is never touched. Logs only counts, never the address or any secret.
-import { getDb, save, id } from './store.js'; import { PLANS, isPaid } from './plans.js'; import { token } from './security/tokens.js';
+// An account with a live subscription is never touched. One whose subscription has ended (subscriptionEnded) is converted: the
+// ref moves to previousSubscriptionRef (ignored by billing sync, status and cancel flows) and the account becomes comp. Logs only counts, never the address or any secret.
+import { getDb, save, id } from './store.js'; import { PLANS, isPaid } from './plans.js'; import { token } from './security/tokens.js'; import { subscriptionEnded } from './subscription.js';
 export const isComp = a => !!a?.comp && !a?.subscriptionRef;
 export function parseCompAccounts(v = process.env.COMP_ACCOUNTS) {
   return String(v || '').split(',').map(s => s.trim()).filter(Boolean).map(s => { const i = s.lastIndexOf(':'); const email = (i > 0 ? s.slice(0, i) : s).trim().toLowerCase(); const plan = (i > 0 ? s.slice(i + 1) : 'pro').trim().toLowerCase();
@@ -14,9 +15,14 @@ export function applyCompAccounts(v = process.env.COMP_ACCOUNTS, now = new Date(
   const db = getDb(); let applied = 0, created = 0, skipped = 0, changed = false;
   for (const { email, plan } of list) {
     let a = Object.values(db.accounts).find(x => x.email === email);
-    if (a?.subscriptionRef) { skipped++; continue; } // a real (paying or ex-paying) subscription: billing owns the plan
+    let note;
+    if (a?.subscriptionRef) {
+      if (!subscriptionEnded(a, now.getTime())) { skipped++; continue; } // live (or in-grace / unsynced) subscription: billing owns the plan
+      a.previousSubscriptionRef = a.subscriptionRef; delete a.subscriptionRef; a.status = 'comp';
+      if (a.testSubscription) { a.previousTestSubscription = true; delete a.testSubscription; } delete a.adminTest; delete a.pastDueSince; delete a.failedNoticeAt; note = 'from inactive subscription'; changed = true;
+    }
     if (!a) { a = { id: id(10), key: token(32), email, plan: 'free', createdAt: now.toISOString(), usage: {} }; db.accounts[a.id] = a; created++; changed = true; }
-    if (a.plan !== plan || a.comp !== true) { a.plan = plan; a.comp = true; a.compSince ||= now.toISOString(); changed = true; db.events.push({ at: now.toISOString(), type: 'account.comp', account: a.id, plan }); }
+    if (a.plan !== plan || a.comp !== true) { a.plan = plan; a.comp = true; a.compSince ||= now.toISOString(); changed = true; db.events.push({ at: now.toISOString(), type: 'account.comp', account: a.id, plan, ...(note ? { note } : {}) }); }
     applied++;
   }
   if (changed) save();
