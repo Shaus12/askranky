@@ -4,7 +4,7 @@ import gsap from "gsap";
 import { reducedMotion } from "@/lib/motion";
 import { bandColor } from "@/lib/mock";
 
-/** Semi-circle gauge with softened red→neutral→blue track; needle arc + number count up together. */
+/** Semi-circle gauge with softened red→amber→green track; needle arc + number count up together. */
 export default function ScoreGauge({ score, label, size = 280 }: { score: number; label: string; size?: number }) {
   const arcRef = useRef<SVGPathElement>(null);
   const [n, setN] = useState(score);
@@ -21,7 +21,7 @@ export default function ScoreGauge({ score, label, size = 280 }: { score: number
     <div className="relative mx-auto" style={{ width: size, maxWidth: "100%" }} role="img" aria-label={`${label}: ${score}/100`}>
       <svg viewBox="0 0 240 140" className="w-full" style={{ direction: "ltr" }}>
         <defs>
-          <linearGradient id="g-track" x1="0" x2="1"><stop offset="0" stopColor="#e97a6f" /><stop offset=".5" stopColor="#d4d4d8" /><stop offset="1" stopColor="#60a5fa" /></linearGradient>
+          <linearGradient id="g-track" x1="0" x2="1"><stop offset="0" stopColor="#e97a6f" /><stop offset=".5" stopColor="#e8b04b" /><stop offset="1" stopColor="#3fbf8a" /></linearGradient>
         </defs>
         <path d="M20 120 A100 100 0 0 1 220 120" fill="none" stroke="url(#g-track)" strokeOpacity=".18" strokeWidth="18" strokeLinecap="round" />
         <path ref={arcRef} d="M20 120 A100 100 0 0 1 220 120" fill="none" stroke="url(#g-track)" strokeWidth="18" strokeLinecap="round"

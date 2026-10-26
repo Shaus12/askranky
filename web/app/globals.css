@@ -6,7 +6,7 @@
   --color-brand-400: #60a5fa; --color-brand-500: #3b82f6; --color-brand-600: #2563eb; --color-brand-700: #1d4ed8; --color-brand-900: #0f1a33;
   --color-violet-glow: #60a5fa;
   --color-cta: #2563eb; --color-cta-hover: #1d4ed8;
-  --color-score-low: #e97a6f; --color-score-mid: #d4d4d8; --color-score-high: #60a5fa;
+  --color-score-low: #e97a6f; --color-score-mid: #e8b04b; --color-score-high: #3fbf8a;
   --font-sans: "Inter", "Heebo", ui-sans-serif, system-ui, sans-serif;
 }
 html { scroll-behavior: auto; }
@@ -56,7 +56,7 @@ body { background: #000; color: #e4e4e7; -webkit-font-smoothing: antialiased; }
 .btn-cta:hover { background: #1d4ed8 !important; }
 
 /* ---- Site v2: shared tokens & components (match Hero v2) ---- */
-:root { --navy-2: #000; --navy-3: #0b0b0c; --line: rgba(255,255,255,.09); --muted: #a8a8ad; --score-low: #e97a6f; --score-mid: #d4d4d8; --score-high: #60a5fa; }
+:root { --navy-2: #000; --navy-3: #0b0b0c; --line: rgba(255,255,255,.09); --muted: #a8a8ad; --score-low: #e97a6f; --score-mid: #e8b04b; --score-high: #3fbf8a; }
 body { font-family: "Inter", "Heebo", ui-sans-serif, system-ui, sans-serif; }
 .vx-page { background: radial-gradient(60% 420px at 50% 0%, rgba(37,99,235,.16), transparent 70%), #000; min-height: 100svh; color: #fff; }
 .vx-section { padding-block: clamp(4rem, calc(var(--u) * 120), 8rem); padding-inline: 1.25rem; }

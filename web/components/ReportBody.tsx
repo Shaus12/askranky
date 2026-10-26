@@ -36,7 +36,7 @@ export default function ReportBody({ t, lang, compact = false, data }: { t: Dict
                   <span className="flex-1">{c.name}</span><span className="h-2 rounded-full bg-brand-400/60" style={{ width: `${(c.count / maxC) * 60}px` }} /><span className="w-8 text-end text-sm text-slate-400">{c.count}×</span></li>))}</ol></div>
             <div data-reveal className="card p-6"><h3 className="mb-4 font-bold">{t.report.sources}</h3>
               <ul className="space-y-3">{r.sources.map((s) => (
-                <li key={s.host} className="flex items-center justify-between"><span dir="ltr">{s.host}{s.own && <span className="ms-2 rounded-full bg-score-high/15 px-2 py-0.5 text-xs font-semibold text-blue-200">{t.report.yours}</span>}</span><span className="text-sm text-slate-400">{s.count}×</span></li>))}</ul></div>
+                <li key={s.host} className="flex items-center justify-between"><span dir="ltr">{s.host}{s.own && <span className="ms-2 rounded-full bg-score-high/15 px-2 py-0.5 text-xs font-semibold text-[#7ee2b4]">{t.report.yours}</span>}</span><span className="text-sm text-slate-400">{s.count}×</span></li>))}</ul></div>
           </Reveal>
           <Reveal className="space-y-4">
             <MaskHeading text={t.report.fixes} className="vx-h3" center={false} />
