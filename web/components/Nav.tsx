@@ -38,7 +38,7 @@ export default function Nav({ t, lang, path = "" }: { t: Dict; lang: Locale; pat
         <nav aria-label="primary" className="rk-menu">
           <details data-rk-menu className="rk-mi"><summary>{s.product}<Chev /></summary>{productMenu}</details>
           <details data-rk-menu className="rk-mi"><summary>{s.resources}<Chev /></summary>{resMenu}</details>
-          <Link className="rk-navlink" href={`${base}#pricing`}>{t.nav.pricing}</Link>
+          <Link className="rk-navlink" href={`${base}/pricing`}>{t.nav.pricing}</Link>
         </nav>
         <div className="rk-navr">
           <span className="rk-desk">{lang2}</span>
@@ -48,7 +48,7 @@ export default function Nav({ t, lang, path = "" }: { t: Dict; lang: Locale; pat
             <div className="rk-mobile-panel">
               <h6>{s.product}</h6>{product.map((p) => <Link key={p.href} href={p.href}>{p.b}</Link>)}<Link href={`${base}/scan`}>{t.nav.cta}</Link>
               <h6>{s.resources}</h6>{posts.map((p) => <a key={p.slug} href={p.path}>{p.title}</a>)}<Link href={`${base}/blog`}>{s.allPosts}</Link>
-              <h6>{s.company}</h6><Link href={`${base}#pricing`}>{t.nav.pricing}</Link><AccountMenu lang={lang} label={t.login.nav} mobile />{lang2}
+              <h6>{s.company}</h6><Link href={`${base}/pricing`}>{t.nav.pricing}</Link><AccountMenu lang={lang} label={t.login.nav} mobile />{lang2}
             </div>
           </details>
         </div>

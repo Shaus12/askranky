@@ -11,6 +11,7 @@ const T = {
 };
 // Per-page title + description (seo-audit #7), Hebrew and English.
 const PAGE: Record<string, { he: string; en: string; dhe: string; den: string }> = {
+  "/pricing": { he: "מחירים", en: "Pricing", dhe: "מחירי Ranky: סריקה חינם, ומסלולים חודשיים מ־₪79 בלי מע\"מ. השוואה כנה של מה שפועל היום ומה בקרוב.", den: "Ranky pricing: a free scan, then monthly plans from ₪79, no VAT. An honest comparison of what runs today and what is coming soon." },
   "/scan": { he: "סריקת AI חינם", en: "Free AI scan", dhe: "בדקו בחינם אם ChatGPT ו־Gemini ממליצים על העסק שלכם, ומי מומלץ במקומכם. חינם, סריקה אחת לכל אימייל, כדקה.", den: "Check free whether ChatGPT and Gemini recommend your business, and who they name instead. Free, one scan per email, about a minute." },
   "/report": { he: "דוח לדוגמה", en: "Sample report", dhe: "כך נראה דוח נראות ב־AI של Ranky: ציון, מתחרים שמומלצים, מקורות שמצוטטים ו־3 תיקונים.", den: "See a sample Ranky AI visibility report: score, competitors AI recommends, cited sources and 3 fixes." },
   "/login": { he: "כניסה", en: "Sign in", dhe: "כניסה לדשבורד של Ranky עם קישור חד־פעמי במייל.", den: "Sign in to your Ranky dashboard with a one-time email link." },
@@ -48,7 +49,7 @@ export function siteJsonLd(lang: Locale, checkoutLive = process.env.NEXT_PUBLIC_
   const cur = "ILS" as const; const t = T[lang];
   const names: Record<string, string> = { starter: "Starter", pro: "Pro", agency: "Agency" };
   const offers = [{ "@type": "Offer", name: lang === "he" ? "סריקה חינם" : "Free scan", price: "0", priceCurrency: cur, url: `${SITE}/${lang}/scan` },
-    ...(checkoutLive ? Object.keys(names).map((k) => ({ "@type": "Offer", name: names[k], price: String(PRICES[k][cur]), priceCurrency: cur, url: `${SITE}/${lang}#pricing`,
+    ...(checkoutLive ? Object.keys(names).map((k) => ({ "@type": "Offer", name: names[k], price: String(PRICES[k][cur]), priceCurrency: cur, url: `${SITE}/${lang}/pricing`,
       priceSpecification: { "@type": "UnitPriceSpecification", price: String(PRICES[k][cur]), priceCurrency: cur, billingDuration: "P1M", unitCode: "MON" } })) : [])];
   return { "@context": "https://schema.org", "@graph": [
     { "@type": "Organization", "@id": `${SITE}/#org`, name: "Ranky", url: SITE, logo: `${SITE}/logo.png`, email: "shaysho1111@gmail.com", areaServed: ["IL", "US"] },

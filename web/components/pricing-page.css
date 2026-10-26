@@ -1,0 +1,11 @@
+/* /{lang}/pricing comparison table (v3 design: off-black, #3f6fd8 accent). Scrolls horizontally on small screens. */
+.pc-wrap { overflow-x: auto; border: 1px solid rgba(255,255,255,.1); border-radius: 16px; background: rgba(255,255,255,.02); }
+.pc-wrap:focus-visible { outline: 2px solid #3f6fd8; outline-offset: 2px; }
+.pc-table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: .9rem; }
+.pc-table th, .pc-table td { padding: .8rem 1rem; text-align: start; border-bottom: 1px solid rgba(255,255,255,.07); vertical-align: top; }
+.pc-table thead th { color: #fff; font-weight: 700; background: rgba(255,255,255,.03); }
+.pc-table tbody th { color: #cbd5e1; font-weight: 600; }
+.pc-table td { color: #e2e8f0; }
+.pc-table .pc-hot { background: rgba(63,111,216,.08); }
+.pc-table td.pc-soon { color: #94a3b8; font-style: italic; }
+.pc-table tbody tr:last-child th, .pc-table tbody tr:last-child td { border-bottom: 0; }
