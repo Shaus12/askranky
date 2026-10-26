@@ -10,7 +10,7 @@ import { aboutSentences } from './sentiment.js';
 const B = '(?<![\\p{L}\\p{N}])', E = '(?![\\p{L}\\p{N}])';
 const CITY_RX = ISRAELI_CITIES.map(c => ({ c, rx: new RegExp(`${B}[בלמ]?(?:${[c.he, c.en, c.he.split('-')[0], c.en.split('-')[0]].filter((x, i, a) => x.length > 2 && a.indexOf(x) === i).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/[-\s]+/g, '[-\\s]?')).join('|')})${E}`, 'iu') }));
 const LOCATED = /(?:located|based|situated|found)\s+in\s+([A-Z][\p{L}'.-]+(?:\s[A-Z][\p{L}'.-]+){0,2})/u;
-const CLOSED = new RegExp(`${B}(?:permanently closed|נסגרה לצמיתות|נסגר לצמיתות|temporarily closed|has (?:since )?closed|no longer (?:open|operating|in business)|went out of business|shut down|out of business|נסגר|נסגרה|סגור לצמיתות|סגורה לצמיתות|הפסיק לפעול|הפסיקה לפעול|כבר לא פעיל|כבר לא פעילה)${E}`, 'iu');
+const CLOSED = new RegExp(`${B}(?:permanently closed|closed permanently|closed down for good|closed for good|permanently shut down|shut down permanently|out of business|went out of business|no longer in business|no longer operating|has (?:since )?(?:permanently )?closed (?:down|its doors)|נסגרה לצמיתות|נסגר לצמיתות|סגור לצמיתות|סגורה לצמיתות|נסגר סופית|נסגרה סופית|העסק נסגר|הפסיק לפעול|הפסיקה לפעול|כבר לא פעיל|כבר לא פעילה)${E}`, 'iu');
 const PHONE = /(?:\+?\d[\d\s().-]{7,}\d)/g;
 const HOURS = new RegExp(`(?:${B}(?:open|opens|hours|until|from)\\s+\\d{1,2}(?::\\d{2})?(?:\\s*[ap]m)?|24\\/7|${B}(?:שעות פתיחה|פתוח|פתוחה|עד השעה|משעה)${E}|\\d{1,2}:\\d{2}\\s*[-–]\\s*\\d{1,2}:\\d{2})`, 'iu');
 const DOMAIN = /\b((?:[a-z0-9-]+\.)+(?:com|co\.il|org\.il|net|org|co|io|biz|info|il|us|uk|de|fr))\b/gi;

@@ -17,6 +17,7 @@ assert.equal(sentimentFor('1. **Sample Dental** – no complaints so far.', en, 
 assert.equal(sentimentFor('Sample Dental is great but some reviews mention long wait times.', en, true).tone, 'mixed'); ok('praise + criticism in one sentence = mixed');
 assert.equal(sentimentFor('1. **Sample Dental** – a dental clinic on Main Street.', en, true).tone, 'neutral'); ok('no cue words = neutral');
 assert.equal(sentimentFor('‏1. **שן לדוגמה** – לא מומלץ, יש תלונות.', he, true).tone, 'negative'); assert.equal(sentimentFor('‏1. **שן לדוגמה** – מומלצת ומקצועית.', he, true).tone, 'positive'); ok('Hebrew cues, prefixes and "לא" negation');
+assert.equal(sentimentFor('‏1. **שן לדוגמה** – מקום יקר לליבי, צוות יקר.', he, true).tone, 'neutral'); assert.equal(sentimentFor('‏1. **שן לדוגמה** – יקר מדי.', he, true).tone, 'negative'); ok('Hebrew: "יקר" (dear) is not negative, "יקר מדי" is');
 assert.ok(aboutSentences('Sample Dental (sample-dental.co.il) is open.', en).length === 1); ok('prose mention counts as a sentence about the business');
 
 // fact check
@@ -42,6 +43,14 @@ const fs2 = summarizeFacts(rs); assert.equal(fs2.conflicts.length, 1); assert.eq
 const sum = summarizeResults(rs, { plan: { competitors: 3 }, engines: ['chatgpt', 'gemini'] }); assert.ok(sum.sentiment && sum.facts); ok('scan summary carries sentiment + facts');
 const old = summarizeResults(rs.map(({ sentiment, facts, ...r }) => r), { plan: { competitors: 3 }, engines: ['chatgpt'] }); assert.ok(!('sentiment' in old) && !('facts' in old)); ok('older scans without the fields get no invented sentiment or facts');
 
+// "closed": only explicit permanent-closure phrases
+const st = (t, b) => factCheck(t, b, true).some(x => x.type === 'status');
+for (const t of ['1. **Sample Dental** – permanently closed.', '1. **Sample Dental** – went out of business in 2024.', '1. **Sample Dental** – no longer in business.', '1. **Sample Dental** has closed down for good.']) assert.ok(st(t, en), t);
+for (const t of ['1. **שן לדוגמה** – נסגר לצמיתות.', '1. **שן לדוגמה** – העסק נסגר בשנה שעברה.', '1. **שן לדוגמה** – נסגרה סופית.']) assert.ok(st(t, he), t);
+ok('closed: explicit permanent-closure phrases (EN + HE) are flagged');
+for (const t of ['1. **Sample Dental** – closes at 8 pm, temporarily closed for renovation.', '1. **Sample Dental** – the old branch shut down, the Holon clinic is open.', '1. **Sample Dental** – closed on Saturdays.']) assert.ok(!st(t, en), t);
+for (const t of ['1. **שן לדוגמה** – נסגר ב־20:00.', '1. **שן לדוגמה** – נסגרת בשבת, העסק סגור בחגים.', '1. **שן לדוגמה** – נסגר מוקדם בימי שישי.']) assert.ok(!st(t, he), t);
+ok('closed: opening hours / temporary closures ("נסגר ב־20:00", "temporarily closed", "shut down") are not flagged');
 // dashboard + CSV
 const scan = { id: 's1', at: '2026-10-20T10:00:00Z', businessId: 'b', summary: sum, results: rs };
 assert.equal(sentimentTrend([scan])[0].net, 0); assert.equal(latestFacts([scan]).conflicts.length, 1); ok('dashboard: sentiment per scan + latest fact flags');

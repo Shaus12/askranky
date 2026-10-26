@@ -1,16 +1,16 @@
 // Alert emails: re-scan paid businesses on a schedule and email the alerts each new scan produced (detection: src/alert-detect.js).
 // Driven by POST /api/internal/cron/alerts (NOT scheduled anywhere) and inert unless ALERTS_ENABLED=1, because it re-scans (AI cost).
-import { getDb, save } from './store.js'; import { runScan } from './scan.js'; import { isComp } from './comp.js';
+import { getDb, save } from './store.js'; import { runScan } from './scan.js'; import { isComp } from './comp.js'; import { hasActiveSubscription } from './subscription.js';
 import { canSend, unsubUrl, unsubHeaders } from './consent.js'; import { renderAlertEmail } from './email/alerts.js';
 export { detectAlerts } from './alert-detect.js';
 
 export const alertsEnabled = () => process.env.ALERTS_ENABLED === '1';
 const DAY = 864e5;
 // Re-scan paid businesses whose last scan is older than ALERT_SCAN_DAYS (default 7) and email the alerts that scan produced.
-// Same account rules as the weekly job: paid plan, not comp (no unattended spend), not unsubscribed from 'alerts'. Budget caps still apply (runScan).
+// Same account rules as the weekly job: paid plan with an ACTIVE subscription (an ended/unpaid one is not re-scanned at our cost), not comp (no unattended spend), not unsubscribed from 'alerts'. Budget caps still apply (runScan).
 export async function runAlerts({ base = process.env.BASE_URL || 'http://localhost:3000', now = new Date(), send, allow = () => true, days = Number(process.env.ALERT_SCAN_DAYS || 7) } = {}) {
   const db = getDb(); const out = { scanned: 0, alerted: 0, skipped: {} }; const skip = r => { out.skipped[r] = (out.skipped[r] || 0) + 1; };
-  for (const a of Object.values(db.accounts).filter(a => a.plan !== 'free' && !isComp(a))) {
+  for (const a of Object.values(db.accounts).filter(a => a.plan !== 'free' && !isComp(a) && hasActiveSubscription(a, +now))) {
     if (!canSend(a, 'alerts')) { skip('opted_out'); continue; }
     for (const b of Object.values(db.businesses).filter(b => b.accountId === a.id)) {
       const last = db.scans[b.scanIds?.at(-1)];
