@@ -13,6 +13,10 @@ export default function Pricing({ t, lang }: { t: Dict; lang: Locale }) {
   // Billing is ILS only unless the server reports usdBilling: prices are shown in ILS and the currency toggle is hidden (no USD in public copy).
   const usd = !!data?.usdBilling;
   const pick = (c: Currency) => { setCurrencyCookie(c); setCur(c); load(c); };
+  // Cadence / digest lines: the static copy says "coming soon"; only when the server reports the job enabled (AUTO_RESCAN_ENABLED /
+  // MONTHLY_DIGEST_ENABLED via /api/pricing) is the line swapped for the "it runs" wording. Starter monthly, Pro/Agency weekly (src/plans.js).
+  const CAD: Record<string, "monthly" | "weekly"> = { starter: "monthly", pro: "weekly", agency: "weekly" };
+  const item = (id: string, it: string) => data?.autoRescan && CAD[id] && /re-scan|סריקה חוזרת/.test(it) ? t.pricing.live.rescan[CAD[id]] : data?.digest && /summary|סיכום חודשי/.test(it) ? t.pricing.live.digest : it;
   const price = (id: string) => data?.plans.find((p) => p.id === id)?.prices[cur] ?? PRICES[id][cur];
   return (<>
     {usd && <div data-reveal className="mt-10 flex justify-center">
@@ -28,7 +32,7 @@ export default function Pricing({ t, lang }: { t: Dict; lang: Locale }) {
           {hot && <span className="absolute -top-3 start-6 rounded-full bg-brand-600 px-3 py-1 text-xs font-semibold text-white">{t.pricing.popular}</span>}
           <h3 className="text-lg font-bold">{p.name}</h3>
           <div className="font-head mt-3 text-4xl font-bold text-white"><span dir="ltr" data-price={p.id}>{fmt(v, cur)}</span><span className="text-base font-medium text-slate-400">{v ? t.pricing.mo : ""}</span></div>
-          <ul className="mt-4 flex-1 space-y-2 text-slate-300">{p.items.map((it) => <li key={it} className="flex gap-2"><span aria-hidden className="text-sky-400">✓</span>{it}</li>)}</ul>
+          <ul className="mt-4 flex-1 space-y-2 text-slate-300">{p.items.map((x) => item(p.id, x)).map((it) => <li key={it} className="flex gap-2"><span aria-hidden className="text-sky-400">✓</span>{it}</li>)}</ul>
           <Link href={v ? `/${lang}/checkout?plan=${p.id}` : `/${lang}/scan`} className={`mt-6 ${hot ? "btn-cta" : "btn-outline"}`}>{p.cta}</Link>
         </div>); })}
     </div>

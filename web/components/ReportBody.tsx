@@ -33,7 +33,7 @@ export default function ReportBody({ t, lang, compact = false, data }: { t: Dict
           {r.live && (r.alerts?.length || 0) > 0 && <Reveal><div data-reveal><AlertsCard alerts={r.alerts} business={r.business.name} lang={lang} id="al-report" /></div></Reveal>}
           <Reveal><div data-reveal><PerceptionCards sentiment={r.sentiment} facts={r.facts} lang={lang} sample={!r.live} /></div></Reveal>
           <Reveal className="grid gap-5 md:grid-cols-3">
-            <div data-reveal className="card p-6"><h3 className="mb-2 font-bold">{r.live ? t.live.history : t.report.trend}</h3><TrendChart values={r.trend} weekLabel={t.report.weeks} /></div>
+            <div data-reveal className="card p-6"><h3 className="mb-2 font-bold">{r.live ? t.live.history : t.report.trend}</h3><TrendChart values={r.trend} weekLabel={t.report.weeks} dates={r.trendDates} lang={lang} emptyNote={r.live ? t.live.oneScan : undefined} /></div>
             <div data-reveal className="card p-6"><h3 className="mb-4 font-bold">{t.report.competitors}</h3>
               <ol className="space-y-3">{r.competitors.map((c, i) => (
                 <li key={c.name} className="flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-full border border-white/15 bg-white/5 text-xs font-bold text-sky-300">{i + 1}</span>

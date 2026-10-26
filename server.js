@@ -91,8 +91,9 @@ app.get('/healthz', (q, r) => r.set('Cache-Control', 'no-store').json({ ok: true
 // Disabled (404) unless CRON_SECRET (>= 16 chars) is set. Requires header X-Cron-Secret, compared timing-safe (sha256 + timingSafeEqual).
 // Not behind the CAPTCHA. Only wrong-secret attempts are rate limited (CRON_FAIL_MAX per 15 min per IP). Concurrent runs are collapsed
 // by an in-process lock (the second caller gets 202 {running:true}). The sync is idempotent. Responses never include sync data.
+import { runRescans, autoRescanEnabled, nextScanAt } from './src/rescan.js'; import { runDigest, digestEnabled } from './src/digest.js';
 import { runWeekly } from './src/weekly.js'; import { runAlerts, alertsEnabled } from './src/alerts.js'; import { runFollowup, followupEmailsEnabled } from './src/followup.js';
-export const cronHooks = { sync: syncAll, weekly: () => runWeekly({ base: BASE }), followup: () => runFollowup({ base: BASE, send: sendEmailSoft, allow: reportEmailAllowed }), alerts: () => runAlerts({ base: BASE, send: sendEmailSoft, allow: reportEmailAllowed }) };
+export const cronHooks = { sync: syncAll, weekly: () => runWeekly({ base: BASE }), followup: () => runFollowup({ base: BASE, send: sendEmailSoft, allow: reportEmailAllowed }), alerts: () => runAlerts({ base: BASE, send: sendEmailSoft, allow: reportEmailAllowed }), rescan: () => runRescans(), digest: () => runDigest({ base: BASE, send: sendEmailSoft }) };
 const cronFailLimiter = createRateLimiter({ max: Number(process.env.CRON_FAIL_MAX || 10), windowMs: 15 * 60 * 1000, onLimit: (q, r) => r.status(429).json({ ok: false }) });
 // Same semantics for every cron endpoint: 404 disabled, 401 wrong secret, 202 already running, 500 {ok:false}, 200 {ok, ranAt}. `enabled` (optional)
 // is an extra opt-in flag; when it is off the endpoint answers 200 {ok:true, skipped} after authenticating and runs nothing.
@@ -119,6 +120,11 @@ app.post('/api/internal/cron/followup', cronEndpoint('followup', 'scan follow-up
 // Alerts (src/alerts.js): re-scan paid businesses whose last scan is older than ALERT_SCAN_DAYS (default 7) and email what got worse.
 // NOT scheduled anywhere and inert unless ALERTS_ENABLED=1 (AI cost). Same secret, lock and status codes as the other cron endpoints.
 app.post('/api/internal/cron/alerts', cronEndpoint('alerts', 'alert scans', { enabled: alertsEnabled, skipped: 'alerts_disabled' }));
+// Scheduled re-scans (src/rescan.js): Starter monthly, Pro/Agency weekly, ACTIVE subscriptions only, never comp. Inert unless AUTO_RESCAN_ENABLED=1 (AI cost);
+// trigger it daily from the external cron (only businesses that are due are scanned). Budget caps apply (runScan).
+app.post('/api/internal/cron/rescan', cronEndpoint('rescan', 'scheduled re-scans', { enabled: autoRescanEnabled, skipped: 'rescan_disabled' }));
+// Monthly digest email (src/digest.js): paying customers only, at most one per calendar month, no scans. Inert unless MONTHLY_DIGEST_ENABLED=1.
+app.post('/api/internal/cron/digest', cronEndpoint('digest', 'monthly digest', { enabled: digestEnabled, skipped: 'digest_disabled' }));
 // Read-only ops status (aggregate numbers, no PII / SUMIT data): GET /api/internal/status with header X-Status-Token (env STATUS_TOKEN, >= 24 chars).
 // Disabled, missing or wrong token: the request falls through to the normal unknown-route 404 (same status, body and headers as any other
 // unknown /api/ path: no 401/403, no hint that it exists). The token is only ever read from the header (never URL/body), compared timing-safe
@@ -439,7 +445,7 @@ app.post('/unsubscribe', loginLimiter, (q, r) => { const t = q.query.t || q.body
 
 // ---------- JSON API for the Next.js frontend (web/) ----------
 const pub = a => ({ id: a.id, email: a.email, plan: a.plan, active: !!a.subscriptionRef && a.status !== 'cancelled', status: a.status || (a.subscriptionRef ? 'active' : null), paidThrough: a.paidThrough || null, cancelledAt: a.cancelledAt || null });
-app.get('/api/config', (q, r) => r.json({ brand: BRAND, plans: publicPlans(), usdBilling: usdBillingEnabled(), mock: isMockMode(), prelaunch: isPrelaunch(), emailMock: emailIsMock(), turnstileSiteKey: turnstileSiteKey(), googleAuth: googleEnabled() }));
+app.get('/api/config', (q, r) => r.json({ brand: BRAND, plans: publicPlans(), usdBilling: usdBillingEnabled(), mock: isMockMode(), prelaunch: isPrelaunch(), emailMock: emailIsMock(), turnstileSiteKey: turnstileSiteKey(), googleAuth: googleEnabled(), autoRescan: autoRescanEnabled(), digest: digestEnabled() }));
 app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body || {};
   // City is required (no default anywhere): a scan for the wrong city scores 0 and looks like a broken product.
@@ -461,18 +467,18 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
 });
 app.get('/api/report/:id', (q, r) => { const db = getDb(); const s = db.scans[q.params.id]; if (!s) return r.status(404).json({ error: 'not found' });
   const b = db.businesses[s.businessId]; const hist = (b.scanIds || []).map(i => db.scans[i]).filter(Boolean); const idx = hist.findIndex(x => x.id === s.id);
-  r.json({ demo: !!s.mock, business: { name: b.name, category: b.category, city: b.city, website: b.website, ...(b.aliases?.length ? { aliases: b.aliases } : {}) }, scan: (({ utm, ...pubScan }) => pubScan)(s), previousScore: idx > 0 ? hist[idx - 1].summary.score : null, history: hist.slice(0, idx + 1).map(x => x.summary.score) }); });
+  r.json({ demo: !!s.mock, business: { name: b.name, category: b.category, city: b.city, website: b.website, ...(b.aliases?.length ? { aliases: b.aliases } : {}) }, scan: (({ utm, ...pubScan }) => pubScan)(s), previousScore: idx > 0 ? hist[idx - 1].summary.score : null, history: hist.slice(0, idx + 1).map(x => x.summary.score), historyAt: hist.slice(0, idx + 1).map(x => x.at) }); });
 app.post('/api/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.refused) return refuseCheckout(r, c.refused); if (c?.prelaunch) return r.status(403).json({ error: 'Pre-launch: checkout is not open yet. Join the waitlist.', prelaunch: true }); if (!c) return r.status(400).json({ error: 'Choose a plan and enter your email.' }); r.json(c); });
 // Pricing for the UI: detected display currency + server prices + what checkout will actually charge.
 app.get('/api/pricing', (q, r) => {
   const forced = String(q.query.currency || '').toUpperCase(); const d = CURRENCIES.includes(forced) ? { currency: forced, source: 'query' } : detectCurrency(q, q.query.lang);
   r.set('Vary', 'Cookie, Accept-Language, CF-IPCountry'); r.set('Cache-Control', 'private, no-store');
-  r.json({ currency: d.currency, source: d.source, currencies: CURRENCIES, usdBilling: usdBillingEnabled(), vat: false,
+  r.json({ currency: d.currency, source: d.source, currencies: CURRENCIES, usdBilling: usdBillingEnabled(), vat: false, autoRescan: autoRescanEnabled(), digest: digestEnabled(),
     plans: publicPlans().map(p => ({ ...p, billing: p.prices.ILS ? billingFor(PLANS[p.id], d.currency) : null })) });
 });
 app.get('/api/dashboard/:id', (q, r) => {
   const a = accountFor(q); if (!a) return r.status(403).json({ error: 'forbidden' }); const db = getDb();
-  const biz = Object.values(db.businesses).filter(b => b.accountId === a.id).map(b => ({ ...b, scans: (b.scanIds || []).map(i => db.scans[i]).filter(Boolean).map(s => ({ id: s.id, at: s.at, summary: s.summary })) }));
+  const biz = Object.values(db.businesses).filter(b => b.accountId === a.id).map(b => ({ ...b, scans: (b.scanIds || []).map(i => db.scans[i]).filter(Boolean).map(s => ({ id: s.id, at: s.at, summary: s.summary })), nextScanAt: autoRescanEnabled() ? nextScanAt(a, b, db) : null }));
   r.json({ account: { ...pub(a), ...(a.comp && !a.subscriptionRef ? { comp: true } : {}) }, businesses: biz, insights: dashboardData(db, a), usage: { used: a.usage?.[new Date().toISOString().slice(0, 7)] || 0, cap: PLANS[a.plan].monthlyCheckBudget } });
 });
 // CSV export of one business's stored results (all scans, or ?scan=<id>). Same key guard; only the account's own businesses.

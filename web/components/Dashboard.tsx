@@ -62,7 +62,8 @@ export default function Dashboard({ t, lang }: { t: Dict; lang: Locale }) {
           <div key={b.id} className="card grid gap-6 p-6  md:grid-cols-[200px_1fr_auto] md:items-center">
             <div>{last && <ScoreGauge score={last.summary.score} label={t.dash.last} />}</div>
             <div><h2 className="text-xl font-bold">{b.name}</h2><p className="text-slate-400">{b.category} · {b.city} · {b.scans.length} {t.dash.scans}</p>
-              {b.scans.length > 1 && <div className="mt-3 max-w-sm"><TrendChart values={b.scans.map((s: any) => s.summary.score)} weekLabel={t.report.weeks} /></div>}</div>
+              {b.scans.length > 0 && <div className="mt-3 max-w-sm"><TrendChart values={b.scans.map((s: any) => s.summary.score)} dates={b.scans.map((s: any) => s.at)} lang={lang} weekLabel={t.report.weeks} emptyNote={t.live.oneScan} /></div>}
+              {b.nextScanAt && <p className="mt-2 text-sm text-slate-400" data-next-scan>{t.dash.nextScan} <span dir="ltr">{new Date(b.nextScanAt).toLocaleDateString(lang === "he" ? "he-IL" : "en-GB", { day: "numeric", month: "short", year: "numeric" })}</span></p>}</div>
             <div className="flex flex-col gap-2">
               {last && <a href={`/${lang}/r/${last.id}`} className="btn-outline !py-2">{t.dash.open}</a>}
               {d.account.plan !== "free" && <button onClick={() => rescan(b.id)} disabled={!!busy} className="btn-cta !py-2 disabled:opacity-60">{busy === b.id ? "…" : t.dash.rescan}</button>}
