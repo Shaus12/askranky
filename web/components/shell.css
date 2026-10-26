@@ -1,7 +1,7 @@
 /* Redesign stage 1: black site shell (header + footer), single accent #2563eb, Inter + Heebo. Page bodies keep their own theme. */
-.rk-nav, .rk-foot { --rk-blue: #2563eb; --rk-blue-2: #3b82f6; --rk-line: rgba(255,255,255,.09); --rk-line-2: rgba(255,255,255,.14); --rk-t2: #a1a1aa; --rk-t3: #71717a; font-family: "Inter", "Heebo", ui-sans-serif, system-ui, sans-serif; }
-[dir="rtl"] .rk-nav, [dir="rtl"] .rk-foot { font-family: "Heebo", "Inter", ui-sans-serif, system-ui, sans-serif; }
-.rk-logo { display: inline-flex; align-items: center; gap: .55rem; font-family: "Inter", sans-serif; font-weight: 700; font-size: 1.15rem; letter-spacing: -.02em; color: #fff; }
+.rk-nav, .rk-foot { --rk-blue: #2563eb; --rk-blue-2: #3b82f6; --rk-line: rgba(255,255,255,.09); --rk-line-2: rgba(255,255,255,.14); --rk-t2: #a1a1aa; --rk-t3: #71717a; font-family: "Geist", "Heebo", ui-sans-serif, system-ui, sans-serif; }
+[dir="rtl"] .rk-nav, [dir="rtl"] .rk-foot { font-family: "Heebo", "Geist", ui-sans-serif, system-ui, sans-serif; }
+.rk-logo { display: inline-flex; align-items: center; gap: .55rem; font-family: "Geist", sans-serif; font-weight: 600; font-size: 1.15rem; letter-spacing: -.035em; color: #fff; }
 .rk-logo img { display: block; border-radius: 6px; }
 .rk-nav { position: sticky; top: 0; z-index: 40; background: rgba(0,0,0,.78); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--rk-line); }
 .rk-nav-in { max-width: 72rem; margin: 0 auto; height: 3.75rem; padding: 0 1.25rem; display: flex; align-items: center; gap: 1.5rem; }

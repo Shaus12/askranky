@@ -1,6 +1,8 @@
 // Dashboard insights built ONLY from the account's own stored scans (no engine calls, no spend). Called after the key-auth guard
 // with the authenticated account; every lookup is filtered by accountId so one account can never see another's businesses/scans.
 import { isOpaqueHost } from './extract.js';
+import { summarizeSentiment } from './sentiment.js';
+import { summarizeFacts } from './factcheck.js';
 const EX = 320; // answer excerpt length
 const clip = (s, n = EX) => { const t = String(s ?? '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
 const engScore = (checks, mentions, ranks) => { if (!checks) return null; const mr = mentions / checks; const ar = ranks.length ? ranks.reduce((a, b) => a + b, 0) / ranks.length : null;
@@ -42,16 +44,24 @@ export function sourceGaps(scans, limit = 8) {
     for (const h of hosts) { const e = map.get(h) || { host: h, cited: 0, missing: 0, engines: new Set() }; e.cited++; if (!r.mentioned) e.missing++; e.engines.add(r.engine); map.set(h, e); } }
   return [...map.values()].filter(e => e.missing > 0).sort((a, b) => b.missing - a.missing || b.cited - a.cited || a.host.localeCompare(b.host)).slice(0, limit).map(e => ({ ...e, engines: [...e.engines].sort() }));
 }
+// Sentiment per scan (counts + net score) and the latest scan's fact flags. Older scans without per-answer sentiment are skipped, not guessed.
+export function sentimentTrend(scans) {
+  return scans.map(s => { const engines = s.summary?.engines?.ran || Object.keys(s.summary?.byEngine || {}); const v = s.summary?.sentiment || summarizeSentiment(okResults(s), engines);
+    return v ? { scanId: s.id, at: s.at, counts: v.counts, net: v.net, answers: v.answers, byEngine: v.byEngine, examples: v.examples } : null; }).filter(Boolean);
+}
+export const latestFacts = scans => { const last = scans.at(-1); return last ? (last.summary?.facts || summarizeFacts(okResults(last))) : null; };
+// Alerts from the account's own scans, newest first (each scan stores what got worse versus the scan before it).
+export const recentAlerts = (scans, limit = 12) => scans.slice().reverse().flatMap(s => (s.alerts || []).map(a => ({ ...a, scanId: s.id, at: s.at }))).slice(0, limit);
 export function dashboardData(db, account) {
   return Object.values(db.businesses).filter(b => b.accountId === account.id).map(b => { const scans = scansOf(db, b).filter(s => s.accountId === undefined || s.accountId === account.id);
-    return { businessId: b.id, scanCount: scans.length, engineTrend: engineTrend(scans), competitors: competitorBoard(scans), questions: questionExplorer(scans), sources: sourceGaps(scans),
+    return { businessId: b.id, scanCount: scans.length, engineTrend: engineTrend(scans), competitors: competitorBoard(scans), questions: questionExplorer(scans), sources: sourceGaps(scans), sentiment: sentimentTrend(scans), facts: latestFacts(scans), alerts: recentAlerts(scans),
       lastScanAt: scans.at(-1)?.at ?? null, prevScanAt: scans.length > 1 ? scans.at(-2).at : null }; });
 }
 // CSV (RFC 4180, UTF-8 BOM for Excel/Hebrew). Cells starting with = + - @ (or tab/CR) are prefixed with ' to block formula injection.
 const cell = v => { let s = v == null ? '' : String(v); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 export function dashboardCsv(db, b) {
-  const rows = [['scan_id', 'scan_date', 'score', 'question', 'engine', 'mentioned', 'rank', 'competitors', 'cited_domains', 'answer_excerpt', 'error']];
+  const rows = [['scan_id', 'scan_date', 'score', 'question', 'engine', 'mentioned', 'rank', 'competitors', 'cited_domains', 'answer_excerpt', 'error', 'sentiment', 'fact_flags']];
   for (const s of scansOf(db, b)) for (const r of s.results || []) { if (!r) continue;
-    rows.push([s.id, s.at, s.summary?.score ?? '', r.question, r.engine, r.error ? '' : r.mentioned ? 'yes' : 'no', r.error ? '' : r.rank ?? '', (r.competitors || []).join('; '), [...new Set((r.citations || []).filter(c => !c.opaque).map(c => c.host))].join('; '), r.error ? '' : clip(r.answer, 500), r.error ? 'error' : '']); }
+    rows.push([s.id, s.at, s.summary?.score ?? '', r.question, r.engine, r.error ? '' : r.mentioned ? 'yes' : 'no', r.error ? '' : r.rank ?? '', (r.competitors || []).join('; '), [...new Set((r.citations || []).filter(c => !c.opaque).map(c => c.host))].join('; '), r.error ? '' : clip(r.answer, 500), r.error ? 'error' : '', r.sentiment?.tone ?? '', (r.facts || []).filter(f => f.status !== 'match').map(f => `${f.status}:${f.type}:${f.said}`).join('; ')]); }
   return '\uFEFF' + rows.map(r => r.map(cell).join(',')).join('\r\n') + '\r\n';
 }

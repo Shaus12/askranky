@@ -67,7 +67,7 @@ export default function Dashboard({ t, lang }: { t: Dict; lang: Locale }) {
               {last && <a href={`/${lang}/r/${last.id}`} className="btn-outline !py-2">{t.dash.open}</a>}
               {d.account.plan !== "free" && <button onClick={() => rescan(b.id)} disabled={!!busy} className="btn-cta !py-2 disabled:opacity-60">{busy === b.id ? "…" : t.dash.rescan}</button>}
             </div>
-            <div className="md:col-span-3"><DashInsights ins={(d.insights || []).find((x: any) => x.businessId === b.id)} lang={lang} auth={auth} /></div>
+            <div className="md:col-span-3"><DashInsights ins={(d.insights || []).find((x: any) => x.businessId === b.id)} lang={lang} auth={auth} business={b.name} /></div>
           </div>); })}
       </div>
     </main>

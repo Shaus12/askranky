@@ -22,7 +22,7 @@ export default function Bars({ data }: { data: { label: string; value: number }[
         <div key={d.label}>
           <div className="mb-1 flex justify-between text-sm"><span className="font-medium">{d.label}</span><span className="tabular-nums text-slate-400">{Math.round(d.value * 100)}%</span></div>
           <div className="h-3 overflow-hidden rounded-full bg-white/[.06]">
-            <div data-bar className="h-full origin-left rounded-full rtl:origin-right" style={{ width: `${Math.max(d.value * 100, 4)}%`, background: `linear-gradient(90deg, #2563eb, ${bandColor(d.value * 100)})` }} />
+            <div data-bar className="h-full origin-left rounded-full rtl:origin-right" style={{ width: `${Math.max(d.value * 100, 4)}%`, background: bandColor(d.value * 100) }} />
           </div>
         </div>
       ))}

@@ -7,6 +7,8 @@ import TrendChart from "./TrendChart";
 import CountUp from "./CountUp";
 import Reveal from "./Reveal";
 import MaskHeading from "./MaskHeading";
+import PerceptionCards from "./PerceptionCards";
+import AlertsCard from "./AlertsCard";
 
 export default function ReportBody({ t, lang, compact = false, data }: { t: Dict; lang: Locale; compact?: boolean; data?: ReportData }) {
   const r = data || sample(lang); const b = band(r.score); const maxC = r.competitors[0]?.count || 1;
@@ -28,6 +30,8 @@ export default function ReportBody({ t, lang, compact = false, data }: { t: Dict
       </Reveal>
       {!compact && (
         <>
+          {r.live && (r.alerts?.length || 0) > 0 && <Reveal><div data-reveal><AlertsCard alerts={r.alerts} business={r.business.name} lang={lang} id="al-report" /></div></Reveal>}
+          <Reveal><div data-reveal><PerceptionCards sentiment={r.sentiment} facts={r.facts} lang={lang} sample={!r.live} /></div></Reveal>
           <Reveal className="grid gap-5 md:grid-cols-3">
             <div data-reveal className="card p-6"><h3 className="mb-2 font-bold">{r.live ? t.live.history : t.report.trend}</h3><TrendChart values={r.trend} weekLabel={t.report.weeks} /></div>
             <div data-reveal className="card p-6"><h3 className="mb-4 font-bold">{t.report.competitors}</h3>

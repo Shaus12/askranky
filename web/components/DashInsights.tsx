@@ -1,6 +1,9 @@
 "use client";
 import { useState } from "react";
 import type { Locale } from "@/lib/i18n";
+import type { Facts, Sentiment } from "@/lib/perception";
+import PerceptionCards from "./PerceptionCards";
+import AlertsCard, { type Alert } from "./AlertsCard";
 
 // Dashboard insights (v2): per-engine trend, competitor leaderboard, question explorer, cited-source gaps, CSV export.
 // Data comes only from /api/dashboard (the account's own stored scans); nothing here calls an engine.
@@ -9,7 +12,7 @@ type Trend = { scanId: string; at: string; score: number | null; byEngine: Recor
 type Comp = { name: string; total: number; scans: number; counts: number[]; last: number; prev: number | null; trend: number };
 type QE = { error?: boolean; excerpt?: string; mentioned?: boolean; rank?: number | null; competitors?: string[]; change?: { mentionedBefore: boolean; rankBefore: number | null; delta: number } | null };
 type Src = { host: string; cited: number; missing: number; engines: string[] };
-export type Insights = { businessId: string; scanCount: number; engineTrend: Trend[]; competitors: Comp[]; questions: { question: string; engines: Record<string, QE> }[]; sources: Src[]; lastScanAt: string | null; prevScanAt: string | null };
+export type Insights = { businessId: string; scanCount: number; engineTrend: Trend[]; competitors: Comp[]; questions: { question: string; engines: Record<string, QE> }[]; sources: Src[]; sentiment?: (Sentiment & { scanId: string; at: string })[]; facts?: Facts | null; alerts?: Alert[]; lastScanAt: string | null; prevScanAt: string | null };
 
 const ENG: Record<string, string> = { chatgpt: "ChatGPT", gemini: "Gemini", perplexity: "Perplexity" };
 const COL: Record<string, string> = { chatgpt: "#2563eb", gemini: "#93c5fd", perplexity: "#a1a1aa" };
@@ -18,11 +21,11 @@ const T = {
   en: { trend: "Score by engine over time", trendOne: "One scan so far: the trend appears after your next scan.", mention: "mentioned", rank: "avg. rank", comps: "Who AI recommends instead", compSub: "Businesses named most often across your scans", name: "Business", times: "Mentions", inScans: "Scans", tr: "Trend", noComps: "No competitors were named yet.",
     qs: "Question explorer", qsSub: "Every question from your latest scan, with each engine's answer", yes: "Mentioned", no: "Not mentioned", rankN: "Rank", alsoNamed: "Also named", err: "Engine error", since: "Since last scan", better: "Improved", worse: "Dropped", same: "No change", newQ: "New question", noQs: "No answers stored for this scan.",
     src: "Where AI gets its information", srcSub: "Sites the engines cited in answers that did not mention you", cited: "cited", missing: "without you", todo: "To do", todoT: (h: string) => `Get listed on ${h}: claim or create your profile with the same name, category and city as your website.`, noSrc: "No outside sources were cited in answers that missed you.",
-    csv: "Download CSV", csvBusy: "Preparing…", scanN: "Scan", empty: "Your insights will appear here after your first scan." },
+    tone: "Net tone by scan", csv: "Download CSV", csvBusy: "Preparing…", scanN: "Scan", empty: "Your insights will appear here after your first scan." },
   he: { trend: "ציון לפי מנוע לאורך זמן", trendOne: "יש עד עכשיו סריקה אחת: המגמה תופיע אחרי הסריקה הבאה.", mention: "אזכור", rank: "דירוג ממוצע", comps: "את מי ה-AI ממליץ במקומך", compSub: "העסקים שהוזכרו הכי הרבה בסריקות שלך", name: "עסק", times: "אזכורים", inScans: "סריקות", tr: "מגמה", noComps: "עדיין לא הוזכרו מתחרים.",
     qs: "סייר השאלות", qsSub: "כל שאלה מהסריקה האחרונה, עם התשובה של כל מנוע", yes: "מוזכר", no: "לא מוזכר", rankN: "מקום", alsoNamed: "הוזכרו גם", err: "שגיאת מנוע", since: "מאז הסריקה הקודמת", better: "השתפר", worse: "ירד", same: "ללא שינוי", newQ: "שאלה חדשה", noQs: "אין תשובות שמורות לסריקה הזאת.",
     src: "מאיפה ה-AI לוקח את המידע", srcSub: "אתרים שהמנועים ציטטו בתשובות שלא הזכירו אותך", cited: "ציטוטים", missing: "בלעדייך", todo: "לביצוע", todoT: (h: string) => `להירשם ב-${h}: לפתוח או לעדכן פרופיל עם אותו שם, תחום ועיר כמו באתר שלך.`, noSrc: "לא צוטטו מקורות חיצוניים בתשובות שבהן לא הוזכרת.",
-    csv: "הורדת CSV", csvBusy: "מכין…", scanN: "סריקה", empty: "התובנות יופיעו כאן אחרי הסריקה הראשונה." },
+    tone: "טון נטו לפי סריקה", csv: "הורדת CSV", csvBusy: "מכין…", scanN: "סריקה", empty: "התובנות יופיעו כאן אחרי הסריקה הראשונה." },
 };
 
 function EngineChart({ rows, lang }: { rows: Trend[]; lang: Locale }) {
@@ -39,7 +42,7 @@ function EngineChart({ rows, lang }: { rows: Trend[]; lang: Locale }) {
     </svg>);
 }
 
-export default function DashInsights({ ins, lang, auth }: { ins?: Insights; lang: Locale; auth: { id: string; key: string } | null }) {
+export default function DashInsights({ ins, lang, auth, business = "" }: { ins?: Insights; lang: Locale; auth: { id: string; key: string } | null; business?: string }) {
   const t = T[lang]; const [busy, setBusy] = useState(false); const [open, setOpen] = useState<number | null>(0);
   if (!ins || !ins.scanCount) return <p className="di-empty" data-dash-empty>{t.empty}</p>;
   const last = ins.engineTrend.at(-1)!; const engines = Object.keys(last.byEngine);
@@ -51,6 +54,7 @@ export default function DashInsights({ ins, lang, auth }: { ins?: Insights; lang
   const delta = (c: QE["change"]) => c == null ? <span className="di-chip">{t.newQ}</span> : c.delta > 0 ? <span className="di-chip di-up">▲ {t.better}</span> : c.delta < 0 ? <span className="di-chip di-down">▼ {t.worse}</span> : <span className="di-chip">{t.same}</span>;
   return (
     <div className="di" data-insights>
+      <AlertsCard alerts={ins.alerts} business={business} lang={lang} scans={ins.scanCount} id={`al-${ins.businessId}`} />
       <section className="di-card" aria-labelledby={`tr-${ins.businessId}`}>
         <div className="di-head"><h3 id={`tr-${ins.businessId}`}>{t.trend}</h3><button type="button" onClick={csv} disabled={busy} className="btn-outline !py-1.5 !px-4 text-sm" data-csv>{busy ? t.csvBusy : t.csv}</button></div>
         <div className="di-eng">{engines.map((e) => { const r = last.byEngine[e]; return (
@@ -60,6 +64,10 @@ export default function DashInsights({ ins, lang, auth }: { ins?: Insights; lang
         {ins.engineTrend.length > 1 ? <EngineChart rows={ins.engineTrend} lang={lang} /> : <p className="di-mut mt-3">{t.trendOne}</p>}
       </section>
 
+      {(ins.sentiment?.length || ins.facts) ? <div data-dash-perception>
+        <PerceptionCards sentiment={ins.sentiment?.at(-1) || null} facts={ins.facts || null} lang={lang} id={`pc-${ins.businessId}`} />
+        {(ins.sentiment?.length || 0) > 1 && <p className="di-mut mt-3">{t.tone}: {ins.sentiment!.map((v) => <span key={v.scanId} className="di-chip ms-2" dir="ltr">{new Date(v.at).toLocaleDateString(lang === "he" ? "he-IL" : "en-US", { day: "numeric", month: "short" })} {v.net > 0 ? "+" : ""}{v.net}</span>)}</p>}
+      </div> : null}
       <section className="di-card" aria-labelledby={`cp-${ins.businessId}`} data-competitors>
         <h3 id={`cp-${ins.businessId}`}>{t.comps}</h3><p className="di-mut">{t.compSub}</p>
         {ins.competitors.length ? <div className="di-tw"><table className="di-t"><thead><tr><th>#</th><th>{t.name}</th><th>{t.times}</th><th>{t.inScans}</th><th>{t.tr}</th></tr></thead><tbody>

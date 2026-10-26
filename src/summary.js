@@ -1,4 +1,6 @@
 import { isOpaqueHost } from './extract.js';
+import { summarizeSentiment } from './sentiment.js';
+import { summarizeFacts } from './factcheck.js';
 // Summary of a scan from its results (pure; shared by runScan and scripts/day1-analyze.js, which rebuilds it per business offline without importing any provider).
 export function summarizeResults(results, { plan, engines, skipped = [], cost = 0 }) {
   const ok = results.filter(r => !r.error);
@@ -9,12 +11,13 @@ export function summarizeResults(results, { plan, engines, skipped = [], cost = 
   // Same rule as byEngine: every mentioned check counts, a mention without a list position counts as rank 5.
   const ranks = ok.filter(r => r.mentioned).map(r => r.rank || 5);
   const avgRank = ranks.length ? ranks.reduce((a, b) => a + b, 0) / ranks.length : null;
+  const sentiment = summarizeSentiment(results, engines), facts = summarizeFacts(results);
   const score = Math.round(100 * (0.7 * mentionRate + 0.3 * (avgRank ? Math.max(0, (6 - avgRank) / 5) : 0)));
   return {
     score, mentionRate: +mentionRate.toFixed(2), avgRank: avgRank && +avgRank.toFixed(1), byEngine,
     topCompetitors: Object.entries(compCount).sort((a, b) => b[1] - a[1]).slice(0, plan.competitors).map(([name, count]) => ({ name, count })),
     topCitedHosts: Object.values(hostCount).sort((a, b) => b.count - a.count).slice(0, 8),
-    engines: { ran: engines, skipped }, ownSiteCited: ok.some(r => r.ownSiteCited), checks: ok.length, ...(ok.some(r => r.clarifying) ? { clarifyingAnswers: ok.filter(r => r.clarifying).length } : {}), ...(ok.some(r => r.grounded === false) ? { ungroundedChecks: ok.filter(r => r.grounded === false).length } : {}), errors: results.length - ok.length, estCostUsd: +cost.toFixed(3),
+    engines: { ran: engines, skipped }, ownSiteCited: ok.some(r => r.ownSiteCited), checks: ok.length, ...(ok.some(r => r.clarifying) ? { clarifyingAnswers: ok.filter(r => r.clarifying).length } : {}), ...(ok.some(r => r.grounded === false) ? { ungroundedChecks: ok.filter(r => r.grounded === false).length } : {}), errors: results.length - ok.length, estCostUsd: +cost.toFixed(3), ...(sentiment ? { sentiment } : {}), ...(facts ? { facts } : {}),
   };
 }
 // Score 0 while the engines did name other businesses: most often a wrong city/category was entered (e.g. a Herzliya hotel

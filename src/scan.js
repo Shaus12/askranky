@@ -5,6 +5,9 @@ import { buildQuestions } from './questions.js';
 import { checkBudget, recordSpend } from './costs.js';
 import { COST_PER_CHECK, PLANS } from './plans.js';
 import { buildFixes } from './fixes.js';
+import { sentimentFor } from './sentiment.js';
+import { factCheck } from './factcheck.js';
+import { detectAlerts } from './alert-detect.js';
 import { getDb, save, id } from './store.js';
 
 export const NO_ENGINE_MESSAGE = { en: 'Live scans are temporarily unavailable (no AI engine is available right now). Please try again later.', he: 'הסריקות האמיתיות לא זמינות כרגע (אף מנוע AI לא זמין). נסו שוב מאוחר יותר.' };
@@ -23,7 +26,8 @@ export async function runScan(account, business, { engines = ENGINES, maxQuestio
     const p = getProvider(e);
     try {
       const ans = await p.ask(q, { business });
-      results.push({ question: q, engine: e, engineLabel: p.label, mock: !!p.mock, answer: ans.text, usage: ans.usage, searches: ans.searches, ...(typeof ans.grounded === 'boolean' ? { grounded: ans.grounded } : {}), ...analyzeAnswer(ans, business) });
+      const a = analyzeAnswer(ans, business); const sentiment = sentimentFor(ans.text, business, a.mentioned); const facts = factCheck(ans.text, business, a.mentioned);
+      results.push({ question: q, engine: e, engineLabel: p.label, mock: !!p.mock, answer: ans.text, usage: ans.usage, searches: ans.searches, ...(typeof ans.grounded === 'boolean' ? { grounded: ans.grounded } : {}), ...a, ...(sentiment ? { sentiment } : {}), ...(facts.length ? { facts } : {}) });
       if (!p.mock) cost += COST_PER_CHECK[e];
     } catch (err) { results.push({ question: q, engine: e, error: String(err.message).slice(0, 300) }); }
   }
@@ -37,6 +41,6 @@ export async function runScan(account, business, { engines = ENGINES, maxQuestio
   const summary = summarizeResults(results, { plan, engines, skipped, cost });
   const scan = { id: id(12), businessId: business.id, accountId: account.id, at: new Date().toISOString(), mock: ok.length > 0 && ok.every(r => r.mock), ...(utm ? { utm } : {}), summary, results };
   scan.fixes = buildFixes(scan, business);
-  const db = getDb(); db.scans[scan.id] = scan; business.scanIds = [...(business.scanIds || []), scan.id]; save();
+  const db = getDb(); const prev = db.scans[business.scanIds?.at(-1)]; scan.alerts = detectAlerts(prev, scan); db.scans[scan.id] = scan; business.scanIds = [...(business.scanIds || []), scan.id]; save();
   return scan;
 }

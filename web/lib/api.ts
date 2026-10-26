@@ -1,6 +1,8 @@
 import type { Dict, Locale } from "./i18n";
 import { mockReport } from "./mock";
-export type ReportData = ReturnType<typeof mockReport> & { mock?: boolean; live?: boolean; id?: string; date?: string; engines?: { ran: string[]; skipped: { engine: string; reason: string }[] } };
+import { sampleFacts, sampleSentiment, type Facts, type Sentiment } from "./perception";
+import type { Alert } from "@/components/AlertsCard";
+export type ReportData = ReturnType<typeof mockReport> & { sentiment?: Sentiment | null; facts?: Facts | null; alerts?: Alert[] | null; mock?: boolean; live?: boolean; id?: string; date?: string; engines?: { ran: string[]; skipped: { engine: string; reason: string }[] } };
 export type Me = { signedIn: boolean; google?: boolean; csrf?: string; account?: { id: string; email: string; plan: string; hasPassword: boolean; googleLinked: boolean } };
 let me: Promise<Me> | null = null;
 // Current session (cookie-based). Cached per page; refreshMe() after sign-in/out or a password change (the CSRF token rotates).
@@ -31,9 +33,9 @@ export function toReport(j: any): ReportData {
     byEngine: Object.entries(s.byEngine as Record<string, { checks: number; mentions: number }>).map(([e, v]) => ({ engine: LABEL[e] || e, rate: v.checks ? v.mentions / v.checks : 0 })),
     trend: j.history?.length ? j.history : [j.previousScore, s.score].filter((x: number | null) => x != null),
     competitors: s.topCompetitors, sources: s.topCitedHosts.map((h: any) => ({ host: h.host, count: h.count, own: !!h.isOwnSite })),
-    fixes: j.scan.fixes, engines: s.engines,
+    fixes: j.scan.fixes, engines: s.engines, sentiment: s.sentiment || null, facts: s.facts || null, alerts: j.scan.alerts || null,
   };
 }
 // Path segment after a marker, e.g. idFromPath("r") on /he/r/abc -> "abc".
 export const idFromPath = (marker: string) => { const p = window.location.pathname.split("/").filter(Boolean); const i = p.indexOf(marker); return i >= 0 ? decodeURIComponent(p[i + 1] || "") : ""; };
-export const sample = (l: Locale): ReportData => ({ ...mockReport(l), mock: true, live: false });
+export const sample = (l: Locale): ReportData => ({ ...mockReport(l), sentiment: sampleSentiment(l), facts: sampleFacts(l), mock: true, live: false });

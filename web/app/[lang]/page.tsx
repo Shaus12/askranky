@@ -12,10 +12,13 @@ import MaskHeading from "@/components/MaskHeading";
 import SectionHead from "@/components/SectionHead";
 import { faqJsonLd, ldScript } from "@/lib/seo";
 import { homeFor } from "@/lib/home";
+import { home3For } from "@/lib/home-v3";
+import JobsTabs from "@/components/JobsTabs";
+import { ContextBento, FeatureGrid, CommandCenter } from "@/components/HomeV3Sections";
 import { postsFor, fmtDate } from "@/lib/blog";
 
 export default async function Landing({ params }: { params: Promise<{ lang: string }> }) {
-  const { lang: l } = await params; const lang = (isLocale(l) ? l : "en") as Locale; const t = dict(lang); const h = t.hero; const m = homeFor(lang); const posts = postsFor(lang).slice(0, 3);
+  const { lang: l } = await params; const lang = (isLocale(l) ? l : "en") as Locale; const t = dict(lang); const h = t.hero; const m = homeFor(lang); const v = home3For(lang); const posts = postsFor(lang).slice(0, 3);
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldScript(faqJsonLd(lang)) }} />
@@ -33,10 +36,20 @@ export default async function Landing({ params }: { params: Promise<{ lang: stri
         <section className="hm-sec"><div className="hm-wrap hm-pad">
           <p className="hm-mono">{m.probEy}</p>
           <h2 className="hm-h2">{m.probT}</h2>
-          <div className="hm-cards3">
+          <div className="hm-cards3 hm-prob">
             {m.prob.map(([title, body], i) => (<div key={title}><span className="hm-num">{String(i + 1).padStart(2, "0")}</span><h3>{title}</h3><p className="hm-ps">{body}</p></div>))}
           </div>
         </div></section>
+
+        <Reveal as="section" id="product" className="hm-sec scroll-mt-16"><div className="hm-wrap hm-pad">
+          <h2 id="v3-jobs-t" className="hm-h2" data-reveal>{v.jobsT}</h2>
+          <p className="hm-pl" data-reveal>{v.jobsS}</p>
+          <div data-reveal><JobsTabs jobs={v.jobs} lang={lang} ex={v.cc.ex} /></div>
+        </div></Reveal>
+
+        <ContextBento h={v} lang={lang} />
+        <FeatureGrid h={v} lang={lang} />
+        <CommandCenter h={v} lang={lang} />
 
         <Reveal as="section" id="scan-form" className="vx-section mx-auto grid max-w-6xl scroll-mt-20 items-center gap-12 !pt-10 md:grid-cols-[1.05fr_1fr]">
           <div className="text-center md:text-start">
@@ -104,7 +117,6 @@ export default async function Landing({ params }: { params: Promise<{ lang: stri
 
         <Reveal as="section" className="vx-section relative overflow-hidden text-center">
           <span className="hairline absolute inset-x-0 top-0 block" />
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-[radial-gradient(60%_80%_at_50%_100%,rgba(37,99,235,.35),transparent_70%)]" />
           <div className="relative mx-auto max-w-4xl">
             <MaskHeading text={t.finalCta.title} grad />
             <p data-reveal className="vx-lede mx-auto mt-6 max-w-xl">{t.finalCta.sub}</p>

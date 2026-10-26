@@ -91,8 +91,8 @@ app.get('/healthz', (q, r) => r.set('Cache-Control', 'no-store').json({ ok: true
 // Disabled (404) unless CRON_SECRET (>= 16 chars) is set. Requires header X-Cron-Secret, compared timing-safe (sha256 + timingSafeEqual).
 // Not behind the CAPTCHA. Only wrong-secret attempts are rate limited (CRON_FAIL_MAX per 15 min per IP). Concurrent runs are collapsed
 // by an in-process lock (the second caller gets 202 {running:true}). The sync is idempotent. Responses never include sync data.
-import { runWeekly } from './src/weekly.js'; import { runFollowup, followupEmailsEnabled } from './src/followup.js';
-export const cronHooks = { sync: syncAll, weekly: () => runWeekly({ base: BASE }), followup: () => runFollowup({ base: BASE, send: sendEmailSoft, allow: reportEmailAllowed }) };
+import { runWeekly } from './src/weekly.js'; import { runAlerts, alertsEnabled } from './src/alerts.js'; import { runFollowup, followupEmailsEnabled } from './src/followup.js';
+export const cronHooks = { sync: syncAll, weekly: () => runWeekly({ base: BASE }), followup: () => runFollowup({ base: BASE, send: sendEmailSoft, allow: reportEmailAllowed }), alerts: () => runAlerts({ base: BASE, send: sendEmailSoft, allow: reportEmailAllowed }) };
 const cronFailLimiter = createRateLimiter({ max: Number(process.env.CRON_FAIL_MAX || 10), windowMs: 15 * 60 * 1000, onLimit: (q, r) => r.status(429).json({ ok: false }) });
 // Same semantics for every cron endpoint: 404 disabled, 401 wrong secret, 202 already running, 500 {ok:false}, 200 {ok, ranAt}. `enabled` (optional)
 // is an extra opt-in flag; when it is off the endpoint answers 200 {ok:true, skipped} after authenticating and runs nothing.
@@ -116,6 +116,9 @@ app.post('/api/internal/cron/weekly', cronEndpoint('weekly', 'weekly reports', {
 // Scan follow-up email (src/followup.js): NOT scheduled anywhere, inert unless FOLLOWUP_EMAILS_ENABLED=1; opted-in addresses only, one per address ever.
 export { followupEmailsEnabled };
 app.post('/api/internal/cron/followup', cronEndpoint('followup', 'scan follow-up emails', { enabled: followupEmailsEnabled, skipped: 'followup_disabled' }));
+// Alerts (src/alerts.js): re-scan paid businesses whose last scan is older than ALERT_SCAN_DAYS (default 7) and email what got worse.
+// NOT scheduled anywhere and inert unless ALERTS_ENABLED=1 (AI cost). Same secret, lock and status codes as the other cron endpoints.
+app.post('/api/internal/cron/alerts', cronEndpoint('alerts', 'alert scans', { enabled: alertsEnabled, skipped: 'alerts_disabled' }));
 // Read-only ops status (aggregate numbers, no PII / SUMIT data): GET /api/internal/status with header X-Status-Token (env STATUS_TOKEN, >= 24 chars).
 // Disabled, missing or wrong token: the request falls through to the normal unknown-route 404 (same status, body and headers as any other
 // unknown /api/ path: no 401/403, no hint that it exists). The token is only ever read from the header (never URL/body), compared timing-safe

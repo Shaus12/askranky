@@ -1,0 +1,6 @@
+feature,original,size,status,evidence
+Sentiment per answer with the phrase that drove it,no,M,building,https://www.g2.com/products/profound/reviews/profound-review-12972914
+Fact check against owner-provided business facts,no,M,building,
+Plain-language "what changed" between scans,no,S,todo,https://www.g2.com/products/profound/reviews/profound-review-12972914
+Glossary tooltips on every metric,no,S,todo,https://www.g2.com/products/profound/reviews/profound-review-12855211
+Per-engine sentiment and fact breakdown,no,S,building,https://www.g2.com/products/profound/reviews/profound-review-12870153
