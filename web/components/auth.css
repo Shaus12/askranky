@@ -1,0 +1,46 @@
+/* v2-auth: sign-in / sign-up / reset / account. Black surface, #2563eb as the only accent. Logical properties for RTL. */
+.rk-auth { display: flex; justify-content: center; padding: clamp(2.5rem, 8vw, 5.5rem) 1.25rem; }
+.rk-auth-card { width: 100%; max-width: 26rem; background: #0a0a0b; border: 1px solid rgba(255,255,255,.09); border-radius: 1rem; padding: clamp(1.25rem, 4vw, 2rem); box-shadow: 0 30px 60px -40px rgba(37,99,235,.45); display: grid; gap: 1rem; }
+.rk-auth-h { margin: 0; font-size: clamp(1.5rem, 4vw, 1.85rem); font-weight: 650; letter-spacing: -.01em; color: #fff; line-height: 1.2; }
+.rk-auth-h2 { margin: .5rem 0 0; font-size: 1.05rem; font-weight: 600; color: #fff; }
+.rk-auth-sub { margin: 0; color: #a1a1aa; font-size: .925rem; line-height: 1.55; overflow-wrap: anywhere; }
+.rk-form { display: grid; gap: .9rem; }
+.rk-field { display: grid; gap: .35rem; }
+.rk-field-l { font-size: .85rem; font-weight: 500; color: #e4e4e7; }
+.rk-input { width: 100%; min-height: 2.75rem; border-radius: .6rem; border: 1px solid rgba(255,255,255,.14); background: #000; color: #fff; padding: .6rem .8rem; font: inherit; font-size: 1rem; text-align: start; transition: border-color .15s, box-shadow .15s; }
+.rk-input:hover { border-color: rgba(255,255,255,.28); }
+.rk-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.35); }
+.rk-pw { position: relative; display: block; }
+.rk-pw .rk-input { padding-inline-end: 4.25rem; }
+.rk-pw-t { position: absolute; inset-inline-end: .35rem; top: 50%; transform: translateY(-50%); background: transparent; border: 0; color: #a1a1aa; font-size: .8rem; padding: .35rem .5rem; border-radius: .4rem; cursor: pointer; }
+.rk-pw-t:hover { color: #fff; background: rgba(255,255,255,.06); }
+.rk-hint { font-size: .78rem; color: #71717a; }
+.rk-btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 2.85rem; border: 0; border-radius: 9999px; background: #2563eb; color: #fff; font: inherit; font-weight: 600; font-size: .975rem; cursor: pointer; transition: background .15s; text-decoration: none; }
+.rk-btn:hover { background: #1d4ed8; }
+.rk-btn:disabled { opacity: .6; cursor: not-allowed; }
+.rk-btn-2 { background: transparent; border: 1px solid rgba(37,99,235,.6); color: #dbeafe; }
+.rk-btn-2:hover { background: rgba(37,99,235,.15); }
+.rk-btn-ghost { background: transparent; color: #a1a1aa; border: 1px solid rgba(255,255,255,.12); }
+.rk-btn-ghost:hover { background: rgba(255,255,255,.05); color: #fff; }
+.rk-btn:focus-visible, .rk-google:focus-visible, .rk-link:focus-visible, .rk-pw-t:focus-visible, .rk-magic > summary:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
+.rk-google { display: flex; align-items: center; justify-content: center; gap: .6rem; min-height: 2.85rem; border-radius: 9999px; background: #fff; color: #18181b; font-weight: 600; font-size: .95rem; text-decoration: none; transition: background .15s; }
+.rk-google:hover { background: #e4e4e7; }
+.rk-or { display: flex; align-items: center; gap: .75rem; color: #71717a; font-size: .8rem; }
+.rk-or::before, .rk-or::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,.1); }
+.rk-row { display: flex; justify-content: flex-end; margin-top: -.35rem; }
+.rk-link { color: #60a5fa; font-size: .875rem; text-decoration: none; }
+.rk-link:hover { text-decoration: underline; }
+.rk-alt { margin: 0; text-align: center; color: #a1a1aa; font-size: .875rem; }
+.rk-err { margin: 0; border: 1px solid rgba(239,68,68,.4); background: rgba(239,68,68,.08); color: #fecaca; border-radius: .6rem; padding: .6rem .8rem; font-size: .875rem; }
+.rk-ok { margin: 0; border: 1px solid rgba(37,99,235,.45); background: rgba(37,99,235,.1); color: #dbeafe; border-radius: .6rem; padding: .75rem .9rem; font-size: .9rem; }
+.rk-magic { border-top: 1px solid rgba(255,255,255,.08); padding-top: .9rem; display: grid; gap: .75rem; }
+.rk-magic > summary { cursor: pointer; color: #d4d4d8; font-size: .9rem; list-style: none; }
+.rk-magic > summary::-webkit-details-marker { display: none; }
+.rk-magic[open] > summary { margin-bottom: .6rem; }
+.rk-magic .rk-form { margin-top: .75rem; }
+.rk-acct { position: relative; }
+.rk-avatar { display: inline-grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 9999px; background: #2563eb; color: #fff; font-size: .75rem; font-weight: 700; }
+.rk-acct-menu { position: absolute; inset-inline-end: 0; top: calc(100% + .5rem); min-width: 14rem; background: #0a0a0b; border: 1px solid rgba(255,255,255,.1); border-radius: .75rem; padding: .5rem; display: grid; gap: .1rem; z-index: 60; box-shadow: 0 20px 40px -20px rgba(0,0,0,.8); }
+.rk-acct-who { margin: .25rem .5rem .4rem; color: #71717a; font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rk-acct-out, .rk-mobile-out { background: transparent; border: 0; text-align: start; cursor: pointer; font: inherit; color: inherit; width: 100%; }
+@media (prefers-reduced-motion: reduce) { .rk-auth *, .rk-acct * { transition: none !important; } }

@@ -42,7 +42,7 @@ try {
     for (const p of PRIVATE_HTML) { assert.equal(await hdr(p), 'noindex, nofollow', `noindex header ${p}`); assert.ok(!blocked(p.split('?')[0]), `${p} must be crawlable so the noindex can be read`); }
     for (const p of ['/api/health', '/api/config', '/webhooks/sumit']) { assert.ok(blocked(p), p); assert.equal(await hdr(p), null, `${p} is Disallow-only (never indexable), no noindex`); }
     for (const p of ['/he', '/en', '/en/scan', '/he/scan', '/en/report', '/he/report', '/en/legal', '/en/legal/terms']) { assert.ok(!blocked(p), p); assert.equal(await hdr(p), null, `${p} indexable`); }
-    if (BUILT) { for (const p of ['/he/dashboard', '/en/dashboard', '/en/login', '/he/login', '/en/checkout', '/he/checkout']) assert.match((await get(p)).t, /<meta name="robots" content="noindex, nofollow"\/>/, `meta ${p}`);
+    if (BUILT) { for (const p of ['/he/dashboard/abc', '/en/dashboard/abc', '/en/login', '/he/signup', '/en/reset', '/he/account', '/he/login', '/en/checkout', '/he/checkout']) assert.match((await get(p)).t, /<meta name="robots" content="noindex, nofollow"\/>/, `meta ${p}`);
       for (const p of ['/en/report', '/he/report', '/en/scan', '/he']) assert.ok(!/name="robots"/.test((await get(p)).t), `${p} must not carry a robots meta`); }
     assert.ok(/NOINDEX_PATH/.test(fs.readFileSync('server.js', 'utf8')) && !/Disallow: \/(dashboard|login|checkout|r\/)/.test(rb));
     ok('robots/noindex consistency: private HTML = crawlable + noindex (header; meta on static pages), /api/ + /webhooks/ = Disallow only, public pages indexable'); }

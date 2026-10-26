@@ -14,6 +14,10 @@ const PAGE: Record<string, { he: string; en: string; dhe: string; den: string }>
   "/scan": { he: "סריקת AI חינם", en: "Free AI scan", dhe: "בדקו בחינם אם ChatGPT ו־Gemini ממליצים על העסק שלכם, ומי מומלץ במקומכם. חינם, סריקה אחת לכל אימייל, כדקה.", den: "Check free whether ChatGPT and Gemini recommend your business, and who they name instead. Free, one scan per email, about a minute." },
   "/report": { he: "דוח לדוגמה", en: "Sample report", dhe: "כך נראה דוח נראות ב־AI של Ranky: ציון, מתחרים שמומלצים, מקורות שמצוטטים ו־3 תיקונים.", den: "See a sample Ranky AI visibility report: score, competitors AI recommends, cited sources and 3 fixes." },
   "/login": { he: "כניסה", en: "Sign in", dhe: "כניסה לדשבורד של Ranky עם קישור חד־פעמי במייל.", den: "Sign in to your Ranky dashboard with a one-time email link." },
+  "/signup": { he: "הרשמה", en: "Create account", dhe: "יצירת חשבון Ranky עם אימייל וסיסמה.", den: "Create a Ranky account with email and password." },
+  "/reset": { he: "איפוס סיסמה", en: "Reset password", dhe: "איפוס הסיסמה לחשבון Ranky.", den: "Reset your Ranky password." },
+  "/verify": { he: "אישור אימייל", en: "Confirm email", dhe: "אישור האימייל לחשבון Ranky.", den: "Confirm the email for your Ranky account." },
+  "/account": { he: "החשבון שלי", en: "My account", dhe: "הגדרות החשבון שלך ב־Ranky.", den: "Your Ranky account settings." },
   "/checkout": { he: "תשלום", en: "Checkout", dhe: "תשלום מאובטח למנוי Ranky. ללא מע\"מ, קבלה במייל.", den: "Secure checkout for a Ranky plan. Receipt by email." },
   "/dashboard": { he: "דשבורד", en: "Dashboard", dhe: "הדשבורד הפרטי שלך ב־Ranky.", den: "Your private Ranky dashboard." },
   "/blog": { he: "הבלוג", en: "Blog", dhe: "מדריכים מעשיים לעסקים מקומיים: איך ChatGPT ו־Gemini בוחרים עסקים להמליץ עליהם, ומה עושים כדי להופיע בתשובות.", den: "Practical guides for local businesses: how ChatGPT and Gemini choose which businesses to recommend, and what to do to show up in the answers." },
@@ -22,7 +26,7 @@ const PAGE: Record<string, { he: string; en: string; dhe: string; den: string }>
 // One entry per legal document: /legal/{doc} (own title, description, self-canonical, he<->en alternates; indexable).
 for (const d of LEGAL_DOCS) PAGE[`/legal/${d}`] = { he: LEGAL_META[d].he.title, en: LEGAL_META[d].en.title, dhe: LEGAL_META[d].he.desc, den: LEGAL_META[d].en.desc };
 // PRIVATE pages get <meta name="robots" content="noindex, nofollow">; robots.txt must NOT disallow them (see src/seo.js).
-export const PRIVATE = ["/checkout", "/dashboard", "/login", "/billing"];
+export const PRIVATE = ["/checkout", "/dashboard", "/login", "/signup", "/reset", "/verify", "/account", "/billing"];
 export function pageMeta(lang: Locale, path = ""): Metadata {
   const t = T[lang]; const title = PAGE[path] ? `${PAGE[path][lang]} · Ranky` : t.title; const desc = PAGE[path]?.[lang === "he" ? "dhe" : "den"] ?? t.desc; const og = `${SITE}/og-${lang}.png`; const url = `${SITE}/${lang}${path}`;
   return {

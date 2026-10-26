@@ -3,7 +3,7 @@
 // (one write at a time; saves requested during a write coalesce into one follow-up write).
 import fs from 'node:fs'; import path from 'node:path'; import crypto from 'node:crypto'; import { dataPath } from './paths.js';
 const FILE = process.env.DB_FILE || dataPath('db.json');
-const empty = () => ({ accounts: {}, businesses: {}, scans: {}, spend: {}, events: [] });
+const empty = () => ({ accounts: {}, businesses: {}, scans: {}, spend: {}, events: [], sessions: {} });
 // Postgres needs DATABASE_URL plus NODE_ENV=production or STORE=postgres, so a dev box that merely has DATABASE_URL in its
 // env keeps using the JSON file (and never migrates the real DB). STORE=json / FORCE_JSON_STORE=1 always force JSON.
 export const wantsPostgres = (env = process.env) => !!env.DATABASE_URL && !env.FORCE_JSON_STORE && env.STORE !== 'json' && (env.STORE === 'postgres' || env.NODE_ENV === 'production');
@@ -27,7 +27,7 @@ export const save = () => {
 };
 export const flush = () => PG ? PG.flush() : writing || Promise.resolve();
 export const id = (n = 10) => crypto.randomBytes(n).toString('base64url').slice(0, n);
-export const getDb = () => PG ? PG.db() : db;
+export const getDb = () => { const d = PG ? PG.db() : db; d.sessions ||= {}; return d; };
 export const reset = () => { if (PG) return PG.reset(); db = empty(); return save(); };
 export const close = () => PG?.close();
 export const DB_FILE = FILE;

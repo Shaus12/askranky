@@ -9,7 +9,7 @@ export const SITE = () => (process.env.SITE_URL || 'https://askranky.com').repla
 //  * Non-HTML endpoints that never were indexable: /api/ (JSON) and /webhooks/ (POST callbacks): Disallow, and no noindex.
 //  * The sample report /{lang}/report, /scan, legal docs and the home page are public and indexable.
 export const DISALLOW = ['/api/', '/webhooks/'];
-export const NOINDEX_PATH = /^\/(?:(?:he|en)\/)?(?:dashboard|login|checkout|billing|auth|mock-checkout|unsubscribe|r)(?:\/|$)/;
+export const NOINDEX_PATH = /^\/(?:(?:he|en)\/)?(?:dashboard|login|signup|reset|verify|account|checkout|billing|auth|mock-checkout|unsubscribe|r)(?:\/|$)/;
 export const BOTS = ['*', 'GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'PerplexityBot', 'Perplexity-User', 'Google-Extended', 'Googlebot', 'ClaudeBot', 'Claude-SearchBot', 'Claude-User', 'Applebot-Extended', 'Bingbot'];
 export const robotsTxt = () => BOTS.map(b => [`User-agent: ${b}`, 'Allow: /', ...DISALLOW.map(d => `Disallow: ${d}`)].join('\n')).join('\n\n') + `\n\nSitemap: ${SITE()}/sitemap.xml\n`;
 // Legal docs have their own server-rendered, self-canonical URLs (/{lang}/legal/{doc}); the old ?doc= URLs 301 to them and are not listed.

@@ -1,15 +1,23 @@
 import type { Dict, Locale } from "./i18n";
 import { mockReport } from "./mock";
 export type ReportData = ReturnType<typeof mockReport> & { mock?: boolean; live?: boolean; id?: string; date?: string; engines?: { ran: string[]; skipped: { engine: string; reason: string }[] } };
+export type Me = { signedIn: boolean; google?: boolean; csrf?: string; account?: { id: string; email: string; plan: string; hasPassword: boolean; googleLinked: boolean } };
+let me: Promise<Me> | null = null;
+// Current session (cookie-based). Cached per page; refreshMe() after sign-in/out or a password change (the CSRF token rotates).
+export const getMe = () => (me ||= fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" }).then((r) => r.json()).catch(() => ({ signedIn: false })));
+export const refreshMe = () => { me = null; return getMe(); };
 export async function api<T = any>(path: string, opts: { method?: string; body?: unknown; headers?: Record<string, string> } = {}): Promise<T> {
-  const r = await fetch(path, { method: opts.method || (opts.body ? "POST" : "GET"), headers: { "Content-Type": "application/json", ...(opts.headers || {}) }, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const method = opts.method || (opts.body ? "POST" : "GET");
+  // State-changing requests carry the session's CSRF token when signed in (the server also checks Origin).
+  const csrf = method !== "GET" && !path.startsWith("/api/auth/me") ? (await getMe()).csrf : undefined;
+  const r = await fetch(path, { method, credentials: "same-origin", headers: { "Content-Type": "application/json", ...(csrf ? { "X-CSRF-Token": csrf } : {}), ...(opts.headers || {}) }, body: opts.body ? JSON.stringify(opts.body) : undefined });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw Object.assign(new Error(j.message || j.error || `Request failed (${r.status})`), { status: r.status, code: typeof j.error === "string" ? j.error : undefined, data: j });
   return j as T;
 }
 // Server CAPTCHA errors carry a stable code in `error`; show the localized string instead of the English message.
 export const errMessage = (x: any, t: Dict): string => x?.code === "captcha_required" ? t.form.captcha : x?.code === "captcha_failed" ? t.form.captchaFailed : x?.code === "captcha_unavailable" ? t.form.captchaUnavailable : x?.code === "rate_limited" ? t.form.rateLimited.replace("{m}", String(Math.max(1, Math.ceil((Number(x?.data?.retryAfter) || 60) / 60)))) : x?.code === "free_limit_reached" ? t.form.freeLimit : x?.code === "scan_unavailable" ? t.scanErr.unavailable : x?.message || String(x);
-export type Config = { turnstileSiteKey: string | null; mock: boolean; prelaunch?: boolean; emailMock?: boolean; brand: { name: string; domain: string } };
+export type Config = { turnstileSiteKey: string | null; googleAuth?: boolean; mock: boolean; prelaunch?: boolean; emailMock?: boolean; brand: { name: string; domain: string } };
 let cfg: Promise<Config> | null = null;
 export const getConfig = () => (cfg ||= api<Config>("/api/config").catch(() => ({ turnstileSiteKey: null, mock: true, prelaunch: true, emailMock: true, brand: { name: "Ranky", domain: "askranky.com" } })));
 const LABEL: Record<string, string> = { chatgpt: "ChatGPT", gemini: "Gemini", perplexity: "Perplexity" };

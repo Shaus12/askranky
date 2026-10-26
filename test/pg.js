@@ -6,7 +6,7 @@ const mem = newDb(); const { Pool } = mem.adapters.createPg(); const URL = 'post
 assert.equal(P.sslFor(URL), false); assert.deepEqual(P.sslFor('postgres://u@h/db?sslmode=require'), { rejectUnauthorized: true }); ok('SSL on unless sslmode=disable');
 const pd = process.env.PG_DRIVER; delete process.env.PG_DRIVER; assert.equal(P.driverFor('postgres://u@ep-x.eu-central-1.aws.neon.tech/db'), 'neon'); assert.equal(P.driverFor(URL), 'pg'); if (pd) process.env.PG_DRIVER = pd; ok('Neon URLs use @neondatabase/serverless (443), others node-postgres');
 const a = await P.createPgStore(URL, { Pool }); const db = a.db();
-assert.deepEqual(Object.keys(db).sort(), ['accounts', 'businesses', 'events', 'scans', 'spend', 'waitlist']); ok('migrations create schema; empty document shape');
+assert.deepEqual(Object.keys(db).sort(), ['accounts', 'businesses', 'events', 'scans', 'sessions', 'spend', 'waitlist']); ok('migrations create schema; empty document shape');
 db.accounts.x = { id: 'x', email: 'a@b.test', plan: 'free' }; db.businesses.b = { id: 'b', accountId: 'x' }; db.scans.s = { id: 's', summary: { score: 5 } };
 db.events.push({ type: 'e1' }); db.waitlist.push({ email: 'w@t.test' }); db.spend['2026-10-22'] = 0.42; await Promise.all([a.save(), a.save(), a.save()]); await a.flush();
 let b = await P.createPgStore(URL, { Pool }); assert.deepEqual(b.db(), db); ok('save → reload round-trips every collection (concurrent saves coalesce)');

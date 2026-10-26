@@ -11,6 +11,7 @@ import { renderTx } from './src/email/templates.js'; import { setConsent, verify
 import { TEST_PLAN, TEST_BILLING, TEST_CHECKOUT_TTL_MS, TEST_ACCESS_MS } from './src/payments/test-plan.js';
 import { validSingleUseToken, looksLikeCardNumber } from './src/payments/sumit.js'; import { checkoutCsp, inlineScriptHashes, adminNonce, JQUERY_PATH, SUMIT_SCRIPT_URL } from './src/security/csp.js';
 import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { buildStatus, recordSync } from './src/status.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js'; import { blogPageHtml } from './src/blog.js';
+import { registerAuth } from './src/auth/routes.js'; import { googleEnabled } from './src/auth/google.js';
 
 // TRUST_PROXY=1 (GO-LIVE.md) is a *string* in process.env; Express treats a string as an IP/subnet list ('1' = the address 0.0.0.1), so the proxy was
 // NOT trusted and every visitor shared the proxy's IP in all per-IP limits. Numbers become a hop count, 'true'/'false' booleans, anything else is passed through.
@@ -40,6 +41,8 @@ async function captcha(q, r, next) {
   // Stable code in `error`/`code` (clients localize it) + the English text in `message`.
   return captchaFailLimiter(q, r, () => wantsJson(q) ? r.status(403).json({ error: v.code, code: v.code, message: v.error }) : r.status(403).send(V.landing(v.error)));
 }
+// Accounts, sessions, CSRF, Google sign-in (src/auth/routes.js). Mounted before every route that reads q.session.
+export const AUTH = registerAuth(app, { getDb, save, id, BASE, sendEmail, renderTx, captcha });
 const dashUrl = a => `/dashboard/${encodeURIComponent(a.id)}?key=${encodeURIComponent(a.key)}`;
 // Sign-in link email (HE/EN via renderTx('login')). Language: explicit > the account's known language > English.
 async function emailMagicLink(a, lang) {
@@ -265,7 +268,8 @@ const freeUsedBody = (hit, lang) => ({ error: 'free_scan_used', code: 'free_scan
 export const needsPaidLogin = a => !!a && !a.testSubscription && !a.adminTest && isPaid(PLANS[a.plan]);
 const sessionAccountId = q => String(q.get('x-account-id') ?? q.body?.accountId ?? '');
 const sessionKey = q => String(q.get('x-dashboard-key') ?? q.body?.dashboardKey ?? '');
-export const paidScanAllowed = (q, a) => !needsPaidLogin(a) || (sessionAccountId(q) === a.id && !!a.key && safeEqual(sessionKey(q), a.key));
+// Either the legacy dashboard key (transition period) or a real signed-in session for that account (with its CSRF token).
+export const paidScanAllowed = (q, a) => !needsPaidLogin(a) || (sessionAccountId(q) === a.id && !!a.key && safeEqual(sessionKey(q), a.key)) || (q.session?.accountId === a.id && AUTH.csrfOk(q));
 const LOGIN_REQ = { en: 'This email is linked to an existing account. Please sign in to that account to scan with it.', he: 'האימייל הזה משויך לחשבון קיים. כדי לסרוק איתו, יש להתחבר לחשבון הזה.' };
 const loginRequiredBody = lang => { const l = lang === 'he' ? 'he' : 'en'; return { error: 'login_required', code: 'login_required', message: LOGIN_REQ.en, messageHe: LOGIN_REQ.he, loginUrl: `/${l}/login` }; };
 app.post('/scan', scanLimiter, captcha, async (q, r) => {
@@ -386,7 +390,11 @@ export const webhookAuthorized = q => { const s = process.env.SUMIT_WEBHOOK_SECR
   return safeEqual(String(q.get('x-webhook-secret') || q.query?.secret || ''), s); };
 app.post('/webhooks/payments', async (q, r) => { if (!webhookAuthorized(q)) return r.sendStatus(401); const res = await getPayments().handleWebhook(q.body, q.headers); if (!res.ok) return r.sendStatus(401); getDb().events.push({ at: new Date().toISOString(), ...res.event }); save(); r.sendStatus(200); });
 
-const accountFor = q => { const db = getDb(); const a = Object.hasOwn(db.accounts, q.params.id) ? db.accounts[q.params.id] : null; return a && safeEqual(String(q.query.key ?? q.get('x-dashboard-key') ?? ''), a.key) ? a : null; };
+// Dashboard auth: the legacy key (?key= / x-dashboard-key) or a session for this account. State-changing requests authenticated only by the
+// session cookie must also carry the session's CSRF token (x-csrf-token header or csrf field) and pass the Origin/Referer check.
+const accountFor = q => { const db = getDb(); const a = Object.hasOwn(db.accounts, q.params.id) ? db.accounts[q.params.id] : null; if (!a) return null;
+  if (safeEqual(String(q.query.key || q.get('x-dashboard-key') || ''), a.key)) return a;
+  if (q.session?.accountId === a.id && (q.method === 'GET' || q.method === 'HEAD' || AUTH.csrfOk(q))) return a; return null; };
 function auth(q, r) { const a = accountFor(q); if (!a) { r.status(403).send('forbidden'); return null; } return a; }
 // Magic-link login: always answers the same way so it can't be used to probe which emails exist.
 async function login(q, r) { const email = String(q.body?.email || '').trim().toLowerCase(); const a = email && Object.values(getDb().accounts).find(x => x.email === email);
@@ -394,7 +402,7 @@ async function login(q, r) { const email = String(q.body?.email || '').trim().to
 app.post('/login', loginLimiter, captcha, login); app.post('/api/login', loginLimiter, captcha, login);
 app.get('/auth/magic', loginLimiter, (q, r) => { const db = getDb(); const a = Object.hasOwn(db.accounts, String(q.query.a)) ? db.accounts[q.query.a] : null;
   if (!a || !consumeMagic(a, q.query.t)) return r.status(403).send(V.message('Link expired', '', 'This sign-in link is invalid or already used. Request a new one.'));
-  if (!a.key || a.key.length < 32) a.key = token(32); save(); r.set('Referrer-Policy', 'no-referrer'); r.redirect(dashUrl(a)); });
+  if (!a.key || a.key.length < 32) a.key = token(32); a.emailVerified = true; AUTH.startSession(q, r, a, 'magic'); save(); r.set('Referrer-Policy', 'no-referrer'); r.redirect(dashUrl(a)); });
 app.post('/dashboard/:id/rescan', async (q, r) => {
   const a = auth(q, r); if (!a) return; const b = Object.hasOwn(getDb().businesses, String(q.body.businessId)) ? getDb().businesses[q.body.businessId] : null; if (!b || b.accountId !== a.id) return r.sendStatus(404);
   try { await runScan(a, b); r.redirect(dashUrl(a)); } catch (e) { r.status(e.code === 'NO_ENGINE' ? 503 : 429).send(V.message('Scan not run', '', e.message)); }
@@ -427,7 +435,7 @@ app.post('/unsubscribe', loginLimiter, (q, r) => { const t = q.query.t || q.body
 
 // ---------- JSON API for the Next.js frontend (web/) ----------
 const pub = a => ({ id: a.id, email: a.email, plan: a.plan, active: !!a.subscriptionRef && a.status !== 'cancelled', status: a.status || (a.subscriptionRef ? 'active' : null), paidThrough: a.paidThrough || null, cancelledAt: a.cancelledAt || null });
-app.get('/api/config', (q, r) => r.json({ brand: BRAND, plans: publicPlans(), usdBilling: usdBillingEnabled(), mock: isMockMode(), prelaunch: isPrelaunch(), emailMock: emailIsMock(), turnstileSiteKey: turnstileSiteKey() }));
+app.get('/api/config', (q, r) => r.json({ brand: BRAND, plans: publicPlans(), usdBilling: usdBillingEnabled(), mock: isMockMode(), prelaunch: isPrelaunch(), emailMock: emailIsMock(), turnstileSiteKey: turnstileSiteKey(), googleAuth: googleEnabled() }));
 app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body || {};
   // City is required (no default anywhere): a scan for the wrong city scores 0 and looks like a broken product.
@@ -498,7 +506,7 @@ app.get('/', (q, r) => r.redirect(`/${prefLang(q)}`));
 // Language-less legacy/short links → preferred language.
 app.get('/r/:id', (q, r) => r.redirect(`/${prefLang(q)}/r/${encodeURIComponent(q.params.id)}`));
 app.get('/dashboard/:id', (q, r) => r.redirect(`/${prefLang(q)}/dashboard/${encodeURIComponent(q.params.id)}${qs(q)}`));
-app.get('/login', (q, r) => r.redirect(`/${prefLang(q)}/login`));
+app.get('/login', (q, r) => r.redirect(`/${prefLang(q)}/login`)); app.get(['/signup', '/account'], (q, r) => r.redirect(`/${prefLang(q)}${q.path}`)); app.get('/dashboard', (q, r) => r.redirect(`/${prefLang(q)}/dashboard`));
 app.get('/pricing', (q, r) => r.redirect(`/${prefLang(q)}#pricing`));
 app.get('/mock-checkout', (q, r) => { const k = String(q.query.account || '').split('.')[0]; const acc = Object.hasOwn(getDb().accounts, k) ? getDb().accounts[k] : null; return isPrelaunch() && !(acc?.pendingAdminTest && getPayments().id === 'mock') ? r.redirect(`/${prefLang(q)}/checkout`) : r.redirect(`/${prefLang(q)}/checkout${qs(q)}${isPrelaunch() ? (qs(q) ? '&' : '?') + 'admintest=1' : ''}`); });
 // Legal docs live at /{lang}/legal/{doc} (server-rendered from legal/*.md, full text in the HTML). Short links and the old
@@ -526,8 +534,12 @@ app.get('/:lang/r/:id', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, 
 app.get('/:lang/dashboard/:id', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'dashboard') : next());
 // The checkout page is the only static page with a CSP (card entry): own origin + Turnstile, and the SUMIT script/API origins only while PAYMENTS_PROVIDER=sumit.
 const checkoutCspFor = lang => checkoutCsp({ sumit: getPayments().id === 'sumit', turnstile: true, scriptSources: inlineScriptHashes(path.join(OUT, `${lang}/checkout.html`)) });
-app.get('/:lang/:page', (q, r, next) => { if (!(LANGS.includes(q.params.lang) && ['scan', 'report', 'login', 'dashboard', 'checkout'].includes(q.params.page))) return next();
-  if (q.params.page === 'checkout') { r.set('Content-Security-Policy', checkoutCspFor(q.params.lang)); } return page(r, q.params.lang, q.params.page); });
+// Password / account pages get the same strict CSP as checkout (own origin + Turnstile, inline scripts by hash), never cached.
+const AUTH_PAGES = ['login', 'signup', 'reset', 'verify', 'account'];
+app.get('/:lang/:page', (q, r, next) => { if (!(LANGS.includes(q.params.lang) && ['scan', 'report', 'dashboard', 'checkout', ...AUTH_PAGES].includes(q.params.page))) return next();
+  if (q.params.page === 'checkout') { r.set('Content-Security-Policy', checkoutCspFor(q.params.lang)); }
+  if (AUTH_PAGES.includes(q.params.page)) { r.set('Content-Security-Policy', checkoutCsp({ turnstile: true, scriptSources: inlineScriptHashes(path.join(OUT, `${q.params.lang}/${q.params.page}.html`)) })); r.set('Cache-Control', 'no-store'); r.set('Referrer-Policy', 'no-referrer'); }
+  return page(r, q.params.lang, q.params.page); });
 app.get(['/he.txt', '/en.txt', '/:lang/:page.txt'], (q, r) => { const f = path.join(OUT, q.path); return LANGS.some(l => q.path.startsWith('/' + l)) && fs.existsSync(f) && !q.path.includes('..') ? r.sendFile(f) : r.sendStatus(404); });
 // Branded bilingual 404 (RTL Hebrew + English, order follows the URL language or preference). JSON for /api.
 app.use((q, r) => { if (wantsJson(q)) return r.status(404).json({ error: 'not found' }); const m = /^\/(he|en)(\/|$)/.exec(q.path); r.status(404).type('html').send(notFoundPage(m ? m[1] : prefLang(q))); });

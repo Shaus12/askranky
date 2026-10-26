@@ -17,7 +17,7 @@ export default function Dashboard({ t, lang }: { t: Dict; lang: Locale }) {
     const id = idFromPath("dashboard"); const q = new URLSearchParams(location.search); const sk = `ranky-key-${id}`;
     const key = q.get("key") || sessionStorage.getItem(sk) || "";
     if (q.get("key")) { sessionStorage.setItem(sk, key); history.replaceState(null, "", location.pathname); }
-    if (!id || !key) { setErr(t.dash.bad); return; }
+    if (!id) { setErr(t.dash.bad); return; } // no key: a signed-in session cookie authenticates instead (v2-auth)
     setAuth({ id, key });
     api(`/api/dashboard/${encodeURIComponent(id)}`, { headers: { "x-dashboard-key": key } }).then(setD).catch(() => setErr(t.dash.bad));
   }, [t]);

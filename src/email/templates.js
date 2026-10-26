@@ -50,6 +50,30 @@ const T = {
       `הגישה נשמרת עד ${v.paidThrough}; לאחר מכן החשבון עובר למסלול החינמי.${v.refundAmount ? ` החזר של ${v.refundAmount} ${v.currency} יגיע לכרטיס תוך 14 יום.` : ''}`,
       `התחרטת? פשוט השב/י.`] },
   },
+  verify: {
+    en: { subject: v => `Confirm your email for ${v.brand}`, body: v => [
+      `Confirm your email to finish creating your ${v.brand} password: <a href="${v.linkRaw}">${v.link}</a>`,
+      `The link is valid for 24 hours and works once.`, `If you didn't sign up, you can ignore this email; nothing changes.`] },
+    he: { subject: v => `אישור האימייל שלך ב-${v.brand}`, body: v => [
+      `כדי לסיים את יצירת הסיסמה ב-${v.brand}, יש לאשר את האימייל: <a href="${v.linkRaw}">${v.link}</a>`,
+      `הקישור תקף ל-24 שעות ופועל פעם אחת בלבד.`, `אם לא נרשמת, אפשר להתעלם ממייל זה. שום דבר לא ישתנה.`] },
+  },
+  reset: {
+    en: { subject: v => `Reset your ${v.brand} password`, body: v => [
+      `Choose a new ${v.brand} password: <a href="${v.linkRaw}">${v.link}</a>`,
+      `The link is valid for 30 minutes and works once. Setting a new password signs out all your other sessions.`, `If you didn't ask for this, you can ignore this email.`] },
+    he: { subject: v => `איפוס הסיסמה שלך ב-${v.brand}`, body: v => [
+      `בחירת סיסמה חדשה ל-${v.brand}: <a href="${v.linkRaw}">${v.link}</a>`,
+      `הקישור תקף ל-30 דקות ופועל פעם אחת בלבד. סיסמה חדשה מנתקת את כל שאר החיבורים שלך.`, `אם לא ביקשת זאת, אפשר להתעלם ממייל זה.`] },
+  },
+  exists: {
+    en: { subject: v => `You already have a ${v.brand} account`, body: v => [
+      `Someone (hopefully you) tried to sign up with this email, but it already has a ${v.brand} password. Sign in: <a href="${v.linkRaw}">${v.link}</a>`,
+      `Forgot the password? Reset it (valid 30 minutes): <a href="${v.resetLink}">${v.resetLink}</a>`, `If this wasn't you, ignore this email; nothing changed.`] },
+    he: { subject: v => `כבר יש לך חשבון ב-${v.brand}`, body: v => [
+      `מישהו (כנראה את/ה) ניסה להירשם עם האימייל הזה, אבל כבר יש לו סיסמה ב-${v.brand}. כניסה: <a href="${v.linkRaw}">${v.link}</a>`,
+      `שכחת את הסיסמה? איפוס (תקף ל-30 דקות): <a href="${v.resetLink}">${v.resetLink}</a>`, `אם זה לא את/ה, אפשר להתעלם. שום דבר לא השתנה.`] },
+  },
 };
 export const TX_KINDS = Object.keys(T);
 export function footer(lang) {
@@ -59,7 +83,7 @@ export function footer(lang) {
 export function renderTx(kind, lang, vars = {}) { // receiptUrl: http(s) only, otherwise the line says the billing provider issues it and to reply if it doesn't arrive
   const l = lang === 'he' ? 'he' : 'en'; const t = T[kind]?.[l]; if (!t) throw new Error('unknown email ' + kind);
   const safeReceipt = vars.receiptUrl && safeUrl(vars.receiptUrl) !== '#' ? vars.receiptUrl : ''; vars = { ...vars, receiptUrl: safeReceipt };
-  const safeLink = vars.link && safeUrl(vars.link) !== '#' ? vars.link : ''; vars = { ...vars, link: safeLink };
+  const safeLink = vars.link && safeUrl(vars.link) !== '#' ? vars.link : ''; vars = { ...vars, link: safeLink, ...(vars.resetLink !== undefined ? { resetLink: safeUrl(vars.resetLink) !== '#' ? vars.resetLink : '' } : {}) };
   const raw = { brand: BRAND.name, supportEmail: BRAND.supportEmail, legalEntity: BRAND.legalEntity, legalEntityHe: BRAND.legalEntityHe, entityId: BRAND.entityId, ...vars };
   const v = Object.fromEntries(Object.entries(raw).map(([k, x]) => [k, esc(x ?? '')])); v.receiptUrlRaw = vars.receiptUrl ? safeUrl(vars.receiptUrl) : ''; v.linkRaw = safeLink ? safeUrl(safeLink) : '';
   const subject = t.subject(raw);

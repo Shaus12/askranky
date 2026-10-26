@@ -3,6 +3,7 @@ import Link from "next/link";
 import LangLink from "@/components/LangLink";
 import Logo from "@/components/Logo";
 import NavCloser from "@/components/NavCloser";
+import AccountMenu from "@/components/AccountMenu";
 import type { Dict, Locale } from "@/lib/i18n";
 import { SHELL } from "@/lib/shell";
 import { postsFor } from "@/lib/blog";
@@ -41,13 +42,13 @@ export default function Nav({ t, lang, path = "" }: { t: Dict; lang: Locale; pat
         </nav>
         <div className="rk-navr">
           <span className="rk-desk">{lang2}</span>
-          <Link href={`${base}/login`} className="rk-navlink rk-desk">{t.login.nav}</Link>
+          <AccountMenu lang={lang} label={t.login.nav} />
           <Link href={`${base}/scan`} className="rk-cta">{t.nav.cta}</Link>
           <details data-rk-menu className="rk-burger"><summary aria-label={s.menu}><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg></summary>
             <div className="rk-mobile-panel">
               <h6>{s.product}</h6>{product.map((p) => <Link key={p.href} href={p.href}>{p.b}</Link>)}<Link href={`${base}/scan`}>{t.nav.cta}</Link>
               <h6>{s.resources}</h6>{posts.map((p) => <a key={p.slug} href={p.path}>{p.title}</a>)}<Link href={`${base}/blog`}>{s.allPosts}</Link>
-              <h6>{s.company}</h6><Link href={`${base}#pricing`}>{t.nav.pricing}</Link><Link href={`${base}/login`}>{t.login.nav}</Link>{lang2}
+              <h6>{s.company}</h6><Link href={`${base}#pricing`}>{t.nav.pricing}</Link><AccountMenu lang={lang} label={t.login.nav} mobile />{lang2}
             </div>
           </details>
         </div>
