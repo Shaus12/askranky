@@ -95,3 +95,6 @@
 @media (max-width: 520px) { .hm-cells { grid-template-columns: 1fr; } .hm-cell { border-inline-start: 0 !important; } .hm-cell + .hm-cell { border-top: 1px solid var(--ln); } .hm-panel > .hm-card:nth-child(2) { display: none; } }
 @media (prefers-reduced-motion: reduce) { .hm-in, .hm-bar i, .hm-ln { animation: none !important; } .hm-ln { stroke-dashoffset: 0; } .hm-rot > span[aria-hidden] { transition: none; } }
 html.a11y-nomotion .hm-ln { stroke-dashoffset: 0; }
+
+/* Engines not measured yet: muted text only (no logos, no tracking claim). */
+.hm-soon{margin:.35rem 0 0;font-size:.8rem;color:#71717a;letter-spacing:.01em}.hm-soon span:first-child{color:#a1a1aa}

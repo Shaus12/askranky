@@ -2,7 +2,7 @@
 // on the server so crawlers (and curl, no JS) get the full text. Whitelisted names only: COMPLIANCE-NOTES.md is internal
 // and is never served (explicit 404). The markdown renderer is deliberately tiny and escapes everything: no raw HTML passes.
 import fs from 'node:fs'; import path from 'node:path';
-import { BRAND } from './brand.js'; import { esc } from './security/html.js';
+import { BRAND } from './brand.js'; import { esc } from './security/html.js'; import { usdBillingEnabled } from './currency.js';
 export const LEGAL_DOCS = ['terms', 'privacy', 'refunds', 'disclaimer', 'accessibility', 'cookies'];
 export const LEGAL_MARKER = '<!--LEGAL_BODY-->'; // emitted by web/components/LegalDoc.tsx into the exported page shell
 const DIR = path.resolve('legal');
@@ -13,8 +13,15 @@ export function legalDoc(doc, lang) {
   const known = { BRAND: BRAND.name, DOMAIN: BRAND.domain, EMAIL: BRAND.supportEmail, ENTITY: he ? BRAND.legalEntityHe : BRAND.legalEntity, ENTITY_ID: BRAND.entityId,
     ADDRESS: he ? BRAND.addressHe : BRAND.address, DPO_NAME: he ? BRAND.legalEntityHe : BRAND.legalEntity, DPO_EMAIL: BRAND.privacyEmail,
     ACCESSIBILITY_COORDINATOR: he ? BRAND.legalEntityHe : BRAND.legalEntity, ACCESSIBILITY_EMAIL: BRAND.accessibilityEmail };
-  return { lang: he ? 'he' : 'en', doc, markdown: fs.readFileSync(f, 'utf8').replace(/\{\{([A-Z_]+)\}\}/g, (_, k) => known[k] ?? process.env['LEGAL_' + k] ?? `[${k}]`) };
+  let md = fs.readFileSync(f, 'utf8'); if (doc === 'terms' && usdBillingEnabled()) md = md.replace(/^4\.3 .*$/m, he ? USD_TERMS.he : USD_TERMS.en);
+  return { lang: he ? 'he' : 'en', doc, markdown: md.replace(/\{\{([A-Z_]+)\}\}/g, (_, k) => known[k] ?? process.env['LEGAL_' + k] ?? `[${k}]`) };
 }
+// Clause 4.3 while USD billing is ON (ENABLE_USD_BILLING + SUMIT_USD_VERIFIED). Draft wording, NOT legal advice: needs accountant/legal review before
+// the flag is turned on. While the flag is off the file text (ILS charging) is served unchanged.
+export const USD_TERMS = {
+  en: '4.3 Prices on the Hebrew site are in Israeli shekels (ILS) and on the English site in US dollars (USD). You are charged in the currency and amount shown at checkout, and later renewals are charged in that same currency. If your card is in another currency, your bank converts the amount and may add exchange-rate differences or conversion fees; we do not control those.',
+  he: '4.3 באתר בעברית המחירים בשקלים (₪) ובאתר באנגלית בדולר ארה"ב (USD). החיוב מתבצע במטבע ובסכום המוצגים בעמוד התשלום, וגם החידושים החודשיים מחויבים באותו מטבע. אם הכרטיס שלך במטבע אחר, הבנק ממיר את הסכום ועשוי לגבות הפרשי שער או עמלת המרה, שאינם בשליטתנו.',
+};
 const safeHref = u => /^(https?:\/\/|mailto:|\/(?!\/))/i.test(u) ? u : null;
 export function inline(s) {
   const out = []; const stash = h => `\u0000${out.push(h) - 1}\u0000`;

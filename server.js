@@ -11,10 +11,12 @@ import { renderTx } from './src/email/templates.js'; import { setConsent, verify
 import { TEST_PLAN, TEST_BILLING, TEST_CHECKOUT_TTL_MS, TEST_ACCESS_MS } from './src/payments/test-plan.js';
 import { validSingleUseToken, looksLikeCardNumber } from './src/payments/sumit.js'; import { checkoutCsp, inlineScriptHashes, adminNonce, JQUERY_PATH, SUMIT_SCRIPT_URL } from './src/security/csp.js';
 import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { buildStatus, recordSync } from './src/status.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js'; import { blogPageHtml } from './src/blog.js';
+import { applyCompAccounts } from './src/comp.js'; import { dashboardData, dashboardCsv } from './src/dashboard.js';
 
 // TRUST_PROXY=1 (GO-LIVE.md) is a *string* in process.env; Express treats a string as an IP/subnet list ('1' = the address 0.0.0.1), so the proxy was
 // NOT trusted and every visitor shared the proxy's IP in all per-IP limits. Numbers become a hop count, 'true'/'false' booleans, anything else is passed through.
 export const trustProxySetting = v => { const s = String(v).trim(); return /^\d+$/.test(s) ? Number(s) : s === 'true' ? true : s === 'false' ? false : s; };
+applyCompAccounts();
 const app = express(); app.disable('x-powered-by'); if (process.env.TRUST_PROXY) app.set('trust proxy', trustProxySetting(process.env.TRUST_PROXY)); app.use(express.urlencoded({ extended: false })); app.use(express.json()); // noindex on private pages (meta robots is also in the HTML; the header covers redirects and server-rendered pages).
 // Which paths: NOINDEX_PATH in src/seo.js (the single source for robots.txt and these headers).
 app.use((q, r, next) => { if (NOINDEX_PATH.test(q.path)) r.set('X-Robots-Tag', 'noindex, nofollow'); next(); });
@@ -342,7 +344,7 @@ async function completeCheckout(q, { identifier, query, via }) {
     if (!res.ok) return { code: 'failed', lang, error: res.error };
     // Card-replacement flow: a past-due/unpaid customer subscribing again. Remember the old standing order so it can be cancelled after the new one is live.
     const oldRef = !isTest && ['past_due', 'unpaid'].includes(account.status) && account.subscriptionRef && String(account.subscriptionRef) !== String(res.subscriptionRef) ? String(account.subscriptionRef) : null;
-    Object.assign(account, { plan: isTest ? 'starter' : plan.id, subscriptionRef: res.subscriptionRef, paidAt: new Date().toISOString(), billing: { currency: billing.currency, amount: billing.amount }, status: 'active', lang, paidThrough: isTest ? new Date(Date.now() + TEST_ACCESS_MS).toISOString() : addMonth(new Date()).toISOString(), ...(account.pendingAdminTest ? { adminTest: true } : {}), ...(isTest ? { testSubscription: true, adminTest: true } : {}) }); delete account.cancelledAt; delete account.pendingAdminTest; delete account.pendingTest; delete account.pendingPlan; delete account.pendingBilling; delete account.checkoutState; delete account.pendingLang; save();
+    Object.assign(account, { plan: isTest ? 'starter' : plan.id, subscriptionRef: res.subscriptionRef, paidAt: new Date().toISOString(), billing: { currency: billing.currency, amount: billing.amount }, status: 'active', lang, paidThrough: isTest ? new Date(Date.now() + TEST_ACCESS_MS).toISOString() : addMonth(new Date()).toISOString(), ...(account.pendingAdminTest ? { adminTest: true } : {}), ...(isTest ? { testSubscription: true, adminTest: true } : {}) }); delete account.cancelledAt; if (!isTest) { delete account.comp; delete account.compSince; } delete account.pendingAdminTest; delete account.pendingTest; delete account.pendingPlan; delete account.pendingBilling; delete account.checkoutState; delete account.pendingLang; save();
     if (!isTest) { account.lastCheckout = { h: stateHash(state), at: new Date().toISOString() }; delete account.pastDueSince; delete account.failedNoticeAt; } // repeat submits of this checkout get 409 'already', never a 2nd charge
     db.events.push({ at: new Date().toISOString(), type: 'subscription.activated', account: account.id, plan: plan.id, currency: billing.currency, amount: billing.amount, ...(isTest ? { test: true, documentId: Number(res.documentId) || null } : {}) }); save();
     // Don't hand the dashboard key to whoever holds this URL: email a single-use magic link instead.
@@ -461,7 +463,13 @@ app.get('/api/pricing', (q, r) => {
 app.get('/api/dashboard/:id', (q, r) => {
   const a = accountFor(q); if (!a) return r.status(403).json({ error: 'forbidden' }); const db = getDb();
   const biz = Object.values(db.businesses).filter(b => b.accountId === a.id).map(b => ({ ...b, scans: (b.scanIds || []).map(i => db.scans[i]).filter(Boolean).map(s => ({ id: s.id, at: s.at, summary: s.summary })) }));
-  r.json({ account: pub(a), businesses: biz, usage: { used: a.usage?.[new Date().toISOString().slice(0, 7)] || 0, cap: PLANS[a.plan].monthlyCheckBudget } });
+  r.json({ account: { ...pub(a), ...(a.comp && !a.subscriptionRef ? { comp: true } : {}) }, businesses: biz, insights: dashboardData(db, a), usage: { used: a.usage?.[new Date().toISOString().slice(0, 7)] || 0, cap: PLANS[a.plan].monthlyCheckBudget } });
+});
+// CSV export of one business's stored results (all scans, or ?scan=<id>). Same key guard; only the account's own businesses.
+app.get('/api/dashboard/:id/export.csv', (q, r) => {
+  const a = accountFor(q); if (!a) return r.status(403).json({ error: 'forbidden' }); const db = getDb();
+  const b = Object.hasOwn(db.businesses, String(q.query.businessId)) ? db.businesses[q.query.businessId] : null; if (!b || b.accountId !== a.id) return r.status(404).json({ error: 'not found' });
+  r.set({ 'Cache-Control': 'no-store', 'Content-Disposition': `attachment; filename="ranky-${String(b.id).replace(/[^\w-]/g, '')}.csv"` }).type('text/csv; charset=utf-8').send(dashboardCsv(db, b));
 });
 app.post('/api/dashboard/:id/rescan', async (q, r) => {
   const a = accountFor(q); if (!a) return r.status(403).json({ error: 'forbidden' });

@@ -11,6 +11,8 @@ export function detectCurrency(q, lang) {
   const c = String(cookie(q, 'ranky_currency') || '').toUpperCase(); if (CURRENCIES.includes(c)) return { currency: c, source: 'cookie' };
   // Hebrew UI: an explicit page language wins; otherwise the ranky_lang cookie set when a /he page was served.
   const ui = lang === 'he' || lang === 'en' ? lang : cookie(q, 'ranky_lang'); if (ui === 'he') return { currency: 'ILS', source: 'locale' };
+  // /en defaults to USD only once USD billing is really on (flag-off behaviour is unchanged: geo / Accept-Language / default decide).
+  if (ui === 'en' && usdBillingEnabled()) return { currency: 'USD', source: 'locale' };
   const geo = String(hdr(q, 'cf-ipcountry') || hdr(q, 'x-vercel-ip-country') || hdr(q, 'x-country-code')).toUpperCase();
   if (/^[A-Z]{2}$/.test(geo) && geo !== 'XX' && geo !== 'T1') return { currency: geo === 'IL' ? 'ILS' : 'USD', source: 'geo' };
   if (/\b(he|iw)\b/i.test(hdr(q, 'accept-language'))) return { currency: 'ILS', source: 'accept-language' };
