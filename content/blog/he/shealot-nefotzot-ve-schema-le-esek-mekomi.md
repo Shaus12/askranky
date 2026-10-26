@@ -4,8 +4,8 @@ meta_title: "שאלות נפוצות ו-Schema לעסק מקומי | תשובו�
 meta_description: "איך בונים דף שאלות נפוצות שמנועי AI יכולים להבין ולצטט: איך מוצאים את השאלות, איך כותבים תשובה טובה, ודוגמת Schema מסוג LocalBusiness ו-FAQPage להעתקה."
 slug: /he/blog/shealot-nefotzot-ve-schema-le-esek-mekomi
 lang: he
-published: 2026-11-05
-updated: 2026-11-05
+published: 2026-10-26
+updated: 2026-10-26
 ---
 
 # שאלות נפוצות ו-Schema לעסק מקומי: איך כותבים תשובות ש-ChatGPT ו-Gemini יכולים לצטט

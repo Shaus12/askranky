@@ -1,4 +1,4 @@
-// Blog + SEO honesty: 3 articles + indexes (he/en) server-rendered, Article JSON-LD, canonical/hreflang rules, sitemap + llms.txt,
+// Blog + SEO honesty: 5 articles + indexes (he/en) server-rendered, Article JSON-LD, canonical/hreflang rules, sitemap + llms.txt,
 // ILS-only structured data, no Perplexity / "3 engines" claims, no the old support mailbox, IndexNow key file, no broken internal links.
 // Needs the static export (`npm run build`).
 import assert from 'node:assert/strict'; import fs from 'node:fs'; import path from 'node:path'; import { useTempData } from './helpers.js'; const TD = useTempData('blog');
@@ -7,12 +7,12 @@ const { default: app } = await import('../server.js'); const { blogPosts } = awa
 const srv = app.listen(0); await new Promise(r => srv.once('listening', r)); const B = 'http://127.0.0.1:' + srv.address().port; let n = 0; const ok = m => { n++; console.log('  ✓', m); };
 const get = (p, h = {}) => fetch(B + p, { redirect: 'manual', headers: h }).then(async r => ({ s: r.status, t: await r.text(), h: r.headers }));
 if (!fs.existsSync('web/out/he/blog.html')) { console.log('  ! web/out not built (npm run build)'); process.exit(1); }
-const ARTICLES = ['/en/blog/get-recommended-by-chatgpt', '/he/blog/lama-chatgpt-mamlits-al-hamitcharim', '/he/blog/eich-lehagia-lehamlatsa-be-chatgpt'];
+const ARTICLES = ['/en/blog/get-recommended-by-chatgpt', '/he/blog/lama-chatgpt-mamlits-al-hamitcharim', '/he/blog/eich-lehagia-lehamlatsa-be-chatgpt', '/he/blog/ma-ze-geo', '/he/blog/shealot-nefotzot-ve-schema-le-esek-mekomi'];
 const count = (s, re) => (s.match(re) || []).length; const words = html => html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length;
 const ld = html => [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(m => JSON.parse(m[1]));
 const links = html => [...html.matchAll(/<link rel="alternate" hrefLang="([^"]+)" href="([^"]+)"/g)].map(m => [m[1], m[2]]);
 try {
-  assert.deepEqual(blogPosts().map(p => p.path).sort(), [...ARTICLES].sort()); assert.ok(!fs.readdirSync('content/blog/he').some(f => /guide-link/.test(f))); ok('content/blog has exactly the 3 approved articles (no -with-guide-link draft)');
+  assert.deepEqual(blogPosts().map(p => p.path).sort(), [...ARTICLES].sort()); assert.ok(!fs.readdirSync('content/blog/he').some(f => /guide-link/.test(f))); ok('content/blog has exactly the 5 approved articles (no -with-guide-link draft)');
   for (const p of ARTICLES) {
     const lang = p.slice(1, 3); const r = await get(p, { 'user-agent': 'GPTBot' }); assert.equal(r.s, 200, p); const h = r.t; const url = 'https://askranky.com' + p;
     assert.ok(!h.includes('<!--BLOG_BODY-->')); assert.equal(count(h, /<h1[ >]/g), 1, `${p}: exactly one h1`); assert.ok(count(h, /<h2[ >]/g) >= 3, `${p} h2s`); assert.ok(words(h) > 500, `${p} only ${words(h)} words`);
@@ -20,15 +20,15 @@ try {
     assert.ok(!/name="robots"/.test(h) && !r.h.get('x-robots-tag'), 'indexable'); assert.match(h, /<title>[^<]{20,}<\/title>/); assert.match(h, /<meta name="description" content="[^"]{60,}"/); assert.match(h, new RegExp(`<meta property="og:url" content="${url}"/>`)); assert.match(h, /<meta property="og:type" content="article"/); assert.match(h, /<meta property="og:title"/);
     const j = ld(h); const a = j.find(x => x['@type'] === 'Article'); assert.ok(a, 'Article JSON-LD'); for (const k of ['headline', 'description', 'datePublished', 'dateModified', 'inLanguage', 'author', 'publisher', 'mainEntityOfPage']) assert.ok(a[k], `${p} ${k}`);
     assert.equal(a.mainEntityOfPage['@id'], url); assert.equal(a.inLanguage, lang === 'he' ? 'he-IL' : 'en-US'); assert.match(a.datePublished, /^\d{4}-\d\d-\d\d$/); assert.equal(a.author['@type'], 'Person'); assert.equal(a.publisher.name, 'Ranky'); assert.ok(j.some(x => x['@type'] === 'BreadcrumbList'));
-    assert.ok(h.includes(`href="/${lang}/scan"`), 'CTA to scan'); assert.ok(h.includes(`href="/${lang}/blog"`), 'link to index'); assert.match(h, /<time dateTime="2026-10-23"/); assert.ok(!/\$\d|USD/.test(JSON.stringify(j)), 'no USD in JSON-LD');
+    assert.ok(h.includes(`href="/${lang}/scan"`), 'CTA to scan'); assert.ok(h.includes(`href="/${lang}/blog"`), 'link to index'); assert.match(h, /<time dateTime="2026-10-2[36]"/); assert.ok(!/\$\d|USD/.test(JSON.stringify(j)), 'no USD in JSON-LD');
   }
-  ok('3 articles: 200 for GPTBot, one h1, >500 words in HTML, self-canonical, NO hreflang, indexable, OG article, valid Article + Breadcrumb JSON-LD, CTA to /scan, last-updated date');
+  ok('5 articles: 200 for GPTBot, one h1, >500 words in HTML, self-canonical, NO hreflang, indexable, OG article, valid Article + Breadcrumb JSON-LD, CTA to /scan, last-updated date');
   for (const lang of ['he', 'en']) { const r = await get(`/${lang}/blog`); assert.equal(r.s, 200); const h = r.t; assert.equal(count(h, /<h1[ >]/g), 1); const mine = ARTICLES.filter(a => a.startsWith(`/${lang}/`)), other = ARTICLES.filter(a => !a.startsWith(`/${lang}/`));
     for (const a of mine) assert.ok(h.includes(`href="${a}"`), a); for (const a of other) assert.ok(!h.includes(`href="${a}"`), 'no other-language article on index');
     assert.match(h, new RegExp(`<link rel="canonical" href="https://askranky.com/${lang}/blog"/>`)); assert.deepEqual(links(h).map(x => x[0]).sort(), ['en', 'he', 'x-default']); assert.ok(links(h).find(x => x[0] === 'x-default')[1] === 'https://askranky.com/en/blog'); assert.ok(ld(h).some(x => x['@type'] === 'CollectionPage')); }
   ok('/he/blog and /en/blog: one h1, list only their own language\'s articles, self-canonical, he/en/x-default pair (true index pair)');
   assert.equal((await get('/he/blog/get-recommended-by-chatgpt')).s, 404); assert.equal((await get('/en/blog/nope')).s, 404); assert.equal((await get('/en/blog/..%2F..%2Fpackage')).s, 404); assert.equal((await get('/he/guides/kidum-be-chatgpt')).s, 404); assert.equal((await get('/blog')).s, 302); ok('wrong-language slug, unknown slug, traversal → 404; /blog short link redirects');
-  const sm = (await get('/sitemap.xml')).t; for (const a of ARTICLES) { assert.ok(sm.includes(`<loc>https://askranky.com${a}</loc>`), a); const blk = sm.split('<url>').find(b => b.includes(`<loc>https://askranky.com${a}</loc>`)); assert.ok(!/hreflang/.test(blk), 'article has no alternates'); assert.match(blk, /<lastmod>2026-10-23<\/lastmod>/); }
+  const sm = (await get('/sitemap.xml')).t; for (const a of ARTICLES) { assert.ok(sm.includes(`<loc>https://askranky.com${a}</loc>`), a); const blk = sm.split('<url>').find(b => b.includes(`<loc>https://askranky.com${a}</loc>`)); assert.ok(!/hreflang/.test(blk), 'article has no alternates'); assert.match(blk, /<lastmod>2026-10-2[36]<\/lastmod>/); }
   for (const l of ['he', 'en']) assert.ok(sm.includes(`<loc>https://askranky.com/${l}/blog</loc>`)); assert.ok(!sm.includes('/report</loc>'), 'client-rendered sample report is not in the sitemap'); const llms = (await get('/llms.txt')).t; for (const a of ARTICLES) assert.ok(llms.includes(`(https://askranky.com${a})`), a); assert.ok(llms.includes('https://askranky.com/en/blog') && !llms.includes('/report')); ok('sitemap.xml + llms.txt list the articles and both indexes (articles without hreflang); sample report removed');
   // ILS only, engine honesty, contact email
   const home = [(await get('/en')).t, (await get('/he')).t]; for (const h of home) { const j = ld(h).filter(x => x['@graph']); const offers = JSON.stringify(j).match(/"priceCurrency":"[A-Z]+"/g) || []; assert.ok(offers.length >= 1, 'offers present (paid offers only when built with NEXT_PUBLIC_CHECKOUT_LIVE=1)'); assert.ok(offers.every(o => o === '"priceCurrency":"ILS"'), 'ILS only'); assert.ok(!/USD|"\$|\$\d/.test(JSON.stringify(ld(h))), 'no USD/$ in any JSON-LD'); assert.ok(JSON.stringify(ld(h)).includes('"email":"shaysho1111@gmail.com"')); }

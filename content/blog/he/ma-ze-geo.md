@@ -4,8 +4,8 @@ meta_title: "מה זה GEO? ההבדל בין SEO, AEO ו-GEO | מדריך לע�
 meta_description: "GEO הוא העבודה שמגדילה את הסיכוי ש-ChatGPT ו-Gemini יזכירו את העסק שלכם בתשובה. הסבר פשוט: מה זה, איך זה שונה מ-SEO ו-AEO, ומה עסק קטן צריך לעשות."
 slug: /he/blog/ma-ze-geo
 lang: he
-published: 2026-11-02
-updated: 2026-11-02
+published: 2026-10-26
+updated: 2026-10-26
 ---
 
 # מה זה GEO? ההבדל בין SEO, AEO ו-GEO בשפה פשוטה
