@@ -35,7 +35,9 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
   const [emb, setEmb] = useState<Embedded | null>(null); const [paid, setPaid] = useState(false); const [already, setAlready] = useState(false);
   useEffect(() => { const sp = new URLSearchParams(location.search); setQ(sp); getConfig().then((c) => { setPre(!!c.prelaunch); setSiteKey(c.turnstileSiteKey); });
     // Show exactly what the server will charge (server re-prices on POST; the client never sends an amount).
-    api<Pricing>(`/api/pricing?lang=${lang}`).then((j) => setBill(j.plans.find((p) => p.id === (sp.get("plan") || "starter"))?.billing || null)).catch(() => {}); }, [lang]);
+    api<Pricing>(`/api/pricing?lang=${lang}`).then((j) => { const p = j.plans.find((x) => x.id === (sp.get("plan") || "starter")); const b = p?.billing || null;
+      // USD billing off: show exactly what is charged (ILS), never a $ figure next to a shekel charge.
+      setBill(b && !j.usdBilling ? { currency: "ILS", amount: p!.prices.ILS, displayCurrency: "ILS", displayAmount: p!.prices.ILS, fallback: false } : b); }).catch(() => {}); }, [lang]);
   if (!q || pre === null) return <main className="min-h-[60vh]" />;
   const c = t.checkout; const account = q.get("account");
   // Pre-launch: never start a payment; collect a waitlist email instead.

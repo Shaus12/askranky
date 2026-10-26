@@ -11,7 +11,8 @@ import { canSend, unsubUrl, unsubHeaders } from './consent.js'; import { PLANS, 
 const HOUR = 36e5; export const FOLLOWUP_MIN_H = 24, FOLLOWUP_MAX_H = 72;
 export const followupEmailsEnabled = () => process.env.FOLLOWUP_EMAILS_ENABLED === '1';
 export const OFFER_CONSENT_VERSIONS = ['scan-form-2026-10-25'];
-const isPaying = a => { const p = PLANS[a?.plan]; return !!p && isPaid(p) && !!a.subscriptionRef && a.status !== 'cancelled'; };
+const isPaying = a => { if (a?.comp) return true; // comp accounts never get the upgrade follow-up
+   const p = PLANS[a?.plan]; return !!p && isPaid(p) && !!a.subscriptionRef && a.status !== 'cancelled'; };
 export const offerText = l => String(process.env[l === 'he' ? 'FOLLOWUP_OFFER_TEXT_HE' : 'FOLLOWUP_OFFER_TEXT_EN'] || '').trim().slice(0, 300);
 const T = {
   en: { subject: 'פרסומת | Ad: Three things that will lift you in ChatGPT answers', h: b => `Three things that will lift ${b} in ChatGPT answers`,

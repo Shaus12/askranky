@@ -6,6 +6,7 @@ import type { Dict, Locale } from "@/lib/i18n";
 import { api, idFromPath } from "@/lib/api";
 import ScoreGauge from "./ScoreGauge";
 import TrendChart from "./TrendChart";
+import DashInsights from "./DashInsights";
 
 // /[lang]/dashboard/<accountId>?key=<dashboard key> (from the magic link). The key is moved from the URL into
 // sessionStorage right away and sent as the x-dashboard-key header, so it doesn't linger in history or screenshots.
@@ -37,7 +38,7 @@ export default function Dashboard({ t, lang }: { t: Dict; lang: Locale }) {
   return (
     <main className="mx-auto max-w-5xl px-5 py-[clamp(3rem,calc(var(--u)*80),5rem)]">
       <h1 className="font-head vx-h3">{t.dash.title}</h1>
-      <span className="hairline mt-6 block w-40" /><p className="mt-5 text-slate-300"><span dir="ltr">{d.account.email}</span> · {t.dash.plan}: <b className="text-white">{d.account.plan}</b> · {t.dash.usage}: <span dir="ltr">{d.usage.used}/{d.usage.cap}</span></p>
+      <span className="hairline mt-6 block w-40" /><p className="mt-5 text-slate-300"><span dir="ltr">{d.account.email}</span> · {t.dash.plan}: <b className="text-white">{d.account.plan}</b>{d.account.comp && <span className="ms-2 rounded-full border border-white/15 px-2 py-0.5 text-xs text-slate-300" data-comp>{lang === "he" ? "חשבון מתנה" : "Complimentary"}</span>} · {t.dash.usage}: <span dir="ltr">{d.usage.used}/{d.usage.cap}</span></p>
       {d.account.plan !== "free" && <p data-back-to-scan className="mt-4"><a href={`/${lang}/scan`} className="btn-cta !py-2">{paidLoginText[lang].returnScan} <span aria-hidden className="rtl:rotate-180">→</span></a></p>}
       {err && <p role="alert" className="mt-4 text-red-200">{err}</p>}
       {d.account.plan !== "free" && d.account.status && (
@@ -66,6 +67,7 @@ export default function Dashboard({ t, lang }: { t: Dict; lang: Locale }) {
               {last && <a href={`/${lang}/r/${last.id}`} className="btn-outline !py-2">{t.dash.open}</a>}
               {d.account.plan !== "free" && <button onClick={() => rescan(b.id)} disabled={!!busy} className="btn-cta !py-2 disabled:opacity-60">{busy === b.id ? "…" : t.dash.rescan}</button>}
             </div>
+            <div className="md:col-span-3"><DashInsights ins={(d.insights || []).find((x: any) => x.businessId === b.id)} lang={lang} auth={auth} /></div>
           </div>); })}
       </div>
     </main>

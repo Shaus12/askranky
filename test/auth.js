@@ -115,6 +115,11 @@ try {
   const k = browser(); await k.req('/api/dashboard/paid1'); assert.equal((await k.req('/api/dashboard/paid1')).s, 403, 'no auth');
   assert.equal((await k.req('/api/dashboard/paid1', { headers: { 'x-dashboard-key': paid.key } })).s, 200, 'legacy key still works');
   assert.equal((await m.req('/api/dashboard/paid1')).j.account.id, 'paid1', 'session works'); assert.equal((await m.req('/api/dashboard/' + a1.id)).s, 403, 'session for another account refused');
+  { const dj = (await m.req('/api/dashboard/paid1')).j; assert.ok('insights' in dj, 'insights via session'); assert.equal((await m.req('/api/dashboard/' + a1.id)).j.insights, undefined, 'no insights for other account');
+    const csv = await m.req('/api/dashboard/paid1/export.csv?businessId=pb'); assert.equal(csv.s, 200, 'CSV via session'); assert.match(csv.h.get('content-type'), /text\/csv/);
+    assert.equal((await browser().req('/api/dashboard/paid1/export.csv?businessId=pb')).s, 403, 'CSV needs auth'); assert.equal((await m.req('/api/dashboard/' + a1.id + '/export.csv?businessId=pb')).s, 403, 'CSV: session of another account refused');
+    const ob = Object.values(getDb().businesses).find(b => b.accountId !== 'paid1'); if (ob) assert.equal((await m.req('/api/dashboard/paid1/export.csv?businessId=' + ob.id)).s, 404, 'CSV: other account business refused'); }
+  ok('v2-release: dashboard insights + CSV export via session; A cannot read B through session');
   await m.me(); assert.equal((await m.post('/api/dashboard/paid1/rescan', { businessId: 'pb' })).s, 403, 'cookie-only POST without CSRF refused');
   assert.equal((await m.post('/api/dashboard/paid1/rescan', { businessId: 'pb' }, { headers: { 'X-CSRF-Token': m.csrf }, origin: 'https://evil.example' })).s, 403);
   assert.equal((await m.post('/api/dashboard/paid1/rescan', { businessId: 'pb' }, { headers: { 'X-CSRF-Token': m.csrf } })).s, 200);

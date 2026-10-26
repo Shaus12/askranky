@@ -19,6 +19,7 @@ export default function Hero({ t, lang }: { t: Dict; lang: Locale }) {
           <a href="#how" className="hm-btn-d hm-btn-lg">{m.how}</a>
         </div>
         <p className="hm-xs hm-in hm-d4 hm-note">{h.note}</p>
+        <p className="hm-soon hm-in hm-d4" data-engines-soon><span>{lang === "he" ? "בקרוב:" : "Coming soon:"}</span> <span dir="ltr">Perplexity · Copilot · Claude</span></p>
 
         <figure className="hm-win hm-in hm-d4" aria-labelledby="hm-cap">
           <div className="hm-tb"><span className="hm-dots" aria-hidden="true"><i /><i /><i /></span><span aria-hidden="true">{m.win}</span><span className="hm-illus">{m.illus}</span></div>
