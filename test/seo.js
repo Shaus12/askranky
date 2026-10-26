@@ -59,7 +59,7 @@ try {
     ok('language-less "/" and short links still follow cookie → Accept-Language, and say so (Vary, private/no-store)');
     for (const f of ['/og-en.png', '/og-he.png', '/logo.png']) { const r = await get(f); assert.equal(r.s, 200); assert.equal(r.h.get('cache-control'), 'public, max-age=86400, stale-while-revalidate=604800', f); }
     assert.notEqual((await get('/style.css')).h.get('cache-control'), 'public, max-age=86400, stale-while-revalidate=604800'); ok('OG images + logo: Cache-Control public, max-age=86400, stale-while-revalidate=604800');
-    const lang = fs.readFileSync('web/components/LangLink.tsx', 'utf8'); assert.match(lang, /document\.cookie = `ranky_lang=\$\{to\}/); assert.match(lang, /onClick=\{remember\}/); for (const f of ['Nav', 'Hero']) assert.match(fs.readFileSync(`web/components/${f}.tsx`, 'utf8'), /<LangLink /); assert.ok(!/Set-Cookie[^\n]*ranky_lang/.test(fs.readFileSync('server.js', 'utf8')));
+    const lang = fs.readFileSync('web/components/LangLink.tsx', 'utf8'); assert.match(lang, /document\.cookie = `ranky_lang=\$\{to\}/); assert.match(lang, /onClick=\{remember\}/); for (const f of ['Nav', 'Footer']) assert.match(fs.readFileSync(`web/components/${f}.tsx`, 'utf8'), /<LangLink /); assert.ok(!/Set-Cookie[^\n]*ranky_lang/.test(fs.readFileSync('server.js', 'utf8')));
     ok('ranky_lang is written only by the explicit language switcher (client), never by the server'); }
   // currency precedence is unaffected by dropping the server-set language cookie (cookie → Hebrew UI → geo → Accept-Language)
   { const cur = async (q, h) => { const j = JSON.parse((await get('/api/pricing' + q, h)).t); return [j.currency, j.source]; };

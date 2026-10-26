@@ -1,0 +1,42 @@
+/* Redesign stage 1: black site shell (header + footer), single accent #2563eb, Inter + Heebo. Page bodies keep their own theme. */
+.rk-nav, .rk-foot { --rk-blue: #2563eb; --rk-blue-2: #3b82f6; --rk-line: rgba(255,255,255,.09); --rk-line-2: rgba(255,255,255,.14); --rk-t2: #a1a1aa; --rk-t3: #71717a; font-family: "Inter", "Heebo", ui-sans-serif, system-ui, sans-serif; }
+[dir="rtl"] .rk-nav, [dir="rtl"] .rk-foot { font-family: "Heebo", "Inter", ui-sans-serif, system-ui, sans-serif; }
+.rk-logo { display: inline-flex; align-items: center; gap: .55rem; font-family: "Inter", sans-serif; font-weight: 700; font-size: 1.15rem; letter-spacing: -.02em; color: #fff; }
+.rk-logo img { display: block; border-radius: 6px; }
+.rk-nav { position: sticky; top: 0; z-index: 40; background: rgba(0,0,0,.78); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--rk-line); }
+.rk-nav-in { max-width: 72rem; margin: 0 auto; height: 3.75rem; padding: 0 1.25rem; display: flex; align-items: center; gap: 1.5rem; }
+.rk-brand { flex: none; }
+.rk-menu { display: flex; align-items: center; gap: .15rem; flex: 1; }
+.rk-navlink, .rk-mi > summary { display: inline-flex; align-items: center; gap: .35rem; padding: .45rem .7rem; border-radius: .5rem; color: #d4d4d8; font-size: .875rem; cursor: pointer; transition: color .15s, background .15s; list-style: none; }
+.rk-mi > summary::-webkit-details-marker, .rk-burger > summary::-webkit-details-marker { display: none; }
+.rk-navlink:hover, .rk-mi > summary:hover, .rk-mi[open] > summary { color: #fff; background: rgba(255,255,255,.06); }
+.rk-navlink:focus-visible, .rk-mi > summary:focus-visible, .rk-burger > summary:focus-visible, .rk-cta:focus-visible, .rk-foot a:focus-visible, .rk-foot button:focus-visible { outline: 2px solid var(--rk-blue-2); outline-offset: 2px; }
+.rk-chev { opacity: .6; transition: transform .15s; } .rk-mi[open] .rk-chev { transform: rotate(180deg); }
+.rk-mi { position: relative; }
+.rk-mega { position: absolute; top: calc(100% + .6rem); inset-inline-start: 0; width: 38rem; max-width: calc(100vw - 2rem); display: grid; grid-template-columns: 1fr 1fr; gap: .25rem 1.25rem; padding: 1rem; background: #0b0b0c; border: 1px solid var(--rk-line-2); border-radius: .75rem; box-shadow: 0 30px 60px -20px #000; }
+.rk-mega h6, .rk-mobile-panel h6 { font-size: .75rem; color: var(--rk-t3); font-weight: 500; margin: .15rem .5rem .5rem; }
+.rk-mlink { display: block; padding: .55rem .5rem; border-radius: .5rem; transition: background .15s; }
+.rk-mlink:hover { background: rgba(255,255,255,.05); }
+.rk-mlink b { display: block; font-size: .875rem; font-weight: 600; color: #fff; }
+.rk-mlink span { display: block; font-size: .8rem; color: var(--rk-t2); margin-top: .1rem; }
+.rk-mfeat { display: flex; flex-direction: column; justify-content: flex-end; gap: .35rem; min-height: 9rem; padding: 1rem; border-radius: .6rem; border: 1px solid var(--rk-line-2); background: radial-gradient(120% 90% at 100% 0%, rgba(37,99,235,.35), transparent 60%), #050506; }
+.rk-mfeat b { font-size: .95rem; color: #fff; } .rk-mfeat span { font-size: .8rem; color: var(--rk-t2); line-height: 1.5; }
+.rk-mfeat:hover { border-color: rgba(59,130,246,.6); }
+.rk-navr { display: flex; align-items: center; gap: .35rem; margin-inline-start: auto; }
+.rk-cta { display: inline-flex; align-items: center; padding: .45rem .95rem; border-radius: 9999px; background: var(--rk-blue); color: #fff; font-size: .875rem; font-weight: 600; transition: background .15s; white-space: nowrap; }
+.rk-cta:hover { background: #1d4ed8; }
+.rk-burger { display: none; position: relative; }
+.rk-burger > summary { list-style: none; display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: .5rem; color: #fff; cursor: pointer; border: 1px solid var(--rk-line-2); }
+.rk-mobile-panel { position: fixed; top: 3.75rem; inset-inline: 0; max-height: calc(100svh - 3.75rem); overflow-y: auto; background: #000; border-bottom: 1px solid var(--rk-line); padding: .75rem 1.25rem 1.25rem; display: flex; flex-direction: column; }
+.rk-mobile-panel h6 { margin: 1rem 0 .35rem; }
+.rk-mobile-panel a { padding: .55rem 0; color: #e4e4e7; font-size: .95rem; border-bottom: 1px solid var(--rk-line); }
+@media (max-width: 960px) { .rk-menu, .rk-desk { display: none; } .rk-burger { display: block; } .rk-nav-in { gap: .75rem; } }
+.rk-foot { position: relative; background: #000; color: var(--rk-t2); border-top: 1px solid var(--rk-line); padding: 3.5rem 1.25rem 2.5rem; }
+.rk-foot-in { max-width: 72rem; margin: 0 auto; }
+.rk-fcols { display: grid; grid-template-columns: 1.6fr repeat(4, 1fr); gap: 2rem; }
+.rk-fcols h5 { font-size: .8rem; font-weight: 600; color: #fff; margin-bottom: .75rem; }
+.rk-fcols a, .rk-fcols button { display: block; padding: .25rem 0; color: var(--rk-t2); text-align: start; font-size: .85rem; transition: color .15s; }
+.rk-fcols a:hover, .rk-fcols button:hover { color: #fff; }
+.rk-fbrand p { margin-top: .75rem; max-width: 16rem; line-height: 1.6; }
+.rk-fbot { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--rk-line); display: grid; gap: .5rem; color: var(--rk-t3); }
+@media (max-width: 860px) { .rk-fcols { grid-template-columns: 1fr 1fr; } .rk-fbrand { grid-column: 1 / -1; } }

@@ -9,7 +9,7 @@ import SiteChrome from "@/components/SiteChrome";
 
 export const generateStaticParams = () => locales.map((lang) => ({ lang }));
 export const generateMetadata = metaFor("");
-export const viewport: Viewport = { themeColor: "#01061a", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#000000", width: "device-width", initialScale: 1 };
 
 export default async function LangLayout({ children, params }: { children: React.ReactNode; params: Promise<{ lang: string }> }) {
   const { lang } = await params;

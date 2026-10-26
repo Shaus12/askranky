@@ -27,6 +27,7 @@ export function pageMeta(lang: Locale, path = ""): Metadata {
   const t = T[lang]; const title = PAGE[path] ? `${PAGE[path][lang]} · Ranky` : t.title; const desc = PAGE[path]?.[lang === "he" ? "dhe" : "den"] ?? t.desc; const og = `${SITE}/og-${lang}.png`; const url = `${SITE}/${lang}${path}`;
   return {
     metadataBase: new URL(SITE), title, description: desc,
+    icons: { icon: [{ url: "/favicon.svg", type: "image/svg+xml" }, { url: "/favicon-32.png", sizes: "32x32", type: "image/png" }], shortcut: "/favicon.ico", apple: "/apple-touch-icon.png" },
     alternates: { canonical: url, languages: { he: `${SITE}/he${path}`, en: `${SITE}/en${path}`, "x-default": path ? `${SITE}/en${path}` : `${SITE}/` } },
     openGraph: { type: "website", siteName: t.site, title, description: desc, url, locale: t.locale, images: [{ url: og, width: 1200, height: 630, alt: title }], alternateLocale: [lang === "he" ? T.en.locale : T.he.locale] },
     twitter: { card: "summary_large_image", title, description: desc, images: [og] },

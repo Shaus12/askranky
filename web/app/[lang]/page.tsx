@@ -2,6 +2,7 @@ import Link from "next/link";
 import { dict, isLocale, type Locale } from "@/lib/i18n";
 import Hero from "@/components/Hero";
 import Footer from "@/components/Footer";
+import Nav from "@/components/Nav";
 import Reveal from "@/components/Reveal";
 import SampleReportHome from "@/components/SampleReportHome";
 import StickyScanCta from "@/components/StickyScanCta";
@@ -16,6 +17,7 @@ export default async function Landing({ params }: { params: Promise<{ lang: stri
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldScript(faqJsonLd(lang)) }} />
+      <Nav t={t} lang={lang} />
       <Hero t={t} lang={lang} />
       <main className="vx-below text-white">
         <Reveal as="section" id="scan-form" className="vx-section mx-auto grid max-w-6xl scroll-mt-20 items-center gap-12 !pt-10 md:grid-cols-[1.05fr_1fr]">
