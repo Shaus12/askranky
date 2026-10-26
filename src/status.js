@@ -6,7 +6,7 @@
 // Every section is computed independently: a missing table/field yields null for that field (never an exception, never invented data).
 import { getDb } from './store.js'; import { PLANS, isPaid } from './plans.js'; import { dailyCapUsd } from './costs.js';
 import { getPayments } from './payments/index.js'; import { isMockMode } from './providers/index.js'; import { emailIsMock } from './email/send.js'; import { isPrelaunch } from './prelaunch.js';
-import { GRACE_DAYS } from './jobs/billing-sync.js'; import { cleanUtm } from './utm.js';
+import { GRACE_DAYS } from './jobs/billing-sync.js'; import { buildFunnel } from './funnel.js'; import { cleanUtm } from './utm.js';
 const DAY = 864e5, HOUR = 36e5;
 const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0); const r2 = v => Math.round(num(v) * 100) / 100;
 // Short, scrubbed text: strips anything that looks like an email, URL, long token, or run of digits (ids, phone/card/amount-like numbers).
@@ -102,5 +102,6 @@ export function buildStatus({ now = new Date(), db = getDb(), running = false } 
           mock: !!s.mock, engines: engineSummary(s), ungroundedChecks: num(sum.ungroundedChecks), errors: num(sum.errors), emailMasked: maskEmail(a.email), source: srcKey(a.utm?.source) || srcKey(s.utm?.source) || 'direct', reportUrl: `${baseUrl()}/${lang}/r/${encodeURIComponent(s.id)}` }; });
   });
   const config = safe(() => ({ paymentsProvider: getPayments().id, scanMode: isMockMode() ? 'mock' : 'live', emailMode: emailIsMock() ? 'mock' : 'live', prelaunch: !!isPrelaunch() }));
-  return { ok: true, generatedAt: now.toISOString(), dayBasis: 'UTC', sync, scans, spend, signups, subscribers: subs && { ...subs, mrrIls: Math.round(subs.mrrIls) }, payments, sources, config, recentScans };
+  const funnel = safe(() => buildFunnel(db, now));
+  return { ok: true, generatedAt: now.toISOString(), dayBasis: 'UTC', sync, scans, spend, signups, funnel, subscribers: subs && { ...subs, mrrIls: Math.round(subs.mrrIls) }, payments, sources, config, recentScans };
 }

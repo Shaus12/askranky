@@ -12,7 +12,7 @@ import { TEST_PLAN, TEST_BILLING, TEST_CHECKOUT_TTL_MS, TEST_ACCESS_MS } from '.
 import { validSingleUseToken, looksLikeCardNumber } from './src/payments/sumit.js'; import { checkoutCsp, inlineScriptHashes, adminNonce, JQUERY_PATH, SUMIT_SCRIPT_URL } from './src/security/csp.js';
 import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { buildStatus, recordSync } from './src/status.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js'; import { blogPageHtml } from './src/blog.js';
 import { registerAuth } from './src/auth/routes.js'; import { googleEnabled } from './src/auth/google.js';
-import { applyCompAccounts } from './src/comp.js'; import { dashboardData, dashboardCsv } from './src/dashboard.js';
+import { applyCompAccounts } from './src/comp.js'; import { visitMiddleware, flushVisits } from './src/funnel.js'; import { dashboardData, dashboardCsv } from './src/dashboard.js';
 
 // TRUST_PROXY=1 (GO-LIVE.md) is a *string* in process.env; Express treats a string as an IP/subnet list ('1' = the address 0.0.0.1), so the proxy was
 // NOT trusted and every visitor shared the proxy's IP in all per-IP limits. Numbers become a hop count, 'true'/'false' booleans, anything else is passed through.
@@ -86,6 +86,8 @@ function findOrCreateAccount(email) {
 
 app.get('/health', (q, r) => r.json({ ok: true, brand: BRAND.name, mockScans: isMockMode(), payments: getPayments().id, prelaunch: isPrelaunch(), store: BACKEND }));
 // Keep-warm for free hosting (cold starts): tiny, no DB or provider calls.
+// First-party funnel page-view counter (src/funnel.js): aggregate per-day number only, no cookies, nothing about the visitor stored.
+app.use(visitMiddleware);
 app.get('/healthz', (q, r) => r.set('Cache-Control', 'no-store').json({ ok: true }));
 // External cron trigger (GitHub Actions / cron-job.org) for the daily billing sync, because the free Render plan has no cron.
 // Disabled (404) unless CRON_SECRET (>= 16 chars) is set. Requires header X-Cron-Secret, compared timing-safe (sha256 + timingSafeEqual).
@@ -298,6 +300,7 @@ app.post('/scan', scanLimiter, captcha, async (q, r) => {
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim().slice(0, 80), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
   db.businesses[business.id] = business; save();
   try {
+    getDb().events.push({ at: new Date().toISOString(), type: 'funnel.scan_started' }); // funnel: a scan really starts (validation, free limit and CAPTCHA passed)
     const scan = await runScan(account, business, { utm: utmFrom(q.body) }); freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
     await sendReportEmail(account, business, scan, lang);
     r.redirect(`/r/${scan.id}`);
@@ -333,6 +336,7 @@ async function startCheckout(q) {
   if (existing && !adminTest) { if (chargeLocks.has(existing.id)) return { refused: 'busy' }; if (!product && hasActiveSubscription(existing)) return { refused: 'already' }; if (product && openFixup(existing)) return { refused: 'fixup_open' }; } // never overwrite checkoutState mid-charge, never open a 2nd checkout for a live subscription
   const account = findOrCreateAccount(q.body.email); applyUtm(account, q.body); account.pendingPlan = plan.id; account.pendingBilling = billing; account.pendingLang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : langOf(q); const state = account.checkoutState = token(24); if (adminTest) account.pendingAdminTest = true; else delete account.pendingAdminTest; delete account.pendingTest; save();
   // Mock provider: { redirectUrl } (stand-in card page). SUMIT: { embedded: {companyId, publicKey, identifier} } for the on-page Payments JS card form.
+  if (!adminTest) getDb().events.push({ at: new Date().toISOString(), type: 'checkout.started', account: account.id, plan: plan.id }); save();
   const co = await getPayments().createCheckout({ account, plan, billing, state, returnUrl: `${BASE}/billing/return?lang=${account.pendingLang}` }); return { ...co, billing, lang: account.pendingLang, plan: plan.id };
 }
 app.post('/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.refused) return r.status(409).send(billingPage(c.refused === 'already' ? 'already' : 'invalid', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (c?.prelaunch) return r.status(403).send(billingPage('prelaunch', q.body?.lang === 'he' || q.body?.lang === 'en' ? q.body.lang : langOf(q))); if (!c) return r.status(400).send('bad plan'); r.redirect(c.redirectUrl || `/${c.lang}/checkout?plan=${encodeURIComponent(c.plan)}`); });
@@ -487,6 +491,7 @@ app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim().slice(0, 80), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
   db.businesses[business.id] = business; save();
   try {
+    getDb().events.push({ at: new Date().toISOString(), type: 'funnel.scan_started' }); // funnel: a scan really starts (validation, free limit and CAPTCHA passed)
     const scan = await runScan(account, business, { utm: utmFrom(q.body) }); freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
     await sendReportEmail(account, business, scan, lang);
     r.json({ reportId: scan.id });
@@ -598,6 +603,7 @@ app.use((err, q, r, next) => { if (r.headersSent) return next(err); const st = N
   console.error(`[http] ${q.method} ${q.path} -> ${st} (${err?.type || err?.name || 'Error'})`); r.status(st).json({ error: st === 400 ? 'bad_request' : 'server_error' }); });
 const port = process.env.PORT || 3000;
 if (process.argv[1]?.endsWith('server.js')) { const cfg = (await import('./src/config-check.js')).logConfig(); if (cfg.fatal.length) { console.error('[config] FATAL: ' + cfg.fatal.join('; ')); process.exit(1); } if (!cfg.ok && process.env.CONFIG_STRICT === '1') process.exit(1); }
+if (process.argv[1]?.endsWith('server.js')) setInterval(() => { try { flushVisits(); } catch { /* next tick retries */ } }, Number(process.env.FUNNEL_FLUSH_MS || 600000)).unref(); // persist the in-memory visit counter
 if (process.argv[1]?.endsWith('server.js') && process.env.BILLING_SYNC_CRON === '1') { startBillingCron({ run: async () => { try { const x = await syncAll(); recordSync(true); return x; } catch (e) { recordSync(false, e); throw e; } } }); console.log('billing sync: in-process daily scheduler on'); }
 if (process.argv[1]?.endsWith('server.js')) app.listen(port, process.env.HOST || '0.0.0.0', () => console.log(`${BRAND.name} on http://localhost:${port} (scans: ${isMockMode() ? 'MOCK' : 'LIVE'}, payments: ${getPayments().id})`));
 export default app;
