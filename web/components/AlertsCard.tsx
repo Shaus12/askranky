@@ -11,7 +11,7 @@ const engs = (e?: string[]) => (e || []).map((x) => ENG[x] || x).join(", ");
 const sign = (n?: number) => (n != null && n > 0 ? `+${n}` : String(n ?? ""));
 const T = {
   en: { title: "Alerts", sub: "What got worse since the scan before", none: "Nothing got worse since your previous scan.", first: "Alerts start after your second scan: they compare each scan with the one before.",
-    email: "Paid plans also get these by email when we re-scan.", high: "Important", medium: "Worth a look", quote: "Quote",
+    email: "Alerts appear here after each re-scan. Email alerts are coming soon.", high: "Important", medium: "Worth a look", quote: "Quote",
     fact: { city: "city", website: "website", status: "status", phone: "phone number", hours: "opening hours" } as Record<string, string>,
     s: { wrong_fact: (a: Alert, b: string) => a.fact!.type === "status" ? `${engs(a.fact!.engines)} now says ${b} is "${a.fact!.said}".` : `${engs(a.fact!.engines)} now gives the wrong ${T.en.fact[a.fact!.type] || a.fact!.type}: "${a.fact!.said}"${a.fact!.expected ? ` (you told us ${a.fact!.expected})` : ""}.`,
       score_drop: (a: Alert) => `Your score dropped from ${a.from} to ${a.to}.`,
@@ -19,7 +19,7 @@ const T = {
       competitor_overtook: (a: Alert) => `${a.name} is now named more often than you: ${a.them} vs ${a.you} (before: ${a.themBefore} vs ${a.youBefore}).`,
       tone_drop: (a: Alert) => ((a.from ?? 0) - (a.to ?? 0) >= 20 ? `Tone of answers about you fell from ${sign(a.from)} to ${sign(a.to)}.` : "An answer about you is now negative.") } },
   he: { title: "התראות", sub: "מה החמיר מאז הסריקה הקודמת", none: "שום דבר לא החמיר מאז הסריקה הקודמת.", first: "ההתראות מתחילות מהסריקה השנייה: הן משוות כל סריקה לזו שלפניה.",
-    email: "במסלולים בתשלום הן נשלחות גם במייל כשאנחנו סורקים שוב.", high: "חשוב", medium: "כדאי לבדוק", quote: "ציטוט",
+    email: "ההתראות מופיעות כאן אחרי כל סריקה חוזרת. התראות במייל בקרוב.", high: "חשוב", medium: "כדאי לבדוק", quote: "ציטוט",
     fact: { city: "העיר", website: "האתר", status: "הסטטוס", phone: "הטלפון", hours: "שעות הפתיחה" } as Record<string, string>,
     s: { wrong_fact: (a: Alert, b: string) => a.fact!.type === "status" ? `${engs(a.fact!.engines)} אומר עכשיו ש${b} „${a.fact!.said}”.` : `${engs(a.fact!.engines)} מציג עכשיו את ${T.he.fact[a.fact!.type] || a.fact!.type} הלא נכון: „${a.fact!.said}”${a.fact!.expected ? ` (אצלך: ${a.fact!.expected})` : ""}.`,
       score_drop: (a: Alert) => `הציון שלך ירד מ־${a.from} ל־${a.to}.`,

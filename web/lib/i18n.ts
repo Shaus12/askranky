@@ -29,9 +29,9 @@ const en = {
     vatNote: "Prices are final: we're a VAT-exempt dealer (עוסק פטור), so no VAT is added. You get a receipt (קבלה) for every payment.",
     plans: [
       { id: "free", name: "Free scan", items: ["1 business", "5 questions × ChatGPT + Gemini", "One-time scan", "Top 3 competitors", "3 fixes"], cta: "Run free scan" },
-      { id: "starter", name: "Starter", items: ["1 business", "15 questions × ChatGPT + Gemini", "Regular tracking (weekly reports coming soon)", "Alerts when AI gets something wrong about you", "Top 3 competitors", "3 fixes per report"], cta: "Start Starter" },
-      { id: "pro", name: "Pro", items: ["3 businesses", "20 questions each × ChatGPT + Gemini", "Regular tracking (weekly reports coming soon)", "Alerts when AI gets something wrong about you", "Top 5 competitors", "3 fixes per report"], cta: "Start Pro" },
-      { id: "agency", name: "Agency", items: ["10 businesses", "15 questions each × ChatGPT + Gemini", "Regular tracking (weekly reports coming soon)", "Alerts when AI gets something wrong about you", "Top 5 competitors", "3 fixes per report"], cta: "Start Agency" },
+      { id: "starter", name: "Starter", items: ["1 business", "15 questions × ChatGPT + Gemini", "Regular tracking (weekly reports coming soon)", "Dashboard alerts when AI gets something wrong about you (email alerts coming soon)", "Top 3 competitors", "3 fixes per report"], cta: "Start Starter" },
+      { id: "pro", name: "Pro", items: ["3 businesses", "20 questions each × ChatGPT + Gemini", "Regular tracking (weekly reports coming soon)", "Dashboard alerts when AI gets something wrong about you (email alerts coming soon)", "Top 5 competitors", "3 fixes per report"], cta: "Start Pro" },
+      { id: "agency", name: "Agency", items: ["10 businesses", "15 questions each × ChatGPT + Gemini", "Regular tracking (weekly reports coming soon)", "Dashboard alerts when AI gets something wrong about you (email alerts coming soon)", "Top 5 competitors", "3 fixes per report"], cta: "Start Agency" },
     ] },
   faq: { title: "Questions, answered", items: [
     ["Is this exactly what ChatGPT shows my customers?", "Close, not identical. We use each engine's official API with web search, which approximates the consumer apps. Answers vary between runs, so we focus on trends over time."],
@@ -89,9 +89,9 @@ const he: Dict = {
     vatNote: "המחיר סופי: אנחנו עוסק פטור, ולכן לא מתווסף מע\"מ. על כל תשלום תקבלו קבלה.",
     plans: [
       { id: "free", name: "סריקה חינם", items: ["עסק אחד", "5 שאלות × ChatGPT + Gemini", "סריקה חד־פעמית", "3 מתחרים מובילים", "3 תיקונים"], cta: "לסריקה חינם" },
-      { id: "starter", name: "Starter", items: ["עסק אחד", "15 שאלות × ChatGPT + Gemini", "מעקב שוטף (דוחות שבועיים בקרוב)", "התראות כשה־AI טועה לגביך", "3 מתחרים מובילים", "3 תיקונים לכל דוח"], cta: "התחל Starter" },
-      { id: "pro", name: "Pro", items: ["3 עסקים", "20 שאלות לכל עסק × ChatGPT + Gemini", "מעקב שוטף (דוחות שבועיים בקרוב)", "התראות כשה־AI טועה לגביך", "5 מתחרים מובילים", "3 תיקונים לכל דוח"], cta: "התחל Pro" },
-      { id: "agency", name: "Agency", items: ["10 עסקים", "15 שאלות לכל עסק × ChatGPT + Gemini", "מעקב שוטף (דוחות שבועיים בקרוב)", "התראות כשה־AI טועה לגביך", "5 מתחרים מובילים", "3 תיקונים לכל דוח"], cta: "התחל Agency" },
+      { id: "starter", name: "Starter", items: ["עסק אחד", "15 שאלות × ChatGPT + Gemini", "מעקב שוטף (דוחות שבועיים בקרוב)", "התראות בדשבורד כשה־AI טועה לגביך (התראות במייל בקרוב)", "3 מתחרים מובילים", "3 תיקונים לכל דוח"], cta: "התחל Starter" },
+      { id: "pro", name: "Pro", items: ["3 עסקים", "20 שאלות לכל עסק × ChatGPT + Gemini", "מעקב שוטף (דוחות שבועיים בקרוב)", "התראות בדשבורד כשה־AI טועה לגביך (התראות במייל בקרוב)", "5 מתחרים מובילים", "3 תיקונים לכל דוח"], cta: "התחל Pro" },
+      { id: "agency", name: "Agency", items: ["10 עסקים", "15 שאלות לכל עסק × ChatGPT + Gemini", "מעקב שוטף (דוחות שבועיים בקרוב)", "התראות בדשבורד כשה־AI טועה לגביך (התראות במייל בקרוב)", "5 מתחרים מובילים", "3 תיקונים לכל דוח"], cta: "התחל Agency" },
     ] },
   faq: { title: "שאלות ותשובות", items: [
     ["זה בדיוק מה ש־ChatGPT מראה ללקוחות שלי?", "קרוב, אבל לא זהה. אנחנו משתמשים ב־API הרשמי של כל מנוע עם חיפוש ברשת, שמקרב את האפליקציות לצרכנים. התשובות משתנות בין הרצות, ולכן אנחנו מתמקדים במגמות."],
