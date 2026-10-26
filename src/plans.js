@@ -17,6 +17,9 @@ export const PRODUCTS = {
   fixup: { id: 'fixup', name: 'Fix-up', prices: { ILS: 390 }, oneTime: true, recurrence: 1, questionsPerBusiness: 20, competitors: 5, rescanAfterDays: 30, monthlyCheckBudget: 2 * 20 * 2 },
 };
 export const productBilling = p => ({ currency: 'ILS', amount: p.prices.ILS, displayCurrency: 'ILS', displayAmount: p.prices.ILS, fallback: false });
+// Founding-member offer (policy text only, no billing logic): the first FOUNDING_MEMBER_LIMIT paying customers (default 20; 0 hides the
+// offer) keep the Starter price they signed up at (₪79) while they stay subscribed. Counting is manual (no live counter is shown).
+export const foundingLimit = () => { const v = process.env.FOUNDING_MEMBER_LIMIT; const n = v === undefined || v === '' ? 20 : Number(v); return Number.isInteger(n) && n >= 0 && n <= 1000 ? n : 20; };
 export const isPaid = p => !!p && p.prices.ILS > 0;
 export const priceOf = (plan, currency) => { if (!CURRENCIES.includes(currency)) throw new Error('bad currency'); return plan.prices[currency]; };
 export const formatPrice = (amount, currency) => currency === 'ILS' ? `₪${amount}` : `$${amount}`;

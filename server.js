@@ -1,6 +1,6 @@
 import { parseOtherNames } from './src/names.js';
 import express from 'express'; import fs from 'node:fs'; import path from 'node:path'; import { createHash } from 'node:crypto';
-import { BRAND } from './src/brand.js'; import { PLANS, isPaid, CURRENCIES, PRODUCTS, productBilling } from './src/plans.js'; import { detectCurrency, billingFor, publicPlans, usdBillingEnabled } from './src/currency.js';
+import { BRAND } from './src/brand.js'; import { PLANS, isPaid, CURRENCIES, PRODUCTS, productBilling, foundingLimit } from './src/plans.js'; import { detectCurrency, billingFor, publicPlans, usdBillingEnabled } from './src/currency.js';
 import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan } from './src/scan.js'; import { utmFrom, applyUtm } from './src/utm.js';
 import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail, reportSubject } from './src/email/report.js'; import { sendEmail, sendEmailSoft, emailIsMock } from './src/email/send.js';
 import * as V from './src/views.js'; import { isMockMode } from './src/providers/index.js';
@@ -500,7 +500,7 @@ app.post('/api/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { 
 app.get('/api/pricing', (q, r) => {
   const forced = String(q.query.currency || '').toUpperCase(); const d = CURRENCIES.includes(forced) ? { currency: forced, source: 'query' } : detectCurrency(q, q.query.lang);
   r.set('Vary', 'Cookie, Accept-Language, CF-IPCountry'); r.set('Cache-Control', 'private, no-store');
-  r.json({ currency: d.currency, source: d.source, currencies: CURRENCIES, usdBilling: usdBillingEnabled(), vat: false, autoRescan: autoRescanEnabled(), digest: digestEnabled(),
+  r.json({ currency: d.currency, source: d.source, currencies: CURRENCIES, usdBilling: usdBillingEnabled(), vat: false, autoRescan: autoRescanEnabled(), digest: digestEnabled(), founding: { limit: foundingLimit(), price: { ILS: PLANS.starter.prices.ILS }, plan: 'starter' },
     plans: publicPlans().map(p => ({ ...p, billing: p.prices.ILS ? billingFor(PLANS[p.id], d.currency) : null })),
     products: Object.values(PRODUCTS).map(p => ({ id: p.id, name: p.name, prices: p.prices, oneTime: true, billing: productBilling(p) })) });
 });

@@ -36,6 +36,13 @@ export default function Pricing({ t, lang }: { t: Dict; lang: Locale }) {
           <Link href={v ? `/${lang}/checkout?plan=${p.id}` : `/${lang}/scan`} className={`mt-6 ${hot ? "btn-cta" : "btn-outline"}`}>{p.cta}</Link>
         </div>); })}
     </div>
+    {/* Founding-member offer (policy text only; FOUNDING_MEMBER_LIMIT from /api/pricing, 0 hides it). No live counter: we never claim how many are left. */}
+    {!!data?.founding?.limit && <div data-reveal data-founding className="card mt-5 border-brand-600/40 p-6 text-center">
+      <span className="rounded-full bg-brand-600 px-3 py-1 text-xs font-semibold text-white">{t.pricing.founding.badge}</span>
+      <h3 className="mt-3 text-lg font-bold text-white">{t.pricing.founding.title.replace("{n}", String(data.founding.limit))}</h3>
+      <p className="mx-auto mt-2 max-w-2xl text-slate-300">{t.pricing.founding.body.replace("{n}", String(data.founding.limit))}</p>
+      <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-400" data-guarantee>{t.pricing.founding.guarantee} <Link className="underline" href={`/${lang}/legal/refunds`}>{t.pricing.founding.terms}</Link></p>
+    </div>}
     {/* One-time Fix-up (src/plans.js PRODUCTS.fixup, ILS only): a checkout item next to the monthly plans. */}
     <div data-reveal data-product="fixup" className="card mt-5 grid gap-5 p-6 md:grid-cols-[1fr_auto] md:items-center">
       <div><span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-sky-300">{t.pricing.fixup.badge}</span>

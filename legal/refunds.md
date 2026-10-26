@@ -11,6 +11,10 @@ Last updated: 2026-10-27 (version 1.2). Operated by Shai Shotashvili, Exempt Dea
 - **Deliver-or-refund:** if we have not handed over your three fixes within 14 days of payment, or have not run the re-scan within 45 days of payment, you get a full refund on request.
 - Before we hand over the fixes you may cancel for a full refund. Israeli consumers also keep the rights in section 2; after the fixes have been handed over, a cancellation under section 2 is refunded in proportion to the part of the service not yet provided (the re-scan), as the law allows.
 
+## 1B. Founding members and the 30-day deliver-or-refund promise
+- Founding members: the first 20 paying customers (the number shown on the pricing page at the time of purchase) keep the Starter price they signed up at (₪79/month) for as long as their subscription stays active without interruption. If the subscription ends, the then-current price applies to a new one.
+- Deliver-or-refund: if within 30 days of your first monthly payment we have not delivered your full report, your three fixes and one re-scan, we refund that first payment in full on request (email us within 45 days of the payment).
+
 ## 2. Israeli consumers: cancelling a distance transaction
 Under section 14C of the Consumer Protection Law, 5741-1981, a consumer may cancel within **14 days** from the transaction (or from receipt of the written disclosure, whichever is later), by written notice (an email to shaysho1111@gmail.com is sufficient).
 - We refund the amount paid within 14 days of the cancellation notice, to the same card, **less a cancellation fee of up to 5% of the transaction value, capped at ILS 100**, where the law permits a fee (see "Cancellation fee" below).
