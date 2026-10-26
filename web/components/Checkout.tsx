@@ -22,7 +22,7 @@ function Summary({ t, lang, name, bill }: { t: Dict; lang: Locale; name: string;
       </div>
       <div className="pay-rows">
         {differs && bill && <div className="pay-row"><span>{c.charged}</span><b dir="ltr" className="text-white">{fmt(bill.amount, bill.currency)}{t.pricing.mo}</b></div>}
-        {bill?.fallback && <p className="text-amber-100">{c.fallback}</p>}
+        {bill?.fallback && <p className="text-zinc-200">{c.fallback}</p>}
         <p>{c.noVat}</p>
       </div>
       <p className="mt-3 text-xs leading-relaxed text-slate-400" data-disclosure>{c.renew} {t.footer.seller}</p>
@@ -46,9 +46,9 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
       try { await api("/api/waitlist", { body: { email: String(fd.get("email") || ""), lang, plan: q.get("plan"), ...getUtm(), "cf-turnstile-response": token || undefined } }); setJoined(true); } catch (x: any) { setErr(errMessage(x, t)); setRk((n) => n + 1); } };
     return (
       <main className="mx-auto max-w-md px-5 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center" data-prelaunch><div className="card space-y-4 p-8">
-        <span className="rounded-full border border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100 px-3 py-1 text-xs">{c.soon}</span>
+        <span className="rounded-full border border-white/15 bg-white/5 text-zinc-200 px-3 py-1 text-xs">{c.soon}</span>
         <h1 className="font-head vx-h3 mt-3 !text-3xl">{c.soonTitle}</h1><p className="text-slate-400">{c.soonSub}</p>
-        {joined ? <p role="status" className="text-emerald-200">{c.joined}</p> : <form onSubmit={join} className="space-y-4 text-start">
+        {joined ? <p role="status" className="text-blue-200">{c.joined}</p> : <form onSubmit={join} className="space-y-4 text-start">
           <label className="vx-label">{c.email}<input name="email" type="email" required dir="ltr" className="vx-input" /></label>
           <Turnstile siteKey={siteKey} lang={lang} resetKey={rk} />
           {err && <p role="alert" className="text-sm text-red-200">{err}</p>}
@@ -58,7 +58,7 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
   }
   if (account) { const a = encodeURIComponent(account); return (
     <main className="mx-auto max-w-md px-4 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center"><div className="card p-8">
-      <span className="rounded-full border border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100 px-3 py-1 text-xs">{c.pill}</span>
+      <span className="rounded-full border border-white/15 bg-white/5 text-zinc-200 px-3 py-1 text-xs">{c.pill}</span>
       <h1 className="font-head vx-h3 mt-5 !text-3xl">{c.title}</h1><p className="mt-2 text-slate-400">{c.sub}</p>
       <div className="mt-8 flex flex-col gap-3"><a className="btn-cta" href={`/billing/return?Valid=1&Token=tok_test&Identifier=${a}`}>{c.pay}</a><a className="btn-ghost" href={`/billing/return?Valid=0&Identifier=${a}`}>{c.decline}</a></div>
     </div></main>); }
@@ -70,7 +70,7 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
     catch (x: any) { if (x.data?.error === "already_subscribed") { setEmb(null); setAlready(true); } else if (x.data?.prelaunch) setPre(true); else { setErr(errMessage(x, t)); setRk((n) => n + 1); } }
   }
   const p = t.pricing.plans.find((x) => x.id === plan) || t.pricing.plans[1];
-  if (paid) return (<main className="mx-auto max-w-lg px-4 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center sm:px-5" data-paid><div className="card pay-panel space-y-3 !p-8"><span aria-hidden="true" className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-emerald-300/30 bg-emerald-400/10 text-xl text-emerald-200">✓</span><h1 className="font-head vx-h3 !text-3xl">{payText[lang].paidTitle}</h1><p role="status" className="text-slate-300">{payText[lang].paidSub}</p></div></main>);
+  if (paid) return (<main className="mx-auto max-w-lg px-4 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center sm:px-5" data-paid><div className="card pay-panel space-y-3 !p-8"><span aria-hidden="true" className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-emerald-300/30 bg-emerald-400/10 text-xl text-blue-200">✓</span><h1 className="font-head vx-h3 !text-3xl">{payText[lang].paidTitle}</h1><p role="status" className="text-slate-300">{payText[lang].paidSub}</p></div></main>);
   if (already) return (<main className="mx-auto max-w-lg px-4 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center sm:px-5" data-already-subscribed><div className="card pay-panel space-y-3 !p-8"><h1 className="font-head vx-h3 !text-3xl">{payText[lang].alreadyTitle}</h1><p role="status" className="text-slate-300">{payText[lang].alreadySub}</p><a className="btn-cta mt-4" href={`/${lang}/login`}>{payText[lang].alreadyCta}</a></div></main>);
   const summary = <Summary t={t} lang={lang} name={p.name} bill={bill} />;
   if (emb) return (

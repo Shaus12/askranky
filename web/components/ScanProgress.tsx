@@ -79,9 +79,9 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   const link = mode === "demo" ? `/${lang}/report` : `/${lang}/r/${reportId}`;
   return (
     <main className="mx-auto max-w-2xl px-5 py-[clamp(3rem,calc(var(--u)*80),5rem)]">
-      {nt.progressMock && <p data-mock-note className="mx-auto w-fit rounded-full border border-[#e8b04b]/30 bg-[#e8b04b]/10 text-amber-100 px-4 py-1.5 text-center text-xs">{nt.progressMock}</p>}
+      {nt.progressMock && <p data-mock-note className="mx-auto w-fit rounded-full border border-white/15 bg-white/5 text-zinc-200 px-4 py-1.5 text-center text-xs">{nt.progressMock}</p>}
       {existing && reportId && <p role="note" data-existing-note className="mx-auto mt-3 w-fit max-w-full rounded-lg border border-sky-300/30 bg-sky-300/10 px-4 py-2 text-center text-sm text-sky-100">{t.existing.runNote}</p>}
-      {nt.runNote && <p role="note" data-demo-note className="mx-auto mt-3 w-fit max-w-full rounded-lg border border-[#e8b04b]/30 bg-[#e8b04b]/10 px-4 py-2 text-center text-sm text-amber-100">{nt.runNote}</p>}
+      {nt.runNote && <p role="note" data-demo-note className="mx-auto mt-3 w-fit max-w-full rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-center text-sm text-zinc-200">{nt.runNote}</p>}
       <h1 className="font-head vx-h3 mt-8 text-center" aria-live="polite">{error ? t.scanErr.title : done ? s.done : s.title}</h1>
       {biz && <p className="mt-2 text-center text-slate-400">{[biz.name, biz.category, biz.city].join(" · ")}</p>}
       {error ? (

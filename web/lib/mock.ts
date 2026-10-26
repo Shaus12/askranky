@@ -19,4 +19,4 @@ export const mockReport = (l: Locale) => ({
   ],
 });
 export const band = (s: number) => (s >= 60 ? "high" : s >= 30 ? "mid" : "low") as "low" | "mid" | "high";
-export const bandColor = (s: number) => (s >= 60 ? "#3fbf8a" : s >= 30 ? "#e8b04b" : "#e97a6f");
+export const bandColor = (s: number) => (s >= 60 ? "#60a5fa" : s >= 30 ? "#d4d4d8" : "#e97a6f");

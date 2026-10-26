@@ -8,6 +8,6 @@ export default function DemoBanner({ lang }: { lang: "he" | "en" }) {
   const [text, setText] = useState<string | null>(null);
   useEffect(() => { getConfig().then((c) => setText(demoNotices(c, dict(lang)).banner)); }, [lang]);
   if (!text) return null;
-  return <div role="note" data-demo-banner className="relative z-50 bg-[#e8b04b]/15 px-4 py-2 text-center text-xs text-amber-100">
+  return <div role="note" data-demo-banner className="relative z-50 bg-white/5 px-4 py-2 text-center text-xs text-zinc-200">
     {text}</div>;
 }

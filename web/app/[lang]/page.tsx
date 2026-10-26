@@ -11,18 +11,36 @@ import Pricing from "@/components/Pricing";
 import MaskHeading from "@/components/MaskHeading";
 import SectionHead from "@/components/SectionHead";
 import { faqJsonLd, ldScript } from "@/lib/seo";
+import { homeFor } from "@/lib/home";
+import { postsFor, fmtDate } from "@/lib/blog";
 
 export default async function Landing({ params }: { params: Promise<{ lang: string }> }) {
-  const { lang: l } = await params; const lang = (isLocale(l) ? l : "en") as Locale; const t = dict(lang); const h = t.hero;
+  const { lang: l } = await params; const lang = (isLocale(l) ? l : "en") as Locale; const t = dict(lang); const h = t.hero; const m = homeFor(lang); const posts = postsFor(lang).slice(0, 3);
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldScript(faqJsonLd(lang)) }} />
       <Nav t={t} lang={lang} />
       <Hero t={t} lang={lang} />
       <main className="vx-below text-white">
+        <section id="data" className="hm-sec scroll-mt-16" aria-labelledby="hm-data-t"><div className="hm-wrap">
+          <div className="hm-datahead"><h2 id="hm-data-t" className="hm-ps">{m.dataTitle}</h2><Link className="hm-ps" href={`/${lang}/blog`}>{m.dataLink} <span aria-hidden="true" className="inline-block rtl:rotate-180">→</span></Link></div>
+          <div className="hm-cells">
+            {m.stats.map(([big, a, b, c], i) => (
+              <div key={i} className="hm-cell"><p className={i === 3 ? "hm-stat sm" : "hm-stat"} dir={i === 3 ? undefined : "ltr"}>{big}</p><p className="hm-ps">{a}{b && <b>{b}</b>}{c}</p></div>))}
+          </div>
+        </div></section>
+
+        <section className="hm-sec"><div className="hm-wrap hm-pad">
+          <p className="hm-mono">{m.probEy}</p>
+          <h2 className="hm-h2">{m.probT}</h2>
+          <div className="hm-cards3">
+            {m.prob.map(([title, body], i) => (<div key={title}><span className="hm-num">{String(i + 1).padStart(2, "0")}</span><h3>{title}</h3><p className="hm-ps">{body}</p></div>))}
+          </div>
+        </div></section>
+
         <Reveal as="section" id="scan-form" className="vx-section mx-auto grid max-w-6xl scroll-mt-20 items-center gap-12 !pt-10 md:grid-cols-[1.05fr_1fr]">
           <div className="text-center md:text-start">
-            <p data-reveal className="vx-pill"><span className="dot h-2 w-2 rounded-full bg-score-high" />{h.eyebrow}</p>
+            <p data-reveal className="vx-pill"><span className="dot h-2 w-2 rounded-full bg-blue-400" />{h.eyebrow}</p>
             <div className="mt-6"><MaskHeading text={h.title} className="vx-h3" center={false} /></div>
             <p data-reveal className="vx-lede mt-6">{h.sub}</p>
             <p data-reveal className="mt-4 text-sm text-slate-400">{h.note}</p>
@@ -71,6 +89,18 @@ export default async function Landing({ params }: { params: Promise<{ lang: stri
               </details>))}
           </div>
         </Reveal>
+
+        <section className="hm-sec"><div className="hm-wrap hm-pad"><div className="hm-mgrid">
+          <div><p className="hm-mono">{m.methEy}</p><h2 className="hm-h2">{m.methT}</h2><p className="hm-pl">{m.methP}</p></div>
+          <dl className="hm-glass">{m.meth.map(([k, v]) => <div key={k} className="hm-mrow"><dt>{k}</dt><dd><b>{v}</b></dd></div>)}</dl>
+        </div></div></section>
+
+        {posts.length > 0 && <section className="hm-sec"><div className="hm-wrap">
+          <div className="hm-blogh"><div><p className="hm-mono">{m.blogEy}</p><h2 className="hm-h2">{m.blogT}</h2></div><Link className="hm-btn-d hm-btn-lg" href={`/${lang}/blog`}>{m.blogAll}</Link></div>
+          <div className="hm-cards3 !mt-0 !rounded-none !border-x-0 !border-b-0">
+            {posts.map((p) => (<a key={p.slug} className="hm-art" href={p.path}><h3 className="hm-arth">{p.title}</h3><span className="hm-xs">{fmtDate(p.published, lang)}</span></a>))}
+          </div>
+        </div></section>}
 
         <Reveal as="section" className="vx-section relative overflow-hidden text-center">
           <span className="hairline absolute inset-x-0 top-0 block" />

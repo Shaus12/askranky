@@ -44,7 +44,7 @@ export default function Dashboard({ t, lang }: { t: Dict; lang: Locale }) {
         <section className="card mt-8 p-6" data-subscription aria-labelledby="sub-h">
           <h2 id="sub-h" className="text-lg font-bold">{t.dash.sub}</h2>
           <p className="mt-2 text-slate-300">{d.account.status === "cancelled" ? `${t.dash.cancelled} ${String(d.account.paidThrough || "").slice(0, 10)}` : d.account.status === "past_due" ? t.dash.pastDue : t.dash.active}</p>
-          {cancelMsg && <p role="status" className="mt-3 text-emerald-200">{cancelMsg}</p>}
+          {cancelMsg && <p role="status" className="mt-3 text-blue-200">{cancelMsg}</p>}
           {d.account.status !== "cancelled" && !confirming && <button onClick={() => setConfirming(true)} className="btn-outline mt-4 !py-2" data-cancel>{t.dash.cancel}</button>}
           {confirming && (
             <div role="alertdialog" aria-labelledby="cancel-h" aria-describedby="cancel-b" className="mt-4 rounded-2xl border border-red-300/30 bg-red-500/10 p-5" data-cancel-confirm>

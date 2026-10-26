@@ -14,7 +14,7 @@ export default function SampleReportHome({ t, lang }: { t: Dict; lang: Locale })
           <div className="font-head text-xl font-bold break-words" aria-label={g.maskedName}>{s.name}</div>
           <div className="text-sm text-slate-400">{s.meta}</div>
         </div>
-        <span className="rounded-full border border-amber-300/40 bg-amber-300/10 px-3 py-1 text-xs font-bold tracking-wide text-amber-200" data-sample-badge>{g.sampleLabel}</span>
+        <span className="rounded-full border border-blue-400/40 bg-blue-500/10 px-3 py-1 text-xs font-bold tracking-wide text-blue-200" data-sample-badge>{g.sampleLabel}</span>
       </div>
       <div className="mt-6 grid gap-5 md:grid-cols-3">
         <div className="rounded-2xl border border-white/10 p-4"><ScoreGauge score={s.score} label={t.report.score} />

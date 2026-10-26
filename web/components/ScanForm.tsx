@@ -50,10 +50,10 @@ export default function ScanForm({ t, lang, onStart }: { t: Dict; lang: Locale; 
       <p className="-mt-1 text-xs text-slate-400" data-existing-note>{t.existing.formNote}</p>
       <datalist id="il-cities">{ISRAELI_CITIES.map((c) => <option key={c.slug} value={c[lang]} />)}</datalist>
       <label className="flex items-start gap-2 text-sm text-slate-300">
-        <input type="checkbox" name="marketingConsent" value="on" defaultChecked={false} className="mt-1 h-4 w-4 shrink-0 accent-emerald-500" data-consent />
+        <input type="checkbox" name="marketingConsent" value="on" defaultChecked={false} className="mt-1 h-4 w-4 shrink-0 accent-blue-600" data-consent />
         <span>{t.form.consent}</span></label>
       <p className="text-xs text-slate-400" data-privacy>{nt.privacy} <a className="vx-link underline" href={`/${lang}/legal/privacy`}>{t.form.privacyLink}</a>.</p>
-      {nt.formNote && <p role="note" data-demo-note className="rounded-lg border border-[#e8b04b]/30 bg-[#e8b04b]/10 px-3 py-2 text-sm text-amber-100">{nt.formNote}</p>}
+      {nt.formNote && <p role="note" data-demo-note className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-zinc-200">{nt.formNote}</p>}
       <Turnstile siteKey={siteKey} lang={lang} />
       {confirm && <div role="alertdialog" aria-live="polite" data-city-confirm className="rounded-lg border border-sky-300/40 bg-sky-400/10 px-3 py-3 text-sm text-sky-100">
         <p>{a.cityConfirm.replaceAll("{city}", confirm.city)}</p>

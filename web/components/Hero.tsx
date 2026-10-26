@@ -1,38 +1,57 @@
-"use client";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
-import gsap from "gsap";
 import type { Dict, Locale } from "@/lib/i18n";
-import { reducedMotion } from "@/lib/motion";
-import BlurText from "@/components/BlurText";
-import Horizon from "@/components/Horizon";
+import { homeFor } from "@/lib/home";
+import EngineRotator from "@/components/EngineRotator";
+import "./home.css";
 
-/** Vexel-inspired hero, ported to GSAP. Staged entrance: masthead → line 1 → line 2 (masked rise) → subhead (BlurText) → actions → horizon. */
+/** Stage-2 hero (Profound-inspired): chip → headline with rotating live engines → lede → CTAs → app-window illustration.
+ *  Server-rendered text. No 100svh: height follows content, so the sticky header never pushes the CTA below the fold. */
 export default function Hero({ t, lang }: { t: Dict; lang: Locale }) {
-  const ref = useRef<HTMLDivElement>(null); const h = t.hero; const base = `/${lang}`;
-  useEffect(() => {
-    if (reducedMotion() || !ref.current) return;
-    const q = gsap.utils.selector(ref.current); const ease = "expo.out";
-    const tl = gsap.timeline({ defaults: { ease } });
-    tl.fromTo(q(".mline > span"), { yPercent: 110 }, { yPercent: 0, duration: 1.3, stagger: 0.14 }, 0.35)
-      .fromTo(q(".hact > *"), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 1, stagger: 0.08 }, 1.05)
-      .fromTo(q(".horizon-wrap"), { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 1.8, ease: "power2.out" }, 0.6);
-    return () => { tl.progress(1).kill(); };
-  }, []);
+  const h = t.hero; const m = homeFor(lang); const base = `/${lang}`;
   return (
-    <div ref={ref} className="vx-hero relative overflow-hidden text-white">
-      <section className="relative z-10 mx-auto max-w-5xl px-5 pt-[calc(var(--u)*72)] text-center">
-        <h1 className="vx-h1 font-head font-bold" aria-label={`${h.l1} ${h.l2}`}>
-          <span className="mline" aria-hidden><span>{h.l1}</span></span>
-          <span className="mline" aria-hidden><span className="vx-grad">{h.l2}</span></span>
-        </h1>
-        <p className="mx-auto mt-[calc(var(--u)*24)] max-w-[36rem] text-[clamp(1rem,calc(var(--u)*18),1.25rem)] leading-relaxed text-slate-300"><BlurText text={h.lede} delay={0.85} /></p>
-        <div className="hact mt-[calc(var(--u)*36)] flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-8">
-          <Link href={`${base}/scan`} className="btn-cta !px-7 !py-4 text-base" data-cta="hero">{h.cta} <span aria-hidden className="rtl:rotate-180">→</span></Link>
-          <a href="#scan-form" className="vx-link inline-flex items-center gap-2 text-sm font-medium text-slate-200">{h.discover} <span aria-hidden className="vx-arrow">↓</span></a>
+    <div className="vx-hero hm-hero text-white">
+      <section className="hm-hero-in">
+        <a href="#data" className="hm-chip hm-in">{m.chip} <span aria-hidden="true" className="rtl:rotate-180 inline-block">→</span></a>
+        <h1 className="hm-h1 hm-in hm-d2">{m.h1a} <EngineRotator names={["ChatGPT", "Gemini"]} />.<br />{m.h1b}</h1>
+        <p className="hm-lede hm-in hm-d3">{m.lede}</p>
+        <div className="hm-acts hm-in hm-d4">
+          <Link href={`${base}/scan`} className="btn-cta hm-btn-lg" data-cta="hero">{h.cta} <span aria-hidden="true" className="rtl:rotate-180">→</span></Link>
+          <a href="#how" className="hm-btn-d hm-btn-lg">{m.how}</a>
         </div>
+        <p className="hm-xs hm-in hm-d4 hm-note">{h.note}</p>
+
+        <figure className="hm-win hm-in hm-d4" aria-labelledby="hm-cap">
+          <div className="hm-tb"><span className="hm-dots" aria-hidden="true"><i /><i /><i /></span><span aria-hidden="true">{m.win}</span><span className="hm-illus">{m.illus}</span></div>
+          <div className="hm-app" aria-hidden="true">
+            <aside className="hm-side">
+              <div className="hm-ws">◧ {m.biz}</div>
+              <div className="hm-seg"><span className="on">{m.tabs[0]}</span><span>{m.tabs[1]}</span></div>
+              {m.side.map((s, i) => <span key={s} className={i === 0 ? "hm-si on" : "hm-si"}>{s}</span>)}
+              <div className="hm-lbl">{m.engines}</div><span className="hm-si"><b className="hm-b3">●</b> ChatGPT</span><span className="hm-si"><b className="hm-b3">●</b> Gemini</span>
+              <div className="hm-lbl">{m.recent}</div>{m.recentQ.map((q) => <span key={q} className="hm-si">{q}</span>)}
+            </aside>
+            <div className="hm-chat">
+              <div className="hm-bub">{m.q}</div>
+              <div className="hm-xs">{m.meta}</div>
+              <div className="hm-ans">{m.a1}<mark>{m.ca}</mark>{m.a2}<small className="hm-cite">{m.cite1}</small>{m.a3}<mark>{m.cb}</mark>{m.a4}<small className="hm-cite">{m.cite2}</small>{m.a5}<mark>{m.cc}</mark>{m.a6}</div>
+              <div className="hm-card"><div className="hm-row0"><span className="hm-w">{m.miss}</span><span className="hm-chipb">{m.fix}</span></div><div className="hm-xs hm-mt6">{m.fixT}</div></div>
+              <div className="hm-inp"><span>{m.ask}</span><span>↑</span></div>
+            </div>
+            <div className="hm-panel">
+              <div className="hm-card"><span className="hm-ex">{m.ex}</span><div className="hm-xs">{m.score}</div>
+                <div className="hm-score"><svg className="hm-ring" viewBox="0 0 80 80"><circle cx="40" cy="40" r="33" stroke="#242426" strokeWidth="7" fill="none" /><circle cx="40" cy="40" r="33" stroke="#3b82f6" strokeWidth="7" fill="none" strokeLinecap="round" strokeDasharray="207" strokeDashoffset="135" transform="rotate(-90 40 40)" /><text x="40" y="46" textAnchor="middle" fill="#fff" fontSize="20" fontFamily="Inter">35</text></svg>
+                  <div className="hm-bars">ChatGPT<div className="hm-bar"><i className="w40" /></div>Gemini<div className="hm-bar"><i className="w28" /></div></div></div></div>
+              <div className="hm-card"><span className="hm-ex">{m.ex}</span><div className="hm-xs">{m.trend}</div>
+                <svg viewBox="0 0 280 90" className="hm-trend"><g stroke="#1f1f22"><line x1="0" y1="22" x2="280" y2="22" /><line x1="0" y1="45" x2="280" y2="45" /><line x1="0" y1="68" x2="280" y2="68" /></g><path className="hm-ln" d="M280 75 L235 70 L190 62 L145 64 L100 48 L55 40 L10 30" stroke="#3b82f6" strokeWidth="2" fill="none" /><path d="M280 80 L235 78 L190 72 L145 70 L100 66 L55 58 L10 52" stroke="#636366" strokeWidth="1.5" fill="none" strokeDasharray="3 3" /></svg>
+                <div className="hm-xs hm-legend"><span><b className="hm-b3">━</b> {m.you}</span><span>┄ {m.avg}</span></div></div>
+              <div className="hm-card"><span className="hm-ex">{m.ex}</span><div className="hm-xs">{m.picked}</div>
+                <div className="hm-r"><span>{lang === "he" ? "מרפאה א׳" : "Clinic A"}</span><span className="hm-chipn">7/20</span></div><div className="hm-r"><span>{lang === "he" ? "מרפאה ב׳" : "Clinic B"}</span><span className="hm-chipn">5/20</span></div><div className="hm-r"><span className="hm-b3">{m.youRow}</span><span className="hm-chipb">3/20</span></div></div>
+            </div>
+          </div>
+          <div className="hm-fade" aria-hidden="true" />
+          <figcaption id="hm-cap" className="hm-caption">{m.caption}</figcaption>
+        </figure>
       </section>
-      <div className="horizon-wrap pointer-events-none relative -mt-[calc(var(--u)*20)] h-[calc(var(--u)*340)] min-h-[220px] w-full"><Horizon /></div>
     </div>
   );
 }

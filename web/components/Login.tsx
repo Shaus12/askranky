@@ -22,7 +22,7 @@ export default function Login({ t, lang }: { t: Dict; lang: Locale }) {
       <MaskHeading as="h1" className="vx-h3" text={t.login.title} />
       <span data-hair className="hairline mx-auto mt-6 block w-40" />
       <p data-reveal className="vx-lede mt-6 text-center">{t.login.sub}</p>
-      {msg ? <p role="status" data-reveal className="card mt-8 p-6 text-center text-emerald-200">✓ {msg}</p> : (
+      {msg ? <p role="status" data-reveal className="card mt-8 p-6 text-center text-blue-200">✓ {msg}</p> : (
         <form onSubmit={submit} data-reveal className="card mt-8 space-y-4 p-6">
           <label className="vx-label">{t.login.email}
             <input name="email" type="email" required dir="ltr" autoComplete="email" placeholder="you@business.com" className="vx-input" /></label>
