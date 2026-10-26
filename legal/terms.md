@@ -1,5 +1,5 @@
 # Terms of Service — Ranky
-Last updated: 2026-10-23 (version 1.2)
+Last updated: 2026-10-27 (version 1.3)
 
 These Terms govern your use of Ranky (askranky.com, the "Service"), operated by Shai Shotashvili, Exempt Dealer (Osek Patur) No. 322713082, Etzel 8, Bat Yam, Israel ("we", "us"). By creating an account, running a scan or paying, you agree to these Terms. If you do not agree, do not use the Service. The Hebrew version of these Terms prevails if the two versions differ (the English version is a convenience translation).
 
@@ -22,6 +22,7 @@ A limited free scan is offered, with daily limits per IP address and bot protect
 4.3 Visitors in Israel see prices in Israeli shekels (ILS); other visitors may see prices in US dollars (USD) for reference. Unless the checkout page states otherwise, your card is charged in ILS at the ILS list price shown at checkout. The amount and currency that will be charged are always shown before you pay. Your bank may apply currency-conversion fees.
 4.4 **US sales tax:** at this time we do not collect US sales tax, VAT or similar taxes: the Service is a digital service supplied from Israel by an exempt dealer. We may review this if our sales in a jurisdiction pass the thresholds that require registration; any change will be announced in advance and will not apply retroactively.
 4.5 We may change prices with at least 30 days' notice by email. Changes apply from the next billing period; you may cancel before then.
+4.6 **One-time Fix-up.** The Fix-up (₪390, single payment) includes one full scan of one business (up to 20 customer questions on the AI engines that run at that time, currently ChatGPT and Gemini), three prioritized fixes written for that business and handed over to you by email, and one re-scan about 30 days after payment. It is not a subscription: no standing order for further payments is created and nothing renews. Implementing the fixes on your own website or listings is up to you unless agreed otherwise in writing. We do not guarantee any ranking, mention or result in any AI engine. Refunds: see the Refund & Cancellation Policy, section 1A.
 
 ## 5. Recurring billing (standing order / הוראת קבע)
 5.1 Paid plans are monthly subscriptions. By subscribing you authorise us, through our payment processor SUMIT (and its card acquirer), to charge your card on the subscription date and every month thereafter until you cancel.

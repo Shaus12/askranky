@@ -16,6 +16,21 @@ const T = {
       `לביטול: דרך הדשבורד, בתשובה למייל זה או בפנייה ל-${v.supportEmail}.`,
       `${v.legalEntityHe}, עוסק פטור ${v.entityId}; המסמך הוא קבלה.`] },
   },
+  // One-time product (Fix-up): no renewal wording.
+  receipt_once: {
+    en: { subject: v => `${v.brand} receipt: ${v.planName}, ${v.amount} ${v.currency}`, body: v => [
+      `Thanks! We received your one-time payment of <b>${v.amount} ${v.currency}</b> for the ${v.brand} ${v.planName}.`,
+      v.receiptUrl ? `Receipt: <a href="${v.receiptUrlRaw}">${v.receiptUrl}</a>` : `A receipt (קבלה) is issued for this payment by our billing provider, SUMIT. If it doesn't reach you, reply to this email and we'll make sure you get it.`,
+      `This is a single payment: nothing renews and you will not be charged again.`,
+      `What happens next: we run your full scan, send you your 3 prioritized fixes by email, and re-scan about 30 days later so you can compare. Questions? Reply to this email or contact ${v.supportEmail}.`,
+      `${v.legalEntity} is an exempt dealer (עוסק פטור); this document is a receipt.`] },
+    he: { subject: v => `קבלה מ-${v.brand}: ${v.planName}, ${v.amount} ${v.currency}`, body: v => [
+      `תודה! התקבל תשלום חד־פעמי של <b>${v.amount} ${v.currency}</b> עבור ${v.planName} ב-${v.brand}.`,
+      v.receiptUrl ? `קבלה: <a href="${v.receiptUrlRaw}">${v.receiptUrl}</a>` : `קבלה על התשלום מונפקת על ידי ספק החיוב שלנו, SUMIT. אם היא לא הגיעה אליך, השב/י למייל זה ונדאג שתקבל/י אותה.`,
+      `זה תשלום יחיד: אין חידוש ולא יהיה חיוב נוסף.`,
+      `מה עכשיו: נריץ את הסריקה המלאה, נשלח במייל את 3 התיקונים המתועדפים, ונסרוק שוב אחרי כ־30 יום כדי להשוות. שאלות? השב/י למייל זה או פנה/י ל-${v.supportEmail}.`,
+      `${v.legalEntityHe}, עוסק פטור ${v.entityId}; המסמך הוא קבלה.`] },
+  },
   failed: {
     en: { subject: v => `Action needed: your ${v.brand} payment didn't go through`, body: v => [
       `We couldn't charge your card for the ${v.planName} plan (${v.amount} ${v.currency}). Your plan stays active for a 7-day grace period.`,

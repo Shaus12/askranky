@@ -11,14 +11,15 @@ import { detectAlerts } from './alert-detect.js';
 import { getDb, save, id } from './store.js';
 
 export const NO_ENGINE_MESSAGE = { en: 'Live scans are temporarily unavailable (no AI engine is available right now). Please try again later.', he: 'הסריקות האמיתיות לא זמינות כרגע (אף מנוע AI לא זמין). נסו שוב מאוחר יותר.' };
-export async function runScan(account, business, { engines = ENGINES, maxQuestions, utm = null } = {}) {
-  const plan = PLANS[account.plan];
+// planOverride: a product (e.g. PRODUCTS.fixup) whose question count / competitors / check budget apply instead of the account's plan.
+export async function runScan(account, business, { engines = ENGINES, maxQuestions, utm = null, planOverride = null } = {}) {
+  const plan = planOverride || PLANS[account.plan];
   const questions = buildQuestions(business, Math.min(plan.questionsPerBusiness, maxQuestions || Infinity));
   // Engines that cannot run live (not enabled / key missing) are skipped, never faked. No runnable engine: refuse before any spend.
   const skipped = engines.map(engineStatus).filter(st => st.skipped).map(st => ({ engine: st.engine, reason: st.reason }));
   const active = engines.filter(e => !skipped.some(x => x.engine === e));
   if (!active.length) throw Object.assign(new Error(NO_ENGINE_MESSAGE.en), { code: 'NO_ENGINE', he: NO_ENGINE_MESSAGE.he, skipped });
-  const budget = checkBudget(account, active, questions.length, active.filter(e => !getProvider(e).mock));
+  const budget = checkBudget(account, active, questions.length, active.filter(e => !getProvider(e).mock), plan);
   if (!budget.ok) throw Object.assign(new Error(budget.reason), { code: 'CAP', he: budget.reasonHe });
 
   const results = []; let cost = 0;

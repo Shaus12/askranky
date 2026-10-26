@@ -31,7 +31,7 @@ export default function CardForm({ embedded, lang, onPaid, onAlready, amount }: 
     try {
       const token = await tokenize(embedded, lang, tt); wipe();
       try { await api("/api/checkout/charge", { body: { identifier: embedded.identifier, token, lang } }); onPaid(); }
-      catch (x: any) { const c = x?.data?.error; if (c === "already_subscribed" && onAlready) return onAlready(); setErr(c === "declined" ? tt.declined : c === "invalid_checkout" || c === "prelaunch" ? tt.invalid : c === "rate_limited" ? tt.rate : c === "busy" ? tt.busy : tt.failed); }
+      catch (x: any) { const c = x?.data?.error; if (c === "already_subscribed" && onAlready) return onAlready(); if (c === "fixup_open") return setErr(lang === "he" ? x.data.messageHe : x.data.message); setErr(c === "declined" ? tt.declined : c === "invalid_checkout" || c === "prelaunch" ? tt.invalid : c === "rate_limited" ? tt.rate : c === "busy" ? tt.busy : tt.failed); }
     } catch (x: any) { setErr(String(x?.message || tt.tokenErr)); } finally { wipe(); lock.current = false; setBusy(false); }
   }
   // Card fields are always LTR digits (dir="ltr"), labels follow the page direction. readOnly (not disabled) while busy keeps the DOM values readable for payments.js.

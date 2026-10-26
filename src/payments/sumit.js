@@ -48,12 +48,13 @@ export function buildChargeRequest({ account, plan, billing, token }) {
   if (!(billing.currency in SUMIT_CURRENCY)) throw new Error('Unsupported currency');
   if (billing.currency === 'USD' && !usdBillingEnabled()) throw new Error('USD billing disabled (ENABLE_USD_BILLING)');
   if (billing.amount !== plan.prices[billing.currency]) throw new Error('Amount does not match plan price');
+  if (plan.oneTime && (billing.currency !== 'ILS' || plan.recurrence !== 1)) throw new Error('Invalid one-time product');
   if (plan.internal && (billing.currency !== 'ILS' || plan.id !== 'test' || plan.recurrence !== 1)) throw new Error('Invalid internal plan');
   return {
     // NoVAT: true marks the customer VAT-exempt (spec: Accounting_Typed_Customer.NoVAT). SearchMode 2 = ExternalIdentifier.
     Customer: { ExternalIdentifier: account.id, SearchMode: 2, Name: account.name || account.email, EmailAddress: account.email, NoVAT: true },
     SingleUseToken: token,
-    Items: [{ Item: { Name: `${plan.name} plan`, Description: 'Monthly subscription', Duration_Months: 1 }, Quantity: 1, UnitPrice: billing.amount, Currency: SUMIT_CURRENCY[billing.currency], Duration_Months: 1, Recurrence: plan.recurrence || 0 }], // Recurrence 0/null = continuous; the internal admin test plan sets 1 (exactly one payment)
+    Items: [{ Item: { Name: plan.oneTime ? plan.name : `${plan.name} plan`, Description: plan.oneTime ? 'One-time purchase (single payment, no renewal)' : 'Monthly subscription', Duration_Months: 1 }, Quantity: 1, UnitPrice: billing.amount, Currency: SUMIT_CURRENCY[billing.currency], Duration_Months: 1, Recurrence: plan.recurrence || 0 }], // Recurrence 0/null = continuous; the internal admin test plan sets 1 (exactly one payment)
     // עוסק פטור: no VAT. Spec has VATIncluded (bool) but NO VATRate field on recurring/charge; VAT is governed by the
     // company's exempt-dealer setting + Customer.NoVAT. DocumentType 2 = Receipt (קבלה).
     VATIncluded: false, DocumentType: SUMIT_DOCUMENT_TYPE, OnlyDocument: false,

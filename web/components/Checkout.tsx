@@ -11,21 +11,21 @@ type CheckoutRes = { redirectUrl?: string, embedded?: Embedded };
 // ?plan=starter → email form → POST /api/checkout → mock: redirect to the stand-in page; SUMIT: embedded card form (CardForm) on this page.
 // ?account=… → mock payment page (stands in for the SUMIT hosted page while PAYMENTS_PROVIDER=mock).
 // Order summary shown above both the email step and the card form: plan, price, cadence, what is actually charged (display only; the server re-prices).
-function Summary({ t, lang, name, bill }: { t: Dict; lang: Locale; name: string; bill: Billing | null }) {
+function Summary({ t, lang, name, bill, once = false }: { t: Dict; lang: Locale; name: string; bill: Billing | null; once?: boolean }) {
   const c = t.checkout, tt = payText[lang]; const differs = !!bill && (bill.fallback || bill.currency !== bill.displayCurrency);
   return (
     <section className="card pay-panel" aria-labelledby="pay-plan" data-billing={bill?.currency}>
       <p className="pay-eyebrow">{tt.orderTitle}</p>
       <div className="mt-2 flex items-end justify-between gap-4">
-        <div className="min-w-0"><h1 id="pay-plan" className="font-head text-2xl font-bold text-white">{name}</h1><p className="mt-1 text-sm text-slate-400">{tt.cadence}</p></div>
-        {bill && <p className="shrink-0 text-end"><span dir="ltr" className="font-head text-3xl font-extrabold text-white">{fmt(bill.displayAmount, bill.displayCurrency)}</span><span className="text-sm text-slate-400">{t.pricing.mo}</span></p>}
+        <div className="min-w-0"><h1 id="pay-plan" className="font-head text-2xl font-bold text-white">{name}</h1><p className="mt-1 text-sm text-slate-400">{once ? t.pricing.fixup.cadence : tt.cadence}</p></div>
+        {bill && <p className="shrink-0 text-end"><span dir="ltr" className="font-head text-3xl font-extrabold text-white">{fmt(bill.displayAmount, bill.displayCurrency)}</span><span className="text-sm text-slate-400">{once ? "" : t.pricing.mo}</span></p>}
       </div>
       <div className="pay-rows">
-        {differs && bill && <div className="pay-row"><span>{c.charged}</span><b dir="ltr" className="text-white">{fmt(bill.amount, bill.currency)}{t.pricing.mo}</b></div>}
+        {differs && bill && <div className="pay-row"><span>{c.charged}</span><b dir="ltr" className="text-white">{fmt(bill.amount, bill.currency)}{once ? "" : t.pricing.mo}</b></div>}
         {bill?.fallback && <p className="text-zinc-200">{c.fallback}</p>}
         <p>{c.noVat}</p>
       </div>
-      <p className="mt-3 text-xs leading-relaxed text-slate-400" data-disclosure>{c.renew} {t.footer.seller}</p>
+      <p className="mt-3 text-xs leading-relaxed text-slate-400" data-disclosure>{once ? t.pricing.fixup.disclosure : c.renew} {t.footer.seller}</p>
     </section>);
 }
 export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
@@ -35,7 +35,7 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
   const [emb, setEmb] = useState<Embedded | null>(null); const [paid, setPaid] = useState(false); const [already, setAlready] = useState(false);
   useEffect(() => { const sp = new URLSearchParams(location.search); setQ(sp); getConfig().then((c) => { setPre(!!c.prelaunch); setSiteKey(c.turnstileSiteKey); });
     // Show exactly what the server will charge (server re-prices on POST; the client never sends an amount).
-    api<Pricing>(`/api/pricing?lang=${lang}`).then((j) => { const p = j.plans.find((x) => x.id === (sp.get("plan") || "starter")); const b = p?.billing || null;
+    api<Pricing>(`/api/pricing?lang=${lang}`).then((j) => { const prod = j.products?.find((x) => x.id === sp.get("plan")); if (prod) return setBill(prod.billing); const p = j.plans.find((x) => x.id === (sp.get("plan") || "starter")); const b = p?.billing || null;
       // USD billing off: show exactly what is charged (ILS), never a $ figure next to a shekel charge.
       setBill(b && !j.usdBilling ? { currency: "ILS", amount: p!.prices.ILS, displayCurrency: "ILS", displayAmount: p!.prices.ILS, fallback: false } : b); }).catch(() => {}); }, [lang]);
   if (!q || pre === null) return <main className="min-h-[60vh]" />;
@@ -69,12 +69,12 @@ export default function Checkout({ t, lang }: { t: Dict; lang: Locale }) {
     e.preventDefault(); const fd = new FormData(e.currentTarget); const email = String(fd.get("email") || ""); const token = String(fd.get("cf-turnstile-response") || "");
     if (siteKey && !token) return setErr(t.form.captcha); setErr("");
     try { const j = await api<CheckoutRes>("/api/checkout", { body: { plan, email, lang, currency: bill?.displayCurrency, ...getUtm(), "cf-turnstile-response": token || undefined } }); if (j.embedded) setEmb(j.embedded); else if (j.redirectUrl) location.href = j.redirectUrl; }
-    catch (x: any) { if (x.data?.error === "already_subscribed") { setEmb(null); setAlready(true); } else if (x.data?.prelaunch) setPre(true); else { setErr(errMessage(x, t)); setRk((n) => n + 1); } }
+    catch (x: any) { if (x.data?.error === "fixup_open") { setErr(lang === "he" ? x.data.messageHe : x.data.message); setRk((n) => n + 1); } else if (x.data?.error === "already_subscribed") { setEmb(null); setAlready(true); } else if (x.data?.prelaunch) setPre(true); else { setErr(errMessage(x, t)); setRk((n) => n + 1); } }
   }
-  const p = t.pricing.plans.find((x) => x.id === plan) || t.pricing.plans[1];
+  const once = plan === "fixup"; const p = once ? { name: t.pricing.fixup.name } : t.pricing.plans.find((x) => x.id === plan) || t.pricing.plans[1];
   if (paid) return (<main className="mx-auto max-w-lg px-4 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center sm:px-5" data-paid><div className="card pay-panel space-y-3 !p-8"><span aria-hidden="true" className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-blue-300/30 bg-blue-500/10 text-xl text-blue-200">✓</span><h1 className="font-head vx-h3 !text-3xl">{payText[lang].paidTitle}</h1><p role="status" className="text-slate-300">{payText[lang].paidSub}</p></div></main>);
   if (already) return (<main className="mx-auto max-w-lg px-4 py-[clamp(3rem,calc(var(--u)*96),6rem)] text-center sm:px-5" data-already-subscribed><div className="card pay-panel space-y-3 !p-8"><h1 className="font-head vx-h3 !text-3xl">{payText[lang].alreadyTitle}</h1><p role="status" className="text-slate-300">{payText[lang].alreadySub}</p><a className="btn-cta mt-4" href={`/${lang}/login`}>{payText[lang].alreadyCta}</a></div></main>);
-  const summary = <Summary t={t} lang={lang} name={p.name} bill={bill} />;
+  const summary = <Summary t={t} lang={lang} name={p.name} bill={bill} once={once} />;
   if (emb) return (
     <main className="mx-auto max-w-lg space-y-4 px-4 py-[clamp(2.5rem,calc(var(--u)*96),6rem)] sm:px-5" data-embedded-checkout>
       {summary}

@@ -10,6 +10,13 @@ export const PLANS = {
   agency:  { id: 'agency',  name: 'Agency',    prices: { ILS: 549, USD: 149 }, businesses: 10, questionsPerBusiness: 15, competitors: 5, cadence: 'weekly', rescanDays: 7, monthlyCheckBudget: 10 * 15 * 3 * 5 },
 };
 // cadence/rescanDays: how often src/rescan.js re-scans each business of a paying account (only while AUTO_RESCAN_ENABLED=1).
+// One-time products: NOT plans (no subscription, never change account.plan, ignored by billing sync / MRR). Charged through the
+// same SUMIT /billing/recurring/charge call with Recurrence: 1 (exactly one payment, no further charges), the path the internal 1 ILS
+// admin test already uses; SUMIT issues the receipt (קבלה) as for plans. ILS only. The scans it includes run via src/fixup.js (FIXUP_SCANS_ENABLED).
+export const PRODUCTS = {
+  fixup: { id: 'fixup', name: 'Fix-up', prices: { ILS: 390 }, oneTime: true, recurrence: 1, questionsPerBusiness: 20, competitors: 5, rescanAfterDays: 30, monthlyCheckBudget: 2 * 20 * 2 },
+};
+export const productBilling = p => ({ currency: 'ILS', amount: p.prices.ILS, displayCurrency: 'ILS', displayAmount: p.prices.ILS, fallback: false });
 export const isPaid = p => !!p && p.prices.ILS > 0;
 export const priceOf = (plan, currency) => { if (!CURRENCIES.includes(currency)) throw new Error('bad currency'); return plan.prices[currency]; };
 export const formatPrice = (amount, currency) => currency === 'ILS' ? `₪${amount}` : `$${amount}`;

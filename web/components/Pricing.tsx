@@ -36,6 +36,14 @@ export default function Pricing({ t, lang }: { t: Dict; lang: Locale }) {
           <Link href={v ? `/${lang}/checkout?plan=${p.id}` : `/${lang}/scan`} className={`mt-6 ${hot ? "btn-cta" : "btn-outline"}`}>{p.cta}</Link>
         </div>); })}
     </div>
+    {/* One-time Fix-up (src/plans.js PRODUCTS.fixup, ILS only): a checkout item next to the monthly plans. */}
+    <div data-reveal data-product="fixup" className="card mt-5 grid gap-5 p-6 md:grid-cols-[1fr_auto] md:items-center">
+      <div><span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-sky-300">{t.pricing.fixup.badge}</span>
+        <h3 className="mt-3 text-lg font-bold">{t.pricing.fixup.name} <span className="text-slate-400 font-medium">· {t.pricing.fixup.sub}</span></h3>
+        <ul className="mt-3 grid gap-2 text-slate-300 sm:grid-cols-2">{t.pricing.fixup.items.map((it) => <li key={it} className="flex gap-2"><span aria-hidden className="text-sky-400">✓</span>{it}</li>)}</ul></div>
+      <div className="text-center md:text-end"><div className="font-head text-4xl font-bold text-white"><span dir="ltr" data-price="fixup">{t.pricing.fixup.price}</span></div><p className="text-sm text-slate-400">{t.pricing.fixup.once}</p>
+        <Link href={`/${lang}/checkout?plan=fixup`} className="btn-cta mt-4">{t.pricing.fixup.cta}</Link></div>
+    </div>
     <p data-reveal className="mx-auto mt-6 max-w-2xl text-center text-sm text-slate-400">{t.pricing.vatNote}</p>
   </>);
 }

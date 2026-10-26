@@ -1,10 +1,15 @@
 # Refund & Cancellation Policy — Ranky
-Last updated: 2026-10-23 (version 1.1). Operated by Shai Shotashvili, Exempt Dealer (Osek Patur) No. 322713082, Etzel 8, Bat Yam, Israel.
+Last updated: 2026-10-27 (version 1.2). Operated by Shai Shotashvili, Exempt Dealer (Osek Patur) No. 322713082, Etzel 8, Bat Yam, Israel.
 
 ## 1. Cancelling your subscription (standing order)
 - Cancel anytime: dashboard → Cancel subscription, or email shaysho1111@gmail.com (from your account email).
 - We cancel the standing order with our processor (SUMIT) and confirm in writing by email, including the date charges stop (at the latest within 3 business days).
 - No further charges after cancellation. You keep access until the end of the current paid month. Partial months are not refunded unless section 2 or 3 applies.
+
+## 1A. One-time Fix-up
+- The Fix-up is a single payment; there is no standing order and nothing to cancel later.
+- **Deliver-or-refund:** if we have not handed over your three fixes within 14 days of payment, or have not run the re-scan within 45 days of payment, you get a full refund on request.
+- Before we hand over the fixes you may cancel for a full refund. Israeli consumers also keep the rights in section 2; after the fixes have been handed over, a cancellation under section 2 is refunded in proportion to the part of the service not yet provided (the re-scan), as the law allows.
 
 ## 2. Israeli consumers: cancelling a distance transaction
 Under section 14C of the Consumer Protection Law, 5741-1981, a consumer may cancel within **14 days** from the transaction (or from receipt of the written disclosure, whichever is later), by written notice (an email to shaysho1111@gmail.com is sufficient).

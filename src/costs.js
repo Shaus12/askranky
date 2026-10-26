@@ -9,9 +9,8 @@ const month = () => new Date().toISOString().slice(0, 7);
 
 export function estimateCost(engines, questions) { return engines.reduce((s, e) => s + COST_PER_CHECK[e] * questions, 0); }
 
-export function checkBudget(account, engines, questions, liveEngines = engines) {
+export function checkBudget(account, engines, questions, liveEngines = engines, plan = PLANS[account.plan]) {
   const db = getDb();
-  const plan = PLANS[account.plan];
   const checks = engines.length * questions;
   const used = account.usage?.[month()] || 0;
   if (used + checks > plan.monthlyCheckBudget) return { ok: false, reason: `Plan cap reached (${used}/${plan.monthlyCheckBudget} checks this month)` };
