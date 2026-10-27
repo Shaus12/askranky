@@ -6,8 +6,8 @@ slug: /he/blog/kli-bdikat-nirut-ai-le-asakim
 lang: he
 faq: true
 sources_checked: "otterly.ai/pricing, semrush.com/pricing/ai, brightlocal.com/pricing (27.10.2026)"
-published: 2026-10-28
-updated: 2026-10-28
+published: 2026-10-27
+updated: 2026-10-27
 ---
 
 # כלי לבדיקת נראות ב-ChatGPT ו-Gemini לעסקים בישראל: מה לבדוק לפני שבוחרים

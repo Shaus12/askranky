@@ -5,8 +5,8 @@ meta_description: "תוכנית מעשית ל-30 יום שתגדיל את הסי
 slug: /he/blog/geo-le-esek-katan-be-israel
 lang: he
 faq: true
-published: 2026-10-29
-updated: 2026-10-29
+published: 2026-10-27
+updated: 2026-10-27
 ---
 
 # GEO לעסק קטן בישראל: תוכנית עבודה ל-30 יום
