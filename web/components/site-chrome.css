@@ -91,3 +91,9 @@ html.a11y-hc body .ra-opt[aria-pressed="true"] *, html.a11y-hc body .ra-opt[aria
 html.a11y-links.a11y-hc body a:not(.ra-btn), html.a11y-links.a11y-lc body a:not(.ra-btn) { background-color: #ffff00 !important; color: #000 !important; -webkit-text-fill-color: #000 !important; border-color: #000 !important; }
 html.a11y-links.a11y-hc body a:not(.ra-btn) *:not(svg, svg *), html.a11y-links.a11y-lc body a:not(.ra-btn) *:not(svg, svg *) { background-color: transparent !important; color: #000 !important; -webkit-text-fill-color: #000 !important; }
 @media print { .rc-banner, .ra-root { display: none !important; } }
+
+/* Phones: compact notice so it doesn't cover the hero CTA / half the scan form (same content and controls, just tighter). */
+@media (max-width: 639px) { .rc-banner:not(:has(.rc-detail)) { padding: .6rem .8rem; font-size: .8rem; line-height: 1.4; bottom: 6px; inset-inline: 6px; }
+  .rc-banner:not(:has(.rc-detail)) .rc-title { font-size: .875rem; margin: 0; }
+  .rc-banner:not(:has(.rc-detail)) .rc-actions { margin-top: .4rem; gap: .25rem .75rem; }
+  .rc-banner:not(:has(.rc-detail)) .rc-btn { padding: .4rem 1rem; } }
