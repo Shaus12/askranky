@@ -23,6 +23,8 @@ try {
   s = await status(); const f = s.funnel.today; assert.deepEqual([f.scanStarted, f.scanDone, f.signup, f.checkoutStarted, f.paid], [1, 1, 1, 1, 1]); assert.equal(s.funnel.last30Days.paid, 1);
   assert.equal(s.funnel.conversionLast30DaysPct.checkoutToPaid, 100); assert.ok(typeof s.funnel.conversionLast30DaysPct.visitToScan === 'number');
   ok('scan started → scan done → signup → checkout started → paid counted (today / 7d / 30d / total + conversion %); admin/test activity excluded');
+  assert.ok(s.funnel.trackingSince && Date.parse(s.funnel.trackingSince) <= Date.now()); ok('trackingSince marks when visit/scanStarted counting began (older scans count as done but never as started)');
+  assert.match(fs.readFileSync('server.js', 'utf8'), /process\.once\(sig[\s\S]{0,80}flushVisits\(\)/); ok('visits flushed on SIGTERM (deploy/restart)');
   const txt = JSON.stringify(s.funnel); assert.ok(!/f@t\.test|Funnel Cafe|t1|Mozilla|127\.0\.0\.1/.test(txt)); ok('funnel output has no personal data');
   const web = ['web/components', 'web/lib', 'web/app'].flatMap(d => fs.readdirSync(d, { recursive: true }).map(f => d + '/' + f)).filter(f => /\.(tsx?|css)$/.test(f)).map(f => fs.readFileSync(f, 'utf8')).join('\n');
   assert.ok(!/googletagmanager|google-analytics|gtag\(|plausible|posthog|mixpanel|segment\.com|hotjar|clarity\.ms|facebook\.net\/.*fbevents/i.test(web)); ok('no third-party analytics / trackers in the web app');

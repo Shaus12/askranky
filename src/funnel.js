@@ -44,6 +44,8 @@ export function buildFunnel(db, now = new Date()) {
   for (const a of Object.values(db.accounts || {})) if (a && !test.has(a.id)) add('signup', a.createdAt);
   const pct = (a, b) => (a > 0 ? Math.round((b / a) * 1000) / 10 : null); const m = out.last30Days;
   out.conversionLast30DaysPct = { visitToScan: pct(m.visit, m.scanStarted), scanStartToDone: pct(m.scanStarted, m.scanDone), scanToSignup: pct(m.scanDone, m.signup), signupToCheckout: pct(m.signup, m.checkoutStarted), checkoutToPaid: pct(m.checkoutStarted, m.paid) };
-  out.note = 'visit = server-side count of public page views (bots/prefetch excluded, no cookies, no personal data); days are UTC';
+  const since = (db.events || []).filter(e => e && /^funnel\./.test(e.type)).map(e => e.at).sort()[0] || null;
+  out.trackingSince = since; // visit/scanStarted only exist from this moment (first deploy of the funnel); scanDone/signup are backfilled from stored records
+  out.note = 'visit and scanStarted are counted only since trackingSince; scanDone and signup include older records; visit = server-side count of public page views (bots/prefetch excluded, no cookies, no personal data); days are UTC';
   return out;
 }

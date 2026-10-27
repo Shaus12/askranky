@@ -604,6 +604,7 @@ app.use((err, q, r, next) => { if (r.headersSent) return next(err); const st = N
 const port = process.env.PORT || 3000;
 if (process.argv[1]?.endsWith('server.js')) { const cfg = (await import('./src/config-check.js')).logConfig(); if (cfg.fatal.length) { console.error('[config] FATAL: ' + cfg.fatal.join('; ')); process.exit(1); } if (!cfg.ok && process.env.CONFIG_STRICT === '1') process.exit(1); }
 if (process.argv[1]?.endsWith('server.js')) setInterval(() => { try { flushVisits(); } catch { /* next tick retries */ } }, Number(process.env.FUNNEL_FLUSH_MS || 600000)).unref(); // persist the in-memory visit counter
+if (process.argv[1]?.endsWith('server.js')) for (const sig of ['SIGTERM', 'SIGINT']) process.once(sig, async () => { try { flushVisits(); await (await import('./src/store.js')).flush?.(); } catch { /* best effort */ } process.exit(0); }); // Render restarts/deploys send SIGTERM: do not lose up to FUNNEL_FLUSH_MS of visits
 if (process.argv[1]?.endsWith('server.js') && process.env.BILLING_SYNC_CRON === '1') { startBillingCron({ run: async () => { try { const x = await syncAll(); recordSync(true); return x; } catch (e) { recordSync(false, e); throw e; } } }); console.log('billing sync: in-process daily scheduler on'); }
 if (process.argv[1]?.endsWith('server.js')) app.listen(port, process.env.HOST || '0.0.0.0', () => console.log(`${BRAND.name} on http://localhost:${port} (scans: ${isMockMode() ? 'MOCK' : 'LIVE'}, payments: ${getPayments().id})`));
 export default app;
