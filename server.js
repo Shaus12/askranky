@@ -12,7 +12,7 @@ import { TEST_PLAN, TEST_BILLING, TEST_CHECKOUT_TTL_MS, TEST_ACCESS_MS } from '.
 import { validSingleUseToken, looksLikeCardNumber } from './src/payments/sumit.js'; import { checkoutCsp, inlineScriptHashes, adminNonce, JQUERY_PATH, SUMIT_SCRIPT_URL } from './src/security/csp.js';
 import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { buildStatus, recordSync } from './src/status.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js'; import { blogPageHtml } from './src/blog.js';
 import { registerAuth } from './src/auth/routes.js'; import { googleEnabled } from './src/auth/google.js';
-import { applyCompAccounts } from './src/comp.js'; import { visitMiddleware, flushVisits } from './src/funnel.js'; import { dashboardData, dashboardCsv } from './src/dashboard.js';
+import { applyCompAccounts } from './src/comp.js'; import { visitMiddleware, flushVisits } from './src/funnel.js'; import { whatsappNumber } from './src/whatsapp.js'; import { dashboardData, dashboardCsv } from './src/dashboard.js';
 
 // TRUST_PROXY=1 (GO-LIVE.md) is a *string* in process.env; Express treats a string as an IP/subnet list ('1' = the address 0.0.0.1), so the proxy was
 // NOT trusted and every visitor shared the proxy's IP in all per-IP limits. Numbers become a hop count, 'true'/'false' booleans, anything else is passed through.
@@ -476,7 +476,7 @@ app.post('/unsubscribe', loginLimiter, (q, r) => { const t = q.query.t || q.body
 
 // ---------- JSON API for the Next.js frontend (web/) ----------
 const pub = a => ({ id: a.id, email: a.email, plan: a.plan, active: !!a.subscriptionRef && a.status !== 'cancelled', status: a.status || (a.subscriptionRef ? 'active' : null), paidThrough: a.paidThrough || null, cancelledAt: a.cancelledAt || null });
-app.get('/api/config', (q, r) => r.json({ brand: BRAND, plans: publicPlans(), usdBilling: usdBillingEnabled(), mock: isMockMode(), prelaunch: isPrelaunch(), emailMock: emailIsMock(), turnstileSiteKey: turnstileSiteKey(), googleAuth: googleEnabled(), autoRescan: autoRescanEnabled(), digest: digestEnabled() }));
+app.get('/api/config', (q, r) => r.json({ brand: BRAND, plans: publicPlans(), usdBilling: usdBillingEnabled(), mock: isMockMode(), prelaunch: isPrelaunch(), emailMock: emailIsMock(), turnstileSiteKey: turnstileSiteKey(), googleAuth: googleEnabled(), autoRescan: autoRescanEnabled(), digest: digestEnabled(), whatsapp: whatsappNumber() }));
 app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body || {};
   // City is required (no default anywhere): a scan for the wrong city scores 0 and looks like a broken product.
