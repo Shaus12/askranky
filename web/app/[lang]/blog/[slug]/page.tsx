@@ -27,10 +27,13 @@ export default async function Page({ params }: { params: Promise<{ lang: string;
     publisher: { "@type": "Organization", "@id": `${SITE}/#org`, name: "Ranky", url: SITE, logo: { "@type": "ImageObject", url: `${SITE}/logo.png` } } };
   const crumbs = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
     { "@type": "ListItem", position: 1, name: "Ranky", item: `${SITE}/${lang}` }, { "@type": "ListItem", position: 2, name: b.nav, item: `${SITE}/${lang}/blog` }, { "@type": "ListItem", position: 3, name: p.title, item: url }] };
+  const faq = p.faq.length ? { "@context": "https://schema.org", "@type": "FAQPage", inLanguage: lang === "he" ? "he-IL" : "en-US", url,
+    mainEntity: p.faq.map((x) => ({ "@type": "Question", name: x.q, acceptedAnswer: { "@type": "Answer", text: x.a } })) } : null;
   return (<><div className="vx-page"><Nav t={t} lang={lang} path="/blog" />
     <main className="mx-auto max-w-3xl px-5 py-[clamp(3rem,calc(var(--u)*80),5rem)]">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldScript(article) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldScript(crumbs) }} />
+      {faq && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldScript(faq) }} />}
       <nav aria-label="breadcrumb" className="mb-4 text-sm text-slate-400"><a className="vx-link hover:text-white" href={`/${lang}/blog`}>{b.nav}</a> <span aria-hidden>›</span> {p.title}</nav>
       <article data-blog-post={p.slug} lang={lang} dir={lang === "he" ? "rtl" : "ltr"} className="card vx-prose blog-body p-6 text-start md:p-10" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: "<!--BLOG_BODY-->" }} />
       <p className="mt-4 text-sm text-slate-400">{b.by} {author} · {b.updated}: <time dateTime={p.updated}>{fmtDate(p.updated, lang)}</time></p>

@@ -27,6 +27,7 @@ export function blogPosts() {
 export const blogPost = (lang, slug) => blogPosts().find(p => p.lang === lang && p.slug === slug) || null;
 const SELF = /^https?:\/\/(?:www\.)?askranky\.com(?=\/|$)/i;
 const local = html => html.replace(/href="([^"]+)"/g, (m, h) => `href="${SELF.test(h.replace(/&amp;/g, '&')) ? h.replace(SELF, '') || '/' : h}"`);
+const TROW = (l, next) => l.includes('|') && /^\s*\|?\s*:?-{2,}/.test(next || '');
 export function renderBlogMarkdown(md) {
   const lines = md.replace(/\r/g, '').split('\n'); const html = []; let i = 0; const I = s => local(inline(s));
   const BLOCK = /^(#{1,4}\s|\s*>|\s*[-*]\s+|\s*\d+\.\s+|\s*-{3,}\s*$)/;
@@ -38,7 +39,11 @@ export function renderBlogMarkdown(md) {
     if (/^\s*>/.test(l)) { const b = []; while (i < lines.length && /^\s*>/.test(lines[i])) b.push(lines[i++].replace(/^\s*>\s?/, '')); html.push(`<blockquote>${b.map(I).join('<br>')}</blockquote>`); continue; }
     if (/^\s*\d+\.\s+/.test(l)) { const b = []; while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) b.push(`<li>${I(lines[i++].replace(/^\s*\d+\.\s+/, ''))}</li>`); html.push(`<ol>${b.join('')}</ol>`); continue; }
     if (/^\s*[-*]\s+/.test(l)) { const b = []; while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) { const t = lines[i++].replace(/^\s*[-*]\s+/, ''); b.push(/^\[[ xX]\]\s/.test(t) ? `<li class="chk"><span aria-hidden="true">☐</span> ${I(t.replace(/^\[[ xX]\]\s/, ''))}</li>` : `<li>${I(t)}</li>`); } html.push(`<ul>${b.join('')}</ul>`); continue; }
-    const p = []; while (i < lines.length && lines[i].trim() && !BLOCK.test(lines[i])) p.push(I(lines[i++]));
+    // GFM table (header row + |---| separator): the same markup as src/legal.js. Before this, blog tables rendered as raw "| a | b |" text.
+    if (TROW(l, lines[i + 1])) { const cells = r => r.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+      const head = cells(l); i += 2; const rows = []; while (i < lines.length && lines[i].includes('|') && lines[i].trim()) rows.push(cells(lines[i++]));
+      html.push(`<div class="tbl"><table><thead><tr>${head.map(c => `<th>${I(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${I(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`); continue; }
+    const p = []; while (i < lines.length && lines[i].trim() && !BLOCK.test(lines[i]) && !TROW(lines[i], lines[i + 1])) p.push(I(lines[i++]));
     html.push(`<p>${p.join('<br>')}</p>`);
   }
   return html.join('\n');
