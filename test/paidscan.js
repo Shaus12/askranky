@@ -13,7 +13,7 @@ let n = 0; const ok = m => { n++; console.log('  ✓', m); };
 const post = (p, body, h = {}) => realFetch(B + p, { method: 'POST', headers: { 'Content-Type': 'application/json', ...h }, body: JSON.stringify(body) });
 const form = (body) => realFetch(B + '/scan', { method: 'POST', redirect: 'manual', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(body) });
 const db = getDb(); const outbox = () => (fs.existsSync(TD.outbox) ? fs.readdirSync(TD.outbox).length : 0);
-const snap = () => JSON.stringify({ s: Object.keys(db.scans).length, b: Object.keys(db.businesses).length, a: Object.keys(db.accounts).length, spend: db.spend, usage: Object.values(db.accounts).map(a => a.usage), ev: db.events.length, mail: outbox() });
+const snap = () => JSON.stringify({ s: Object.keys(db.scans).length, b: Object.keys(db.businesses).length, a: Object.keys(db.accounts).length, spend: db.spend, usage: Object.values(db.accounts).map(a => a.usage), ev: db.events.filter(e => e.type !== 'funnel.scan_rejected').length, mail: outbox() });
 const mk = (email, extra) => { const a = findOrCreateAccount(email); Object.assign(a, { key: 'K'.repeat(20) + email.replace(/\W/g, '').padEnd(20, 'x'), ...extra }); return a; };
 const paid = mk('paid@t.test', { plan: 'starter', status: 'active', subscriptionRef: 'sr1' });
 const other = mk('other@t.test', { plan: 'starter', status: 'active', subscriptionRef: 'sr2' });

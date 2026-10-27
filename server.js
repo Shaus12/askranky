@@ -12,7 +12,7 @@ import { TEST_PLAN, TEST_BILLING, TEST_CHECKOUT_TTL_MS, TEST_ACCESS_MS } from '.
 import { validSingleUseToken, looksLikeCardNumber } from './src/payments/sumit.js'; import { checkoutCsp, inlineScriptHashes, adminNonce, JQUERY_PATH, SUMIT_SCRIPT_URL } from './src/security/csp.js';
 import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { buildStatus, recordSync } from './src/status.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js'; import { blogPageHtml } from './src/blog.js';
 import { registerAuth } from './src/auth/routes.js'; import { googleEnabled } from './src/auth/google.js';
-import { applyCompAccounts } from './src/comp.js'; import { visitMiddleware, flushVisits } from './src/funnel.js'; import { whatsappNumber } from './src/whatsapp.js'; import { dashboardData, dashboardCsv } from './src/dashboard.js';
+import { applyCompAccounts } from './src/comp.js'; import { visitMiddleware, flushVisits, scanRejectMiddleware } from './src/funnel.js'; import { whatsappNumber } from './src/whatsapp.js'; import { dashboardData, dashboardCsv } from './src/dashboard.js';
 
 // TRUST_PROXY=1 (GO-LIVE.md) is a *string* in process.env; Express treats a string as an IP/subnet list ('1' = the address 0.0.0.1), so the proxy was
 // NOT trusted and every visitor shared the proxy's IP in all per-IP limits. Numbers become a hop count, 'true'/'false' booleans, anything else is passed through.
@@ -287,7 +287,7 @@ const sessionKey = q => String(q.get('x-dashboard-key') ?? q.body?.dashboardKey 
 export const paidScanAllowed = (q, a) => !needsPaidLogin(a) || (sessionAccountId(q) === a.id && !!a.key && safeEqual(sessionKey(q), a.key)) || (q.session?.accountId === a.id && AUTH.csrfOk(q));
 const LOGIN_REQ = { en: 'This email is linked to an existing account. Please sign in to that account to scan with it.', he: 'האימייל הזה משויך לחשבון קיים. כדי לסרוק איתו, יש להתחבר לחשבון הזה.' };
 const loginRequiredBody = lang => { const l = lang === 'he' ? 'he' : 'en'; return { error: 'login_required', code: 'login_required', message: LOGIN_REQ.en, messageHe: LOGIN_REQ.he, loginUrl: `/${l}/login` }; };
-app.post('/scan', scanLimiter, captcha, async (q, r) => {
+app.post('/scan', scanRejectMiddleware, scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body;
   if (!blank(name) && !blank(category) && !blank(email) && blank(city)) return r.status(400).send(V.landing(CITY_REQUIRED.en));
   if (blank(name) || blank(category) || blank(city) || blank(email)) return r.status(400).send(V.landing('Please fill all required fields.'));
@@ -477,7 +477,7 @@ app.post('/unsubscribe', loginLimiter, (q, r) => { const t = q.query.t || q.body
 // ---------- JSON API for the Next.js frontend (web/) ----------
 const pub = a => ({ id: a.id, email: a.email, plan: a.plan, active: !!a.subscriptionRef && a.status !== 'cancelled', status: a.status || (a.subscriptionRef ? 'active' : null), paidThrough: a.paidThrough || null, cancelledAt: a.cancelledAt || null });
 app.get('/api/config', (q, r) => r.json({ brand: BRAND, plans: publicPlans(), usdBilling: usdBillingEnabled(), mock: isMockMode(), prelaunch: isPrelaunch(), emailMock: emailIsMock(), turnstileSiteKey: turnstileSiteKey(), googleAuth: googleEnabled(), autoRescan: autoRescanEnabled(), digest: digestEnabled(), whatsapp: whatsappNumber() }));
-app.post('/api/scan', scanLimiter, captcha, async (q, r) => {
+app.post('/api/scan', scanRejectMiddleware, scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body || {};
   // City is required (no default anywhere): a scan for the wrong city scores 0 and looks like a broken product.
   if (blank(city)) return r.status(400).json({ error: q.body?.lang === 'he' ? CITY_REQUIRED.he : CITY_REQUIRED.en, code: 'city_required', message: CITY_REQUIRED.en });
@@ -551,31 +551,31 @@ function page(r, lang, name, shared = PUBLIC_PAGES.has(name || '')) {
 app.use((q, r, next) => { if (/^\/(?:(?:r|dashboard)\/[^/]+|login|pricing|mock-checkout|legal(?:\/[^/]+)?|blog|privacy|terms|refunds|disclaimer|accessibility|cookies)?\/?$/.test(q.path)) { r.vary('Cookie'); r.vary('Accept-Language'); r.set('Cache-Control', 'private, no-store'); } next(); });
 app.use(['/dashboard', '/auth', '/he/dashboard', '/en/dashboard'], (q, r, next) => { r.set('Referrer-Policy', 'no-referrer'); r.set('Cache-Control', 'no-store'); next(); });
 app.use('/_next', express.static(path.join(OUT, '_next'), { immutable: true, maxAge: '1y' }));
-app.get('/', (q, r) => r.redirect(`/${prefLang(q)}`));
+app.get('/', (q, r) => r.redirect(`/${prefLang(q)}${qs(q)}`));
 // Language-less legacy/short links → preferred language.
 app.get('/r/:id', (q, r) => r.redirect(`/${prefLang(q)}/r/${encodeURIComponent(q.params.id)}`));
 app.get('/dashboard/:id', (q, r) => r.redirect(`/${prefLang(q)}/dashboard/${encodeURIComponent(q.params.id)}${qs(q)}`));
 app.get('/login', (q, r) => r.redirect(`/${prefLang(q)}/login`)); app.get(['/signup', '/account'], (q, r) => r.redirect(`/${prefLang(q)}${q.path}`)); app.get('/dashboard', (q, r) => r.redirect(`/${prefLang(q)}/dashboard`));
-app.get('/pricing', (q, r) => r.redirect(`/${prefLang(q)}/pricing`));
+app.get('/pricing', (q, r) => r.redirect(`/${prefLang(q)}/pricing${qs(q)}`));
 app.get('/:lang/pricing', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'pricing') : next());
 // Short legal URLs (/{lang}/privacy, /{lang}/terms, ... and /privacy, /terms) 301 to the canonical /{lang}/legal/{doc} pages (were 404).
-app.get('/:lang(he|en)/:doc', (q, r, next) => isDoc(q.params.doc) ? r.redirect(301, `/${q.params.lang}/legal/${q.params.doc}`) : next());
-app.get('/:doc', (q, r, next) => isDoc(q.params.doc) && !LANGS.includes(q.params.doc) ? r.redirect(`/${prefLang(q)}/legal/${q.params.doc}`) : next());
+app.get('/:lang(he|en)/:doc', (q, r, next) => isDoc(q.params.doc) ? r.redirect(301, `/${q.params.lang}/legal/${q.params.doc}${qs(q)}`) : next());
+app.get('/:doc', (q, r, next) => isDoc(q.params.doc) && !LANGS.includes(q.params.doc) ? r.redirect(`/${prefLang(q)}/legal/${q.params.doc}${qs(q)}`) : next());
 app.get('/mock-checkout', (q, r) => { const k = String(q.query.account || '').split('.')[0]; const acc = Object.hasOwn(getDb().accounts, k) ? getDb().accounts[k] : null; return isPrelaunch() && !(acc?.pendingAdminTest && getPayments().id === 'mock') ? r.redirect(`/${prefLang(q)}/checkout`) : r.redirect(`/${prefLang(q)}/checkout${qs(q)}${isPrelaunch() ? (qs(q) ? '&' : '?') + 'admintest=1' : ''}`); });
 // Legal docs live at /{lang}/legal/{doc} (server-rendered from legal/*.md, full text in the HTML). Short links and the old
 // /{lang}/legal?doc=… URLs 301 there (language-less short links 302: the language is a per-visitor choice). Anything off the
 // whitelist, COMPLIANCE-NOTES included, is an explicit 404 and is never redirected to a page that could imply it exists.
 const isDoc = d => typeof d === 'string' && LEGAL_DOCS.includes(d);
-app.get('/legal', (q, r) => r.redirect(`/${prefLang(q)}/legal`));
-app.get('/legal/:lang(he|en)/:doc', (q, r, next) => isDoc(q.params.doc) ? r.redirect(301, `/${q.params.lang}/legal/${q.params.doc}`) : next());
-app.get('/legal/:doc', (q, r, next) => isDoc(q.params.doc) ? r.redirect(`/${prefLang(q)}/legal/${q.params.doc}`) : next());
+app.get('/legal', (q, r) => r.redirect(`/${prefLang(q)}/legal${qs(q)}`));
+app.get('/legal/:lang(he|en)/:doc', (q, r, next) => isDoc(q.params.doc) ? r.redirect(301, `/${q.params.lang}/legal/${q.params.doc}${qs(q)}`) : next());
+app.get('/legal/:doc', (q, r, next) => isDoc(q.params.doc) ? r.redirect(`/${prefLang(q)}/legal/${q.params.doc}${qs(q)}`) : next());
 app.get('/:lang/legal', (q, r, next) => { if (!LANGS.includes(q.params.lang)) return next(); if (q.query.doc === undefined) return page(r, q.params.lang, 'legal'); return isDoc(q.query.doc) ? r.redirect(301, `/${q.params.lang}/legal/${q.query.doc}`) : r.redirect(301, `/${q.params.lang}/legal`); });
 app.get('/:lang/legal/:doc', (q, r, next) => {
   if (!LANGS.includes(q.params.lang) || !isDoc(q.params.doc)) return next();
   const h = legalPageHtml(OUT, q.params.lang, q.params.doc); if (h === undefined) return r.status(503).send('Frontend not built: cd web && npm install && npm run build');
   r.set('Cache-Control', PUBLIC_CACHE).type('html').send(h); });
 // Blog: /{lang}/blog (static index) and /{lang}/blog/{slug} (article text rendered from content/blog/{lang}/{slug}.md into the exported shell, like legal docs).
-app.get('/blog', (q, r) => r.redirect(`/${prefLang(q)}/blog`));
+app.get('/blog', (q, r) => r.redirect(`/${prefLang(q)}/blog${qs(q)}`));
 app.get('/:lang/blog', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'blog') : next());
 app.get('/:lang/blog/:slug', (q, r, next) => {
   if (!LANGS.includes(q.params.lang)) return next();

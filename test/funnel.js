@@ -12,7 +12,7 @@ try {
   await get('/he', { 'user-agent': 'Googlebot/2.1' }); await get('/he', {}); await get('/he', { ...UA, 'sec-purpose': 'prefetch' }); await get('/en/nosuch'); await get('/api/config', UA); await get('/he/dashboard', UA);
   await new Promise(r => setTimeout(r, 50)); let s = await status(); assert.equal(s.funnel.today.visit, 5); assert.equal(s.funnel.total.visit, 5);
   ok('visit: counts 200 public page views only (bots, empty UA, prefetch, 404s, API and private pages excluded); no Set-Cookie');
-  assert.equal(flushVisits(), 1); const ev = getDb().events.filter(e => e.type === 'funnel.visits'); assert.equal(ev.length, 1); assert.deepEqual(Object.keys(ev[0]).sort(), ['at', 'day', 'n', 'type']); assert.equal(ev[0].n, 5);
+  assert.equal(flushVisits(), 1); const ev = getDb().events.filter(e => e.type === 'funnel.visits'); assert.equal(ev.length, 1); assert.deepEqual(Object.keys(ev[0]).sort(), ['at', 'day', 'n', 'type', 'u']); assert.equal(ev[0].n, 5);
   s = await status(); assert.equal(s.funnel.today.visit, 5); ok('visits persist as aggregate {day, n} events only (no IP / UA / path / id); totals unchanged after flush');
   process.env.FUNNEL_FLUSH_MS = '0'; countVisit({ method: 'GET', path: '/he', get: k => (k === 'user-agent' ? UA['user-agent'] : '') }); assert.equal(getDb().events.filter(e => e.type === 'funnel.visits').length, 2); delete process.env.FUNNEL_FLUSH_MS; ok('flush interval FUNNEL_FLUSH_MS');
   // scan + checkout + paid (mock)
@@ -28,6 +28,21 @@ try {
   const txt = JSON.stringify(s.funnel); assert.ok(!/f@t\.test|Funnel Cafe|t1|Mozilla|127\.0\.0\.1/.test(txt)); ok('funnel output has no personal data');
   const web = ['web/components', 'web/lib', 'web/app'].flatMap(d => fs.readdirSync(d, { recursive: true }).map(f => d + '/' + f)).filter(f => /\.(tsx?|css)$/.test(f)).map(f => fs.readFileSync(f, 'utf8')).join('\n');
   assert.ok(!/googletagmanager|google-analytics|gtag\(|plausible|posthog|mixpanel|segment\.com|hotjar|clarity\.ms|facebook\.net\/.*fbevents/i.test(web)); ok('no third-party analytics / trackers in the web app');
+  // audit1: link-preview fetchers, own monitors, non-document fetches and repeat views
+  resetFunnelMemory(); let before = (await status()).funnel.today;
+  for (const ua of ['WhatsApp/2.23.20.0 A', 'meta-externalagent/1.1', 'Go-http-client/1.1', 'okhttp/4.9', 'TelegramBot (like TwitterBot)']) await get('/he', { 'user-agent': ua });
+  await get('/he', { ...UA, 'x-ranky-monitor': '1' }); await get('/he', { ...UA, 'sec-fetch-dest': 'empty' });
+  for (let i = 0; i < 3; i++) await get('/he/scan', { ...UA, 'sec-fetch-dest': 'document' }); await get('/en', { 'user-agent': 'Mozilla/5.0 (iPhone) Safari/605.1.15' });
+  await new Promise(r => setTimeout(r, 50)); let a = (await status()).funnel.today;
+  assert.equal(a.visit - before.visit, 4); assert.equal(a.visitor - before.visitor, 2); ok('audit1: WhatsApp/Meta/Go/OkHttp/Telegram, X-Ranky-Monitor and non-document fetches not counted; visitor = distinct browsers per day');
+  flushVisits(); const last = getDb().events.filter(e => e.type === 'funnel.visits').at(-1); assert.deepEqual(Object.keys(last).sort(), ['at', 'day', 'n', 'type', 'u']); assert.equal((await status()).funnel.today.visitor, a.visitor); ok('audit1: unique count persisted as an aggregate number only');
+  before = (await status()).funnel.today;
+  r = await fetch(B + '/api/scan', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'X', category: 'Cafe', email: 'r@t.test' }) }); assert.equal(r.status, 400);
+  a = (await status()).funnel; assert.equal(a.today.scanRejected - before.scanRejected, 1); assert.equal(a.today.scanStarted, before.scanStarted); assert.ok(a.scanRejectedLast7DaysByStatus['400'] >= 1);
+  assert.ok(!/r@t\.test/.test(JSON.stringify(getDb().events.filter(e => e.type === 'funnel.scan_rejected')))); ok('audit1: rejected scan requests counted by status only (not as started)');
+  for (const [from, to] of [['/?utm_source=fb&utm_campaign=c', '/en?utm_source=fb&utm_campaign=c'], ['/pricing?utm_source=fb', '/en/pricing?utm_source=fb'], ['/en/privacy?utm_source=fb', '/en/legal/privacy?utm_source=fb'], ['/blog?utm_source=fb', '/en/blog?utm_source=fb']]) {
+    const x = await get(from, { ...UA, 'accept-language': 'en' }); assert.ok([301, 302].includes(x.status), from); assert.equal(new URL(x.headers.get('location'), B).pathname + new URL(x.headers.get('location'), B).search, to); }
+  ok('audit1: language / short-link redirects keep the query string (UTM survives)');
   console.log(`ALL FUNNEL TESTS PASSED (${n})`);
 } finally { srv.close(); await flush(); TD.done(); }
 process.exit(0);

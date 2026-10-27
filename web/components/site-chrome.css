@@ -97,3 +97,7 @@ html.a11y-links.a11y-hc body a:not(.ra-btn) *:not(svg, svg *), html.a11y-links.a
   .rc-banner:not(:has(.rc-detail)) .rc-title { font-size: .875rem; margin: 0; }
   .rc-banner:not(:has(.rc-detail)) .rc-actions { margin-top: .4rem; gap: .25rem .75rem; }
   .rc-banner:not(:has(.rc-detail)) .rc-btn { padding: .4rem 1rem; } }
+
+/* audit1: while the consent notice is open, let the page scroll its last field/button above it and keep focused inputs clear of it. */
+html { scroll-padding-bottom: calc(var(--rc-h, 0px) + 12px); }
+body { padding-bottom: var(--rc-h, 0px); }

@@ -23,7 +23,7 @@ try {
   ok('same business + same email: 200 {reportId, existing:true} (unchanged), also for case/whitespace variants');
 
   // 2) different business, same email -> 409 with a structured body; nothing new is created, spent or sent. Live mode with a key: the engine must not be called.
-  const db = getDb(); const snap = () => JSON.stringify({ s: Object.keys(db.scans).length, b: Object.keys(db.businesses).length, spend: db.spend, ev: db.events.filter(e => /scan|spend/.test(e.type)).length });
+  const db = getDb(); const snap = () => JSON.stringify({ s: Object.keys(db.scans).length, b: Object.keys(db.businesses).length, spend: db.spend, ev: db.events.filter(e => /scan|spend/.test(e.type) && e.type !== 'funnel.scan_rejected').length });
   const outbox = () => (fs.existsSync(path.join(TD.dir, 'outbox')) ? fs.readdirSync(path.join(TD.dir, 'outbox')).length : 0); const before = snap(), mailBefore = outbox();
   process.env.SCAN_MODE = 'live'; process.env.OPENAI_API_KEY = 'sk-test-not-real'; process.env.LIVE_ENGINES = 'chatgpt';
   for (const [lang, expectLang] of [['he', 'he'], ['en', 'en'], [undefined, 'en']]) {
