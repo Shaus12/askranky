@@ -38,7 +38,7 @@ ${s.engines ? `<p class="sub">${esc(engineNote(s))}</p>` : ''}
 
 export const pricing = () => layout('Pricing', `<h1>Simple pricing</h1><p class="sub">Cancel anytime. No VAT is added (exempt dealer). Billed in ILS.</p><div class="grid3">
 ${Object.values(PLANS).map(p => `<div class="card plan"><h2>${esc(p.name)}</h2><div class="score">₪${+p.prices.ILS}<small>${isPaid(p) ? '/mo' : ''}</small></div><ul>
-<li>${p.businesses} business${p.businesses > 1 ? 'es' : ''}</li><li>${p.questionsPerBusiness} questions × ChatGPT + Gemini</li><li>${p.cadence === 'once' ? 'One-time scan' : p.cadence === 'monthly' ? 'Monthly re-scan (automatic scheduling coming soon)' : 'Weekly re-scan (automatic scheduling coming soon)'}</li><li>Top ${p.competitors} competitors</li><li>3 fixes per report</li></ul>
+<li>${p.businesses} business${p.businesses > 1 ? 'es' : ''}</li><li>${p.questionsPerBusiness} questions × ChatGPT + Gemini</li><li>${p.cadence === 'once' ? 'One-time scan' : 'Re-scan from your dashboard, within the monthly check budget'}</li><li>Top ${p.competitors} competitors</li><li>3 fixes per report</li></ul>
 ${isPaid(p) ? `<form method="post" action="/checkout"><input type="hidden" name="plan" value="${esc(p.id)}"><input name="email" type="email" required placeholder="Email"><button>Choose ${esc(p.name)}</button></form>` : '<a class="btn" href="/">Run free scan</a>'}</div>`).join('')}</div>`);
 
 export const dashboard = (account, businesses, scansByBiz, budget) => layout('Dashboard', `<h1>Dashboard</h1><p class="sub">${esc(account.email)} · plan <b>${esc(account.plan)}</b> · ${account.subscriptionRef ? 'active' : 'no subscription'}</p>

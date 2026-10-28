@@ -3,6 +3,8 @@
 import type { Locale } from "./i18n";
 export const FOUNDER_PHOTO = "/founder-placeholder.svg";
 export const FOUNDER_PHOTO_IS_PLACEHOLDER = true;
+// The whole home founder block stays hidden until a real photo exists: set true after replacing FOUNDER_PHOTO.
+export const FOUNDER_PHOTO_READY = false;
 const F = {
   en: { eyebrow: "Who is behind Ranky", title: "A real person reads your questions", name: "Shai Shotashvili", role: "Founder, Ranky (Israel)",
     body: "Ranky is built and run by Shai Shotashvili. If something in your report is unclear, or you think a result is wrong, write and you will get an answer from the person who builds it.",

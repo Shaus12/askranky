@@ -9,7 +9,7 @@ import StickyScanCta from "@/components/StickyScanCta";
 import ScanForm from "@/components/ScanForm";
 import Pricing from "@/components/Pricing";
 import Founder from "@/components/Founder";
-import { founderFor } from "@/lib/founder";
+import { founderFor, FOUNDER_PHOTO_READY } from "@/lib/founder";
 import MaskHeading from "@/components/MaskHeading";
 import SectionHead from "@/components/SectionHead";
 import { faqJsonLd, ldScript } from "@/lib/seo";
@@ -94,10 +94,10 @@ export default async function Landing({ params }: { params: Promise<{ lang: stri
           <Pricing t={t} lang={lang} />
         </Reveal>
 
-        <Reveal as="section" id="founder" className="vx-section mx-auto max-w-6xl scroll-mt-16 !pt-0">
+        {FOUNDER_PHOTO_READY && <Reveal as="section" id="founder" className="vx-section mx-auto max-w-6xl scroll-mt-16 !pt-0">
           <SectionHead eyebrow={founderFor(lang).eyebrow} title={founderFor(lang).title} />
           <Founder lang={lang} />
-        </Reveal>
+        </Reveal>}
 
         <Reveal as="section" id="faq" className="vx-section mx-auto max-w-3xl scroll-mt-16 !pt-0">
           <SectionHead eyebrow={t.nav.faq} title={t.faq.title} />

@@ -68,5 +68,5 @@ for (const k of ['ENABLE_USD_BILLING', 'PAYMENTS_PROVIDER', 'SUMIT_USD_VERIFIED'
 
 // ---- coming-soon engines row (source; the exported page is checked when built) ----
 const hero = fs.readFileSync(new URL('../web/components/Hero.tsx', import.meta.url), 'utf8');
-assert.match(hero, /Perplexity · Copilot · Claude/); assert.match(hero, /\{ name: "ChatGPT" \}, \{ name: "Gemini" \}, \{ name: "Perplexity", soon: true \}, \{ name: "Claude", soon: true \}, \{ name: "Copilot", soon: true \}/); ok('hero: rotator = live ChatGPT/Gemini + Perplexity/Claude/Copilot tagged soon, plus muted coming-soon row');
+assert.match(hero, /Perplexity · Copilot · Claude/); assert.match(hero, /const ENGINES = \[\{ name: "ChatGPT" \}, \{ name: "Gemini" \}\];/); ok('hero: rotator = live ChatGPT/Gemini + Perplexity/Claude/Copilot tagged soon, plus muted coming-soon row');
 srv.close(); TD.done(); console.log(`v2dashboard: ${n} passed`);

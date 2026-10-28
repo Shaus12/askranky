@@ -49,3 +49,24 @@ export const HOME = {
   },
 } as const;
 export const homeFor = (l: Locale) => HOME[l];
+
+// Hero headline variant (owner picks). "A" leads with our real Tel Aviv dental sample (research/scans/day1-rerun/results-IL-1.md:
+// 12 clinics, 5 questions × ChatGPT + Gemini × 2 runs, 25.10.2026: k_named 1, ChatGPT 1/12 = 8%, Gemini 1/12 = 8%), labelled directional.
+// "B" is problem-led with no numbers. Default B until Shai chooses.
+export type HeroVariant = "A" | "B";
+export const HERO_VARIANT: HeroVariant = "B";
+export const HERO = {
+  A: {
+    he: { rot: false, h1a: "בתל אביב, 11 מתוך 12 מרפאות שיניים שבדקנו לא הוזכרו ב־ChatGPT.", h1b: "העסק שלך מוזכר?",
+      lede: "בדיקה כיוונית שלנו מ־25.10.2026: רק 1 מתוך 12 מרפאות הוזכרה בשם (8%), גם ב־ChatGPT וגם ב־Gemini. זה מדגם קטן, לא מחקר. Ranky בודק את אותו הדבר על העסק שלך: איפה אתה מדורג, מי נבחר במקומך, ו־3 תיקונים." },
+    en: { rot: false, h1a: "In Tel Aviv, 11 of 12 dental clinics we checked weren't named by ChatGPT.", h1b: "Is your business named?",
+      lede: "Our directional check, 25 Oct 2026: only 1 of 12 clinics was named (8%), on ChatGPT and on Gemini. A small sample, not a study. Ranky runs the same check on your business: where you rank, who gets picked instead, and 3 fixes." },
+  },
+  B: {
+    he: { rot: true, h1a: "לקוחות מבקשים המלצה מ־", h1b: "אם אתה לא בתשובה, הם הולכים למתחרה.",
+      lede: "כשמישהו שואל את ChatGPT או את Gemini על עסק מקומי, הוא מקבל כמה שמות ולא עשרה קישורים. Ranky בודק אם העסק שלך ביניהם, מי נבחר במקומך, ו־3 תיקונים כדי להיכנס לתשובה." },
+    en: { rot: true, h1a: "Customers ask", h1b: "If you're not in the answer, they go to a competitor.",
+      lede: "When someone asks ChatGPT or Gemini for a local business, they get a few names, not ten links. Ranky checks whether yours is one of them, who gets picked instead, and 3 fixes to get into the answer." },
+  },
+} as const;
+export const heroFor = (l: Locale, v: HeroVariant = HERO_VARIANT) => HERO[v][l];

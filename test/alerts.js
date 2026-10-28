@@ -67,7 +67,7 @@ try {
   process.env.ALERTS_ENABLED = '1'; j = await (await post('/api/internal/cron/alerts', { 'X-Cron-Secret': process.env.CRON_SECRET })).json(); assert.equal(j.ok, true); assert.ok(j.ranAt);
   ok('cron endpoint: no secret → 404, wrong secret → 401, ALERTS_ENABLED unset → skipped, enabled → runs');
   const pk = JSON.stringify(JSON.parse((await import('node:fs')).readFileSync('package.json', 'utf8')).scripts); assert.ok(!/cron\/alerts/.test(pk)); ok('not scheduled by the app or npm scripts');
-  const i18n = (await import('node:fs')).readFileSync('web/lib/i18n.ts', 'utf8'); assert.equal((i18n.match(/"Dashboard alerts when AI gets something wrong about you \(email alerts coming soon\)"/g) || []).length, 3); assert.equal((i18n.match(/"התראות בדשבורד כשה־AI טועה לגביך \(התראות במייל בקרוב\)"/g) || []).length, 3);
+  const i18n = (await import('node:fs')).readFileSync('web/lib/i18n.ts', 'utf8'); assert.equal((i18n.match(/"Dashboard alerts when AI gets something wrong about you"/g) || []).length, 3); assert.equal((i18n.match(/"התראות בדשבורד כשה־AI טועה לגביך"/g) || []).length, 3);
   assert.ok(!/"Alerts when AI[^"]*"[^\n]*id: "free"|id: "free"[^\n]*Alerts when AI/.test(i18n)); ok('pricing: every paid plan (he/en) lists alerts; the free plan does not');
   console.log(`ALL ALERTS TESTS PASSED (${n})`);
 } finally { srv.close(); }
