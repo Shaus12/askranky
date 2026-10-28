@@ -15,7 +15,7 @@ export const PENDING = "ranky-pending-scan";
 export default function ScanForm({ t, lang, onStart }: { t: Dict; lang: Locale; onStart?: (p: Record<string, string>) => void }) {
   const h = t.hero; const router = useRouter();
   const a = t.accuracy; const [confirm, setConfirm] = useState<{ d: Record<string, string>; city: string } | null>(null);
-  const [siteKey, setSiteKey] = useState<string | null>(null); const [err, setErr] = useState(""); const [cfg, setCfg] = useState<Config | null>(null); const nt = demoNotices(cfg, t);
+  const [siteKey, setSiteKey] = useState<string | null>(null); const [err, setErr] = useState(""); const [cfg, setCfg] = useState<Config | null>(null); const [more, setMore] = useState(false); const nt = demoNotices(cfg, t);
   useEffect(() => { getConfig().then((c) => { setSiteKey(c.turnstileSiteKey); setCfg(c); }); }, []);
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); const fd = new FormData(e.currentTarget); const d: Record<string, string> = {};
@@ -43,9 +43,15 @@ export default function ScanForm({ t, lang, onStart }: { t: Dict; lang: Locale; 
             list={f === "city" ? "il-cities" : undefined} autoComplete={f === "email" ? "email" : f === "city" ? "off" : undefined} required={f !== "website"}
             className="vx-input" onChange={f === "city" ? () => setConfirm(null) : undefined} />
         </label>
-        {f === "name" && <label className="vx-label">{a.otherNames}
-          <input name="otherNames" type="text" maxLength={300} placeholder={a.otherNamesPh} className="vx-input" data-other-names />
-          <span className="mt-1 block text-xs font-normal text-slate-400">{a.otherNamesHint}</span></label>}
+        {f === "name" && <div data-more-options>
+          <button type="button" aria-expanded={more} aria-controls="scan-more-options" data-more-toggle onClick={() => setMore((m) => !m)}
+            className="inline-flex min-h-[44px] items-center gap-1.5 text-sm font-medium text-slate-300 underline-offset-4 hover:underline">
+            <span aria-hidden className={`inline-block transition-transform ${more ? "rotate-90" : "rtl:rotate-180"}`}>›</span>{a.moreOptions}</button>
+          <div id="scan-more-options" hidden={!more}>
+            <label className="vx-label">{a.otherNames}
+              <input name="otherNames" type="text" maxLength={300} placeholder={a.otherNamesPh} className="vx-input" data-other-names />
+              <span className="mt-1 block text-xs font-normal text-slate-400">{a.otherNamesHint}</span></label>
+          </div></div>}
       </div>))}
       <p className="-mt-1 text-xs text-slate-400" data-existing-note>{t.existing.formNote}</p>
       <datalist id="il-cities">{ISRAELI_CITIES.map((c) => <option key={c.slug} value={c[lang]} />)}</datalist>
@@ -62,7 +68,7 @@ export default function ScanForm({ t, lang, onStart }: { t: Dict; lang: Locale; 
           <button type="button" className="btn-outline !py-1.5 !px-3 text-sm" onClick={() => go(confirm.d)}>{a.keepCity.replaceAll("{entered}", confirm.d.city)}</button>
         </div></div>}
       {err && <p role="alert" className="rounded-lg bg-score-low/15 px-3 py-2 text-sm text-red-200">{err}</p>}
-      <button className="btn-cta mt-2 w-full">{t.form.submit}</button>
+      <div className="scan-submit-bar" data-submit-bar><button className="btn-cta w-full">{t.form.submit}</button></div>
     </form>
   );
 }

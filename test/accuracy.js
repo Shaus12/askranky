@@ -25,6 +25,7 @@ assert.ok(/data-city-confirm/.test(form) && /cityHint\(/.test(form) && /a\.cityR
 assert.ok(!/city: "תל אביב-יפו"/.test(i18n) && !/city: "Austin, TX", email/.test(i18n), 'no value-like city placeholder');
 assert.equal(read('../web/lib/city-hint.ts').includes('EXTRA'), true);
 ok('form: city required (own message), confirm before submit when the name/website hints another city, optional other-names field; no city placeholder that looks like a default');
+assert.ok(/aria-expanded=\{more\}/.test(form) && /aria-controls="scan-more-options"/.test(form) && /hidden=\{!more\}/.test(form) && /data-submit-bar/.test(form)); ok('form1: other names behind an accessible collapsed "more options" disclosure; sticky submit bar');
 
 // server: missing city -> clear 400; other names stored (capped)
 const { default: app } = await import('../server.js'); const { getDb } = await import('../src/store.js');

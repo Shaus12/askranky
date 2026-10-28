@@ -101,3 +101,14 @@ html.a11y-links.a11y-hc body a:not(.ra-btn) *:not(svg, svg *), html.a11y-links.a
 /* audit1: while the consent notice is open, let the page scroll its last field/button above it and keep focused inputs clear of it. */
 html { scroll-padding-bottom: calc(var(--rc-h, 0px) + 12px); }
 body { padding-bottom: var(--rc-h, 0px); }
+
+/* ---------- form1: sticky scan submit (mobile) + floating CTA clear of the accessibility button ---------- */
+/* The submit stays reachable while filling the form on phones: sticky inside the form card (so it never leaves the form or covers the
+   fields below it), lifted above the cookie notice (--rc-h), and indented on the start side so it never sits under the 48px .ra-btn. */
+@media (max-width: 600px) {
+  .scan-submit-bar { position: sticky; z-index: 20; bottom: calc(8px + var(--rc-h, 0px)); margin-top: .5rem; padding: .5rem 0 .5rem 0; padding-inline-start: 60px;
+    background: linear-gradient(to top, rgba(11,11,12,.96) 70%, rgba(11,11,12,0)); }
+}
+@media (min-width: 601px) { .scan-submit-bar { margin-top: .5rem; } }
+/* Floating "free scan" CTA: never wider than the space left by the accessibility button (8px + 48px + gap) on narrow phones. */
+[data-cta="sticky"] { max-width: calc(100vw - 12px - 72px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
