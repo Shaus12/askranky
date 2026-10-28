@@ -38,16 +38,17 @@ export const resetFunnelMemory = () => { mem = {}; memU = {}; seen.clear(); salt
 // Rejected scan requests (CAPTCHA missing/failed, validation, rate / free limits, login required, already used): aggregate by HTTP status
 // only, so a form that users submit but never get through (e.g. Turnstile blocked in an in-app browser) is visible in the funnel.
 export const scanRejectMiddleware = (q, r, next) => { r.on('finish', () => { if (r.statusCode >= 400) { getDb().events.push({ at: new Date().toISOString(), type: 'funnel.scan_rejected', status: r.statusCode }); save(); } }); next(); };
-const STEPS = ['visit', 'visitor', 'scanRejected', 'scanStarted', 'scanDone', 'signup', 'checkoutStarted', 'paid'];
+const STEPS = ['visit', 'visitor', 'scanRejected', 'scanStarted', 'scanFailed', 'scanDone', 'signup', 'checkoutStarted', 'paid'];
 export function buildFunnel(db, now = new Date()) {
   const T = +now, DAY = 864e5; const windows = { today: d => d === day(now), last7Days: (d, t) => t > T - 7 * DAY, last30Days: (d, t) => t > T - 30 * DAY, total: () => true };
   const out = Object.fromEntries(Object.keys(windows).map(k => [k, Object.fromEntries(STEPS.map(s => [s, 0]))]));
   const add = (step, at, n = 1) => { const t = Date.parse(at); if (!Number.isFinite(t)) return; const d = String(at).slice(0, 10); for (const [k, f] of Object.entries(windows)) if (f(d, t)) out[k][step] += n; };
-  const rej = {}; const test = new Set(Object.values(db.accounts || {}).filter(a => a.testSubscription || a.adminTest || a.pendingTest).map(a => a.id));
+  const rej = {}; const failed = {}; let lastFail = null; const test = new Set(Object.values(db.accounts || {}).filter(a => a.testSubscription || a.adminTest || a.pendingTest).map(a => a.id));
   for (const e of db.events || []) {
     if (!e || test.has(e.account) || e.test) continue;
     if (e.type === 'funnel.visits') { add('visit', `${e.day}T12:00:00.000Z`, Number(e.n) || 0); add('visitor', `${e.day}T12:00:00.000Z`, Number(e.u) || 0); }
     else if (e.type === 'funnel.scan_rejected') { add('scanRejected', e.at); if (Date.parse(e.at) > T - 7 * DAY) rej[e.status] = (rej[e.status] || 0) + 1; }
+    else if (e.type === 'scan.failed') { add('scanFailed', e.at); if (Date.parse(e.at) > T - 7 * DAY) failed[e.reason || 'unknown'] = (failed[e.reason || 'unknown'] || 0) + 1; if (!lastFail || e.at > lastFail.at) lastFail = { at: e.at, reason: e.reason, engines: (e.engines || []).map(x => ({ engine: x.engine, status: x.status ?? null, message: x.message ?? null })) }; }
     else if (e.type === 'funnel.scan_started') add('scanStarted', e.at);
     else if (e.type === 'checkout.started') add('checkoutStarted', e.at);
     else if (e.type === 'subscription.activated' || e.type === 'order.paid') add('paid', e.at);
@@ -60,6 +61,7 @@ export function buildFunnel(db, now = new Date()) {
   out.conversionLast30DaysPct = { visitToScan: pct(m.visit, m.scanStarted), scanStartToDone: pct(m.scanStarted, m.scanDone), scanToSignup: pct(m.scanDone, m.signup), signupToCheckout: pct(m.signup, m.checkoutStarted), checkoutToPaid: pct(m.checkoutStarted, m.paid) };
   const since = (db.events || []).filter(e => e && /^funnel\./.test(e.type)).map(e => e.at).sort()[0] || null;
   out.scanRejectedLast7DaysByStatus = rej; // 400 validation, 401 login required, 403 CAPTCHA, 409 free scan used, 429 rate/free limit
+  out.scanFailedLast7DaysByReason = failed; out.lastScanFailure = lastFail; // accepted scans that died after the CAPTCHA (no_engine = every AI engine errored)
   out.trackingSince = since; // visit/scanStarted only exist from this moment (first deploy of the funnel); scanDone/signup are backfilled from stored records
   out.note = 'visit and scanStarted are counted only since trackingSince; scanDone and signup include older records; visit = server-side count of public page views (bots/prefetch/monitors excluded, no cookies, no personal data); visitor = distinct browsers per UTC day (in-memory hash only, restarts can double count); scanRejected = scan requests refused (by status); days are UTC';
   return out;
