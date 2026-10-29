@@ -1,4 +1,4 @@
-import { ANSWER_INSTRUCTION, GEMINI_SEARCH_INSTRUCTION } from './prompt.js';
+import { ANSWER_INSTRUCTION, GEMINI_SEARCH_INSTRUCTION } from './prompt.js'; import { postJson, isModelMissing } from './http.js';
 // Google AI proxy: Gemini Flash + Google Search grounding (5k free/mo, then $14/1k search queries).
 const DOMAIN = /^(?:[a-z0-9-]+\.)+[a-z]{2,}$/i;
 const isRedirect = u => { try { return new URL(u).hostname === 'vertexaisearch.cloud.google.com'; } catch { return false; } };
@@ -21,14 +21,14 @@ export async function groundingCitations(chunks, { resolve = process.env.GEMINI_
 export const geminiProvider = {
   id: 'gemini', label: 'Gemini',
   async ask(question) {
-    const model = process.env.GEMINI_MODEL || 'gemini-3-flash-preview';
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
+    const call = model => postJson('gemini', `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: ANSWER_INSTRUCTION + ' ' + GEMINI_SEARCH_INSTRUCTION }] }, contents: [{ parts: [{ text: question }] }], tools: [{ google_search: {} }] }),
+      body: { systemInstruction: { parts: [{ text: ANSWER_INSTRUCTION + ' ' + GEMINI_SEARCH_INSTRUCTION }] }, contents: [{ parts: [{ text: question }] }], tools: [{ google_search: {} }] },
     });
-    if (!r.ok) throw new Error(`Gemini ${r.status}: ${await r.text()}`);
-    const j = await r.json();
+    const model = process.env.GEMINI_MODEL || 'gemini-3-flash-preview'; const fallback = process.env.GEMINI_MODEL_FALLBACK ?? 'gemini-2.5-flash';
+    let j;
+    // Preview model retired / renamed (404): retry once on the stable fallback model so scans keep running.
+    try { j = await call(model); } catch (e) { if (!fallback || fallback === model || !isModelMissing(e)) throw e; console.warn(`[scan] gemini model ${model} unavailable (${e.status}); using fallback ${fallback}`); j = await call(fallback); }
     const cand = j.candidates?.[0] || {};
     const text = (cand.content?.parts || []).map(p => p.text || '').join('');
     const gm = cand.groundingMetadata || {};
