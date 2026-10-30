@@ -1,3 +1,4 @@
+import { isOwnerEmail } from './owner.js';
 import { ENGINES, getProvider, engineStatus, isMockMode } from './providers/index.js';
 import { analyzeAnswer } from './extract.js';
 import { summarizeResults } from './summary.js';
@@ -22,11 +23,13 @@ export async function runScan(account, business, { engines = ENGINES, maxQuestio
   const active = engines.filter(e => !skipped.some(x => x.engine === e));
   if (!active.length) { console.error(`[scan] NO_ENGINE: no live engine configured (${skipped.map(x => `${x.engine}=${x.reason}`).join(' ')})`); recordScanFailure('no_engine_configured', skipped.map(x => ({ engine: x.engine, status: x.reason }))); }
   if (!active.length) throw Object.assign(new Error(NO_ENGINE_MESSAGE.en), { code: 'NO_ENGINE', he: NO_ENGINE_MESSAGE.he, skipped });
-  const budget = checkBudget(account, active, questions.length, active.filter(e => !getProvider(e).mock), plan);
+  // owner1: OWNER_EMAILS accounts are internal (outreach scans): no per-account monthly check budget, but DAILY_SPEND_CAP_USD still applies.
+  const internal = isOwnerEmail(account.email);
+  const budget = checkBudget(account, active, questions.length, active.filter(e => !getProvider(e).mock), internal ? { ...plan, monthlyCheckBudget: Infinity } : plan);
   if (!budget.ok) throw Object.assign(new Error(budget.reason), { code: 'CAP', he: budget.reasonHe });
   // Funnel 'scan started': recorded HERE, the one place every scan path goes through (free form, /api/scan, dashboard re-scans, weekly,
   // alerts), so scanStarted >= scanDone. Automatic re-scans and Fix-up scans are excluded, matching scanDone in src/funnel.js.
-  if (!auto && !planOverride) { try { getDb().events.push({ at: new Date().toISOString(), type: 'funnel.scan_started', account: account.id }); save(); } catch {} }
+    if (!auto && !planOverride) { try { getDb().events.push({ at: new Date().toISOString(), type: 'funnel.scan_started', account: account.id, ...(internal ? { internal: true } : {}) }); save(); } catch {} }
 
   // Every (question, engine) check runs through a small worker pool (SCAN_CONCURRENCY, default 4 = both engines x 2 questions) with a
   // per-call timeout in the providers, so a full live scan stays well under Cloudflare's ~100s. Results keep question-then-engine order.
@@ -58,7 +61,7 @@ export async function runScan(account, business, { engines = ENGINES, maxQuestio
 
   const ok = results.filter(r => !r.error);
   const summary = summarizeResults(results, { plan, engines, skipped, cost });
-  const scan = { id: id(12), businessId: business.id, accountId: account.id, at: new Date().toISOString(), mock: ok.length > 0 && ok.every(r => r.mock), ...(utm ? { utm } : {}), summary, results };
+  const scan = { id: id(12), businessId: business.id, accountId: account.id, at: new Date().toISOString(), mock: ok.length > 0 && ok.every(r => r.mock), ...(utm ? { utm } : {}), ...(internal ? { internal: true } : {}), summary, results };
   scan.fixes = buildFixes(scan, business);
   const db = getDb(); const prev = db.scans[business.scanIds?.at(-1)]; scan.alerts = detectAlerts(prev, scan); db.scans[scan.id] = scan; business.scanIds = [...(business.scanIds || []), scan.id]; save();
   return scan;

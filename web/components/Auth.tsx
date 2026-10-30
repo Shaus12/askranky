@@ -34,6 +34,9 @@ const tok = (fd: FormData) => String(fd.get("cf-turnstile-response") || "") || u
 
 export function LoginView({ t, lang }: { t: Dict; lang: Locale }) {
   const a = authText[lang]; const c = useCfg(); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false); const [rk, setRk] = useState(0); const [magic, setMagic] = useState("");
+  // owner1: the magic-link form needs its OWN Turnstile widget. Before, the only widget sat in the password form, so the magic form's
+  // FormData never had a token and it always failed client-side with "please complete the CAPTCHA" even after the (other) widget passed.
+  const [mOpen, setMOpen] = useState(false); const [mErr, setMErr] = useState(""); const [mRk, setMRk] = useState(0);
   useEffect(() => { const e = new URLSearchParams(location.search).get("error"); if (e) setErr(e === "google_unverified" ? a.errGoogleUnverified : a.errGoogle); }, [a]);
   async function login(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); const fd = new FormData(e.currentTarget); if (c.siteKey && !tok(fd)) return setErr(t.form.captcha); setBusy(true); setErr("");
@@ -41,8 +44,8 @@ export function LoginView({ t, lang }: { t: Dict; lang: Locale }) {
     catch (x: any) { setErr(authErr(a, x) || errMessage(x, t)); setRk((n) => n + 1); setBusy(false); }
   }
   async function sendMagic(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault(); const fd = new FormData(e.currentTarget); if (c.siteKey && !tok(fd)) return setErr(t.form.captcha); setBusy(true); setErr("");
-    try { await api("/api/login", { body: { email: fd.get("email"), lang, "cf-turnstile-response": tok(fd) } }); setMagic(c.noEmail ? t.demo.loginSent : t.login.sent); } catch (x: any) { setErr(errMessage(x, t)); setRk((n) => n + 1); } finally { setBusy(false); }
+    e.preventDefault(); const fd = new FormData(e.currentTarget); if (c.siteKey && !tok(fd)) return setMErr(t.form.captcha); setBusy(true); setMErr("");
+    try { await api("/api/login", { body: { email: fd.get("email"), lang, "cf-turnstile-response": tok(fd) } }); setMagic(c.noEmail ? t.demo.loginSent : t.login.sent); } catch (x: any) { setMErr(errMessage(x, t)); setMRk((n) => n + 1); } finally { setBusy(false); }
   }
   return (<Shell title={a.loginTitle} sub={a.loginSub}>
     {c.google && <><GoogleBtn a={a} lang={lang} /><Or a={a} /></>}
@@ -53,8 +56,8 @@ export function LoginView({ t, lang }: { t: Dict; lang: Locale }) {
       <button disabled={busy} className="rk-btn">{a.signIn}</button>
     </form>
     <p className="rk-alt">{a.noAccount} <a className="rk-link" href={`/${lang}/signup${nextParam() ? `?next=${encodeURIComponent(nextParam())}` : ""}`}>{a.createOne}</a></p>
-    <details className="rk-magic"><summary>{a.magicTitle}</summary><p className="rk-auth-sub">{a.magicSub}</p>
-      {magic ? <Ok m={magic} /> : <form onSubmit={sendMagic} className="rk-form"><Email a={a} /><button disabled={busy} className="rk-btn rk-btn-2">{a.magicSend}</button></form>}
+    <details className="rk-magic" onToggle={(e) => setMOpen((e.currentTarget as HTMLDetailsElement).open)}><summary>{a.magicTitle}</summary><p className="rk-auth-sub">{a.magicSub}</p>
+      {magic ? <Ok m={magic} /> : <form onSubmit={sendMagic} className="rk-form" data-magic-form><Email a={a} />{mOpen && <Turnstile siteKey={c.siteKey} lang={lang} resetKey={mRk} />}<Err m={mErr} /><button disabled={busy} className="rk-btn rk-btn-2">{a.magicSend}</button></form>}
     </details>
   </Shell>);
 }

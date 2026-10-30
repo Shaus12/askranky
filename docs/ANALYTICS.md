@@ -15,3 +15,11 @@
 Admin/test accounts are excluded. Privacy: no cookies, no localStorage, no third-party scripts, and nothing about the visitor (IP, user
 agent, path, id) is stored, only per-day totals; so it does not depend on the consent banner. No DB migration (uses the existing events table).
 Not counted: visitors with JavaScript-only navigations inside the static site after the first page (Next.js client routing does not hit the server), so `visit` is a lower bound of page views.
+
+## Owner / internal scans (OWNER_EMAILS)
+
+Emails listed in `OWNER_EMAILS` (Render env, comma-separated, e.g. `OWNER_EMAILS=owner@example.com`) can run unlimited scans from the
+public scan form (outreach prospects). Those scans are stored with `internal: true` and are **excluded** from `scanStarted`, `scanDone`,
+`scanDoneSinceTracking`, `signup` and the conversion percentages. They are counted separately in the funnel as `internalScanStarted` and
+`internalScans` (today / last7Days / last30Days / total), and `recentScans` shows `internal: true`. Their API spend still counts in
+`spend` and against `DAILY_SPEND_CAP_USD`. The allowlist never signs anyone in or opens a dashboard.

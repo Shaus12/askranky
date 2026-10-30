@@ -12,7 +12,7 @@ import { TEST_PLAN, TEST_BILLING, TEST_CHECKOUT_TTL_MS, TEST_ACCESS_MS } from '.
 import { validSingleUseToken, looksLikeCardNumber } from './src/payments/sumit.js'; import { checkoutCsp, inlineScriptHashes, adminNonce, JQUERY_PATH, SUMIT_SCRIPT_URL } from './src/security/csp.js';
 import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { buildStatus, recordSync } from './src/status.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js'; import { blogPageHtml } from './src/blog.js';
 import { registerAuth } from './src/auth/routes.js'; import { googleEnabled } from './src/auth/google.js';
-import { applyCompAccounts } from './src/comp.js'; import { visitMiddleware, flushVisits, scanRejectMiddleware } from './src/funnel.js'; import { whatsappNumber } from './src/whatsapp.js'; import { dashboardData, dashboardCsv } from './src/dashboard.js';
+import { applyCompAccounts } from './src/comp.js'; import { visitMiddleware, flushVisits, scanRejectMiddleware } from './src/funnel.js'; import { whatsappNumber } from './src/whatsapp.js'; import { isOwnerEmail } from './src/owner.js'; import { dashboardData, dashboardCsv } from './src/dashboard.js';
 
 // TRUST_PROXY=1 (GO-LIVE.md) is a *string* in process.env; Express treats a string as an IP/subnet list ('1' = the address 0.0.0.1), so the proxy was
 // NOT trusted and every visitor shared the proxy's IP in all per-IP limits. Numbers become a hop count, 'true'/'false' booleans, anything else is passed through.
@@ -39,6 +39,7 @@ export const captchaFailLimiter = createRateLimiter({ max: Number(process.env.CA
   onLimit: (q, r, retry) => wantsJson(q) ? r.status(429).json({ error: 'rate_limited', code: 'rate_limited', retryAfter: retry, message: `Too many attempts. Try again in ${retry}s.` }) : r.status(429).send(V.landing(`Too many attempts. Try again in ${retry}s.`)) });
 async function captcha(q, r, next) {
   const v = await verifyTurnstile(q.body?.['cf-turnstile-response'] || q.body?.turnstileToken, q.ip); if (v.ok) return next();
+  if (v.code === 'captcha_required') console.warn(`[turnstile] token missing path=${String(q.path).slice(0, 60)}`); // failed/unavailable are logged in verifyTurnstile with error-codes
   scanLimiter.refund(q); loginLimiter.refund(q);
   // Stable code in `error`/`code` (clients localize it) + the English text in `message`.
   return captchaFailLimiter(q, r, () => wantsJson(q) ? r.status(403).json({ error: v.code, code: v.code, message: v.error }) : r.status(403).send(V.landing(v.error)));
@@ -291,16 +292,16 @@ app.post('/scan', scanRejectMiddleware, scanLimiter, captcha, async (q, r) => {
   const { name, website, category, city, email } = q.body;
   if (!blank(name) && !blank(category) && !blank(email) && blank(city)) return r.status(400).send(V.landing(CITY_REQUIRED.en));
   if (blank(name) || blank(category) || blank(city) || blank(email)) return r.status(400).send(V.landing('Please fill all required fields.'));
-  const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).send(V.landing('Free scan limit reached for today.'));
-  const db = getDb(); const known = findAccountByEmail(email); if (known && !paidScanAllowed(q, known)) { const b = loginRequiredBody(q.body?.lang); return r.status(401).send(V.landing(`${q.body?.lang === 'he' ? b.messageHe : b.message} ${BASE}${b.loginUrl}`)); }
+  const owner = isOwnerEmail(email); const ipCount = freeScanIps.get(q.ip) || 0; if (!owner && ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).send(V.landing('Free scan limit reached for today.'));
+  const db = getDb(); const known = findAccountByEmail(email); if (known && !owner && !paidScanAllowed(q, known)) { const b = loginRequiredBody(q.body?.lang); return r.status(401).send(V.landing(`${q.body?.lang === 'he' ? b.messageHe : b.message} ${BASE}${b.loginUrl}`)); }
   const account = findOrCreateAccount(email); recordConsent(account, q.body); if (applyUtm(account, q.body)) save();
-  const hit = freeScanLookup(db, account, q.body);
+  const hit = owner ? null : freeScanLookup(db, account, q.body); // owner1: OWNER_EMAILS skip the one-free-scan rule
   if (hit && hit.same) return r.redirect(`/r/${hit.reportId}`);
   if (hit) return r.status(409).send(V.landing(`${FREE_USED_MSG} Your existing report: ${BASE}/r/${hit.reportId}`));
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim().slice(0, 80), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
   db.businesses[business.id] = business; save();
   try {
-    const scan = await runScan(account, business, { utm: utmFrom(q.body) }); freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
+    const scan = await runScan(account, business, { utm: utmFrom(q.body) }); if (!owner) freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
     await sendReportEmail(account, business, scan, lang);
     r.redirect(`/r/${scan.id}`);
   } catch (e) { r.status(e.code === 'CAP' ? 429 : e.code === 'NO_ENGINE' ? 503 : 500).send(V.landing(e.message)); }
@@ -481,16 +482,16 @@ app.post('/api/scan', scanRejectMiddleware, scanLimiter, captcha, async (q, r) =
   // City is required (no default anywhere): a scan for the wrong city scores 0 and looks like a broken product.
   if (blank(city)) return r.status(400).json({ error: q.body?.lang === 'he' ? CITY_REQUIRED.he : CITY_REQUIRED.en, code: 'city_required', message: CITY_REQUIRED.en });
   if (blank(name) || blank(category) || blank(email)) return r.status(400).json({ error: 'Please fill all required fields.' });
-  const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).json({ error: 'free_limit_reached', code: 'free_limit_reached', message: 'Free scan limit reached for today.' });
-  const db = getDb(); const known = findAccountByEmail(email); if (known && !paidScanAllowed(q, known)) return r.status(401).json(loginRequiredBody(q.body?.lang));
+  const owner = isOwnerEmail(email); const ipCount = freeScanIps.get(q.ip) || 0; if (!owner && ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).json({ error: 'free_limit_reached', code: 'free_limit_reached', message: 'Free scan limit reached for today.' });
+  const db = getDb(); const known = findAccountByEmail(email); if (known && !owner && !paidScanAllowed(q, known)) return r.status(401).json(loginRequiredBody(q.body?.lang));
   const account = findOrCreateAccount(email); recordConsent(account, q.body); if (applyUtm(account, q.body)) save();
-  const hit = freeScanLookup(db, account, q.body);
+  const hit = owner ? null : freeScanLookup(db, account, q.body); // owner1: OWNER_EMAILS skip the one-free-scan rule
   if (hit && hit.same) return r.json({ reportId: hit.reportId, existing: true });
   if (hit) return r.status(409).json(freeUsedBody(hit, q.body?.lang));
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim().slice(0, 80), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
   db.businesses[business.id] = business; save();
   try {
-    const scan = await runScan(account, business, { utm: utmFrom(q.body) }); freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
+    const scan = await runScan(account, business, { utm: utmFrom(q.body) }); if (!owner) freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
     await sendReportEmail(account, business, scan, lang);
     r.json({ reportId: scan.id });
   } catch (e) { if (e.code === 'NO_ENGINE') return r.status(503).json({ error: 'scan_unavailable', code: 'scan_unavailable', message: e.message }); r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }

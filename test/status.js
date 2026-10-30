@@ -133,7 +133,7 @@ try {
     const rs = S.buildStatus({ db: { accounts, businesses, scans }, now }).recentScans;
     assert.equal(rs.length, 25); assert.deepEqual(rs.slice(0, 3).map(x => x.reportId), ['newest', 'old', 'f0']); assert.ok(!rs.some(x => ['testscan', 'bad'].includes(x.reportId)), 'test accounts and undated scans excluded');
     assert.ok(rs.every((x, i) => !i || Date.parse(rs[i - 1].createdAt) >= Date.parse(x.createdAt)), 'newest first');
-    assert.deepEqual(rs[0], { reportId: 'newest', createdAt: scans.newest.at, lang: 'he', businessName: 'Ritz Carlton', website: 'ritzcarlton.com', city: 'הרצליה', category: 'hotel', score: 100, mock: false,
+    assert.deepEqual(rs[0], { reportId: 'newest', createdAt: scans.newest.at, lang: 'he', businessName: 'Ritz Carlton', website: 'ritzcarlton.com', city: 'הרצליה', category: 'hotel', score: 100, mock: false, internal: false,
       engines: { chatgpt: { status: 'ok', checks: 1, errors: 0, mentions: 1 }, gemini: { status: 'ok', checks: 2, errors: 0, mentions: 2, grounded: 1, ungrounded: 1 } }, ungroundedChecks: 1, errors: 0, emailMasked: 'a***@g***.com', source: 'whatsapp', reportUrl: 'https://example.test/he/r/newest' });
     assert.equal(rs[1].website, 'pizza.co.il'); assert.equal(rs[1].emailMasked, 'y***@c***.il'); assert.equal(rs[1].reportUrl, 'https://example.test/en/r/old');
     assert.deepEqual(rs[1].engines, { chatgpt: { status: 'ok', checks: 1, errors: 0, mentions: 0 }, gemini: { status: 'failed', reason: 'failed' }, perplexity: { status: 'skipped', reason: 'not_enabled' } });

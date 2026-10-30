@@ -99,7 +99,7 @@ export function buildStatus({ now = new Date(), db = getDb(), running = false } 
     return Object.values(db?.scans || {}).filter(s => s && typeof s === 'object' && s.id && Number.isFinite(ts(s.at)) && !(accs[s.accountId] && isTestAcc(accs[s.accountId])))
       .sort((a, b) => ts(b.at) - ts(a.at)).slice(0, 25).map(s => { const b = biz[s.businessId] || {}, a = accs[s.accountId] || {}, sum = s.summary || {}, lang = s.lang === 'he' ? 'he' : s.lang === 'en' ? 'en' : (a.lang === 'he' ? 'he' : 'en');
         return { reportId: s.id, createdAt: new Date(ts(s.at)).toISOString(), lang, businessName: txt(b.name), website: hostOnly(b.website), city: txt(b.city, 80), category: txt(b.category, 80), score: Number.isFinite(sum.score) ? sum.score : null,
-          mock: !!s.mock, engines: engineSummary(s), ungroundedChecks: num(sum.ungroundedChecks), errors: num(sum.errors), emailMasked: maskEmail(a.email), source: srcKey(a.utm?.source) || srcKey(s.utm?.source) || 'direct', reportUrl: `${baseUrl()}/${lang}/r/${encodeURIComponent(s.id)}` }; });
+          mock: !!s.mock, internal: !!s.internal, engines: engineSummary(s), ungroundedChecks: num(sum.ungroundedChecks), errors: num(sum.errors), emailMasked: maskEmail(a.email), source: srcKey(a.utm?.source) || srcKey(s.utm?.source) || 'direct', reportUrl: `${baseUrl()}/${lang}/r/${encodeURIComponent(s.id)}` }; });
   });
   const config = safe(() => ({ paymentsProvider: getPayments().id, scanMode: isMockMode() ? 'mock' : 'live', emailMode: emailIsMock() ? 'mock' : 'live', prelaunch: !!isPrelaunch() }));
   const funnel = safe(() => buildFunnel(db, now));
