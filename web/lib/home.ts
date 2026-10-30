@@ -1,6 +1,6 @@
 import type { Locale } from "./i18n";
 // Copy for the stage-2 home page (Profound-inspired). Rules: no invented customers, logos, testimonials or statistics.
-// The only real numbers are from our own scans on 25.10.2026 (Austin 4/12, Tel Aviv 1/12, 20 questions × ChatGPT + Gemini via API), shown as directional.
+// The only real numbers are from our own scans on 25.10.2026 (Austin 3-4/12, Tel Aviv 1/12, 20 questions × ChatGPT + Gemini via API), shown as directional.
 // The hero app window is an illustration with a fictional business and must stay labelled as such.
 export const HOME = {
   en: {
@@ -18,7 +18,7 @@ export const HOME = {
     picked: "Who gets picked instead", youRow: "Sample Dental (you)",
     caption: "Illustration only: a fictional business with example numbers, not a real scan.",
     dataTitle: "Real data from our own scans, 25 October 2026", dataLink: "Read our guides",
-    stats: [["33%", "Austin dentists: ", "4 of 12", " named in AI answers"], ["8%", "Tel Aviv dental clinics: ", "1 of 12", " named"], ["20 × 2", "Questions per city, in ChatGPT and Gemini via the API", "", ""], ["Directional", "Small sample: a direction, not a final statistic", "", ""]],
+    stats: [["25-33%", "Austin dentists: ", "3 to 4 of 12", " (about 25-33%), a small directional check, results vary between runs"], ["8%", "Tel Aviv dental clinics: ", "1 of 12", " named"], ["20 × 2", "Questions per city, in ChatGPT and Gemini via the API", "", ""], ["Directional", "Small sample: a direction, not a final statistic", "", ""]],
     probEy: "The problem", probT: "Customers no longer scroll ten results. They ask, and get a few names.",
     prob: [["One answer, not a list", "An AI engine recommends a handful of businesses. If you are not there, you are not in the conversation."], ["Google won't tell you", "Regular SEO tools don't show what ChatGPT and Gemini answer about your business."], ["Competitors are already there", "In most of the clinics we checked in Austin and Tel Aviv, the business was not named. Whoever fixes it first gets picked."]],
     methEy: "How we measure", methT: "Full transparency. No black box.", methP: "We use each engine's official API with web search. It is close to the consumer apps, but not identical to them.",
@@ -40,7 +40,7 @@ export const HOME = {
     picked: "מי נבחר במקומך", youRow: "שן לדוגמה (אתה)",
     caption: "המחשה בלבד: עסק פיקטיבי ומספרים לדוגמה, לא סריקה אמיתית.",
     dataTitle: "נתונים אמיתיים מהסריקות שלנו, 25 באוקטובר 2026", dataLink: "למדריכים שלנו",
-    stats: [["33%", "רופאי שיניים באוסטין: ", "4 מתוך 12", " הוזכרו בשמם"], ["8%", "מרפאות שיניים בתל אביב: ", "1 מתוך 12", " הוזכרה בשמה"], ["20 × 2", "שאלות בכל עיר, ב־ChatGPT וב־Gemini דרך ה־API", "", ""], ["מגמה", "מדגם קטן: הנתונים מכוונים, לא סטטיסטיקה סופית", "", ""]],
+    stats: [["25%-33%", "רופאי שיניים באוסטין: ", "3 עד 4 מתוך 12", " (כ-25%-33%), בדיקה כיוונית קטנה, התוצאות משתנות בין הרצות"], ["8%", "מרפאות שיניים בתל אביב: ", "1 מתוך 12", " הוזכרה בשמה"], ["20 × 2", "שאלות בכל עיר, ב־ChatGPT וב־Gemini דרך ה־API", "", ""], ["מגמה", "מדגם קטן: הנתונים מכוונים, לא סטטיסטיקה סופית", "", ""]],
     probEy: "הבעיה", probT: "לקוחות כבר לא גוללים עשר תוצאות. הם שואלים, ומקבלים כמה שמות.",
     prob: [["תשובה אחת במקום רשימה", "מנוע AI ממליץ על כמה עסקים בודדים. אם אתה לא שם, אתה לא קיים בשיחה."], ["גוגל לא מספר לך", "כלי SEO רגילים לא מראים מה ChatGPT ו־Gemini עונים על העסק שלך."], ["המתחרים כבר שם", "ברוב המרפאות שבדקנו באוסטין ובתל אביב, העסק לא הוזכר בשמו. מי שמתקן קודם, נבחר."]],
     methEy: "איך אנחנו מודדים", methT: "שקיפות מלאה. בלי קופסה שחורה.", methP: "אנחנו משתמשים ב־API הרשמי של כל מנוע עם חיפוש ברשת, שמקרב את האפליקציות לצרכנים, אבל לא זהה להן.",
