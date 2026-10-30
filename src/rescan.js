@@ -23,7 +23,7 @@ export async function runRescans({ now = new Date(), scan = runScan, maxScans = 
       const last = db.scans[b.scanIds?.at(-1)];
       if (last && now - Date.parse(last.at) < days * DAY - 36e5) { skip('not_due'); continue; } // 1h slack so a daily trigger never drifts a day
       if (out.scanned >= maxScans) { skip('run_limit'); continue; }
-      try { const s = await scan(a, b); s.auto = true; out.scanned++; db.events.push({ at: now.toISOString(), type: 'scan.auto', account: a.id, business: b.id }); }
+      try { const s = await scan(a, b, { auto: true }); s.auto = true; out.scanned++; db.events.push({ at: now.toISOString(), type: 'scan.auto', account: a.id, business: b.id }); }
       catch (e) { skip(e.code === 'CAP' ? 'cap' : e.code === 'NO_ENGINE' ? 'no_engine' : 'scan_failed'); }
     }
   }

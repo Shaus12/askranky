@@ -38,7 +38,7 @@ export const resetFunnelMemory = () => { mem = {}; memU = {}; seen.clear(); salt
 // Rejected scan requests (CAPTCHA missing/failed, validation, rate / free limits, login required, already used): aggregate by HTTP status
 // only, so a form that users submit but never get through (e.g. Turnstile blocked in an in-app browser) is visible in the funnel.
 export const scanRejectMiddleware = (q, r, next) => { r.on('finish', () => { if (r.statusCode >= 400) { getDb().events.push({ at: new Date().toISOString(), type: 'funnel.scan_rejected', status: r.statusCode }); save(); } }); next(); };
-const STEPS = ['visit', 'visitor', 'scanRejected', 'scanStarted', 'scanFailed', 'scanDone', 'signup', 'checkoutStarted', 'paid'];
+const STEPS = ['visit', 'visitor', 'scanRejected', 'scanStarted', 'scanFailed', 'scanDone', 'scanDoneSinceTracking', 'signup', 'checkoutStarted', 'paid'];
 export function buildFunnel(db, now = new Date()) {
   const T = +now, DAY = 864e5; const windows = { today: d => d === day(now), last7Days: (d, t) => t > T - 7 * DAY, last30Days: (d, t) => t > T - 30 * DAY, total: () => true };
   const out = Object.fromEntries(Object.keys(windows).map(k => [k, Object.fromEntries(STEPS.map(s => [s, 0]))]));
@@ -55,11 +55,12 @@ export function buildFunnel(db, now = new Date()) {
   }
   for (const [d, n] of Object.entries(mem)) add('visit', `${d}T12:00:00.000Z`, n);
   for (const [d, n] of Object.entries(memU)) add('visitor', `${d}T12:00:00.000Z`, n);
-  for (const s of Object.values(db.scans || {})) if (s && !s.auto && !s.fixupOrder && !test.has(s.accountId)) add('scanDone', s.at);
+  const since = (db.events || []).filter(e => e && /^funnel\./.test(e.type)).map(e => e.at).sort()[0] || null;
+  // scanDone is backfilled from all stored scans; scanDoneSinceTracking only counts scans after trackingSince, comparable to scanStarted.
+  for (const s of Object.values(db.scans || {})) if (s && !s.auto && !s.fixupOrder && !test.has(s.accountId)) { add('scanDone', s.at); if (since && s.at >= since) add('scanDoneSinceTracking', s.at); }
   for (const a of Object.values(db.accounts || {})) if (a && !test.has(a.id)) add('signup', a.createdAt);
   const pct = (a, b) => (a > 0 ? Math.round((b / a) * 1000) / 10 : null); const m = out.last30Days;
-  out.conversionLast30DaysPct = { visitToScan: pct(m.visit, m.scanStarted), scanStartToDone: pct(m.scanStarted, m.scanDone), scanToSignup: pct(m.scanDone, m.signup), signupToCheckout: pct(m.signup, m.checkoutStarted), checkoutToPaid: pct(m.checkoutStarted, m.paid) };
-  const since = (db.events || []).filter(e => e && /^funnel\./.test(e.type)).map(e => e.at).sort()[0] || null;
+  out.conversionLast30DaysPct = { visitToScan: pct(m.visit, m.scanStarted), scanStartToDone: pct(m.scanStarted, m.scanDoneSinceTracking), scanToSignup: pct(m.scanDone, m.signup), signupToCheckout: pct(m.signup, m.checkoutStarted), checkoutToPaid: pct(m.checkoutStarted, m.paid) };
   out.scanRejectedLast7DaysByStatus = rej; // 400 validation, 401 login required, 403 CAPTCHA, 409 free scan used, 429 rate/free limit
   out.scanFailedLast7DaysByReason = failed; out.lastScanFailure = lastFail; // accepted scans that died after the CAPTCHA (no_engine = every AI engine errored)
   out.trackingSince = since; // visit/scanStarted only exist from this moment (first deploy of the funnel); scanDone/signup are backfilled from stored records

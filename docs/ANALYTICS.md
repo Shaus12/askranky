@@ -5,8 +5,9 @@
 | Step | Source |
 |---|---|
 | visit | Server-side counter of `200` GET responses for public HTML pages (`/he`, `/en`, `/{lang}/pricing|scan|report|blog…|legal…`). Bots (user-agent pattern), empty/`node` user agents and prefetches are skipped. Kept in memory per day and written as aggregate `funnel.visits` events `{day, n}` every `FUNNEL_FLUSH_MS` (default 600000 = 10 min); a restart can lose up to that window. |
-| scanStarted | `funnel.scan_started` event when a free/public scan really starts (`POST /scan`, `POST /api/scan`, after CAPTCHA, validation and the one-free-scan rule); `scanStarted − scanDone` ≈ scans that failed (no engine, cap). |
-| scanDone | Stored scans, excluding automatic re-scans (`auto`) and Fix-up scans. |
+| scanStarted | `funnel.scan_started` event recorded inside `runScan` (src/scan.js) after the engine and budget checks, so every scan path counts (free form, `/api/scan`, dashboard re-scans, weekly, alerts); automatic re-scans and Fix-up scans are excluded like scanDone. Compare with `scanDoneSinceTracking`; the difference ≈ scans that died mid-run. |
+| scanDone | Stored scans, excluding automatic re-scans (`auto`) and Fix-up scans. Backfilled from before `trackingSince`, so it can exceed scanStarted. |
+| scanDoneSinceTracking | scanDone restricted to scans after `trackingSince` (comparable to scanStarted; used for `scanStartToDone`). |
 | signup | Accounts created (free scan email, checkout or password signup). |
 | checkoutStarted | `checkout.started` event when `POST /api/checkout` opens a checkout (plans and the Fix-up). |
 | paid | `subscription.activated` + `order.paid` events. |

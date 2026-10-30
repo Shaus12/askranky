@@ -300,7 +300,6 @@ app.post('/scan', scanRejectMiddleware, scanLimiter, captcha, async (q, r) => {
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim().slice(0, 80), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
   db.businesses[business.id] = business; save();
   try {
-    getDb().events.push({ at: new Date().toISOString(), type: 'funnel.scan_started' }); // funnel: a scan really starts (validation, free limit and CAPTCHA passed)
     const scan = await runScan(account, business, { utm: utmFrom(q.body) }); freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
     await sendReportEmail(account, business, scan, lang);
     r.redirect(`/r/${scan.id}`);
@@ -491,7 +490,6 @@ app.post('/api/scan', scanRejectMiddleware, scanLimiter, captcha, async (q, r) =
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim().slice(0, 80), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
   db.businesses[business.id] = business; save();
   try {
-    getDb().events.push({ at: new Date().toISOString(), type: 'funnel.scan_started' }); // funnel: a scan really starts (validation, free limit and CAPTCHA passed)
     const scan = await runScan(account, business, { utm: utmFrom(q.body) }); freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
     await sendReportEmail(account, business, scan, lang);
     r.json({ reportId: scan.id });

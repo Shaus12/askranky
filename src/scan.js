@@ -14,7 +14,7 @@ export function recordScanFailure(reason, engines = []) { try { getDb().events.p
 
 export const NO_ENGINE_MESSAGE = { en: 'Live scans are temporarily unavailable (no AI engine is available right now). Please try again later.', he: 'הסריקות האמיתיות לא זמינות כרגע (אף מנוע AI לא זמין). נסו שוב מאוחר יותר.' };
 // planOverride: a product (e.g. PRODUCTS.fixup) whose question count / competitors / check budget apply instead of the account's plan.
-export async function runScan(account, business, { engines = ENGINES, maxQuestions, utm = null, planOverride = null } = {}) {
+export async function runScan(account, business, { engines = ENGINES, maxQuestions, utm = null, planOverride = null, auto = false } = {}) {
   const plan = planOverride || PLANS[account.plan];
   const questions = buildQuestions(business, Math.min(plan.questionsPerBusiness, maxQuestions || Infinity));
   // Engines that cannot run live (not enabled / key missing) are skipped, never faked. No runnable engine: refuse before any spend.
@@ -24,6 +24,9 @@ export async function runScan(account, business, { engines = ENGINES, maxQuestio
   if (!active.length) throw Object.assign(new Error(NO_ENGINE_MESSAGE.en), { code: 'NO_ENGINE', he: NO_ENGINE_MESSAGE.he, skipped });
   const budget = checkBudget(account, active, questions.length, active.filter(e => !getProvider(e).mock), plan);
   if (!budget.ok) throw Object.assign(new Error(budget.reason), { code: 'CAP', he: budget.reasonHe });
+  // Funnel 'scan started': recorded HERE, the one place every scan path goes through (free form, /api/scan, dashboard re-scans, weekly,
+  // alerts), so scanStarted >= scanDone. Automatic re-scans and Fix-up scans are excluded, matching scanDone in src/funnel.js.
+  if (!auto && !planOverride) { try { getDb().events.push({ at: new Date().toISOString(), type: 'funnel.scan_started', account: account.id }); save(); } catch {} }
 
   // Every (question, engine) check runs through a small worker pool (SCAN_CONCURRENCY, default 4 = both engines x 2 questions) with a
   // per-call timeout in the providers, so a full live scan stays well under Cloudflare's ~100s. Results keep question-then-engine order.
