@@ -63,7 +63,7 @@ export function FeatureGrid({ h, lang }: { h: Home3; lang: Locale }) {
 export function CommandCenter({ h, lang }: { h: Home3; lang: Locale }) {
   const c = h.cc; const he = lang === "he";
   const cols = [22, 28, 26, 33, 31, 38, 41, 39, 46, 52];
-  const comps: [string, number, string][] = he ? [["מרפאה א׳", 41, "▲"], ["מרפאה ב׳", 33, "▼"], ["שן לדוגמה (אתה)", 29, "▲"], ["מרפאה ג׳", 18, "–"]] : [["Clinic A", 41, "▲"], ["Clinic B", 33, "▼"], ["Sample Dental (you)", 29, "▲"], ["Clinic C", 18, "–"]];
+  const comps: [string, number, string][] = he ? [["עסק א׳", 41, "▲"], ["עסק ב׳", 33, "▼"], ["אינסטלציה לדוגמה (אתה)", 29, "▲"], ["עסק ג׳", 18, "–"]] : [["Business A", 41, "▲"], ["Business B", 33, "▼"], ["Sample Plumbing (you)", 29, "▲"], ["Business C", 18, "–"]];
   return (
     <ScrollFx as="section" className="hm-sec" aria-labelledby="v3-cc-t"><div className="hm-wrap hm-pad">
       <p className="hm-mono" data-rise>{h.ccEy}</p>
