@@ -7,17 +7,19 @@ import { demoNotices } from "@/lib/notices";
 import ReportBody from "./ReportBody";
 import Reveal from "./Reveal";
 import MaskHeading from "./MaskHeading";
+import LockedReport, { type Partial } from "./LockedReport";
 
 const ENG = { chatgpt: "ChatGPT", gemini: "Gemini", perplexity: "Perplexity" } as Record<string, string>;
 // /[lang]/r/<id> (served by Express from report.html) loads the real report; /[lang]/report shows the sample.
 export default function ReportView({ t, lang }: { t: Dict; lang: Locale }) {
-  const [r, setR] = useState<ReportData | null>(null); const [existing, setExisting] = useState(false); const [cfg, setCfg] = useState<Config | null>(null); const nt = demoNotices(cfg, t);
+  const [r, setR] = useState<ReportData | null>(null); const [existing, setExisting] = useState(false); const [cfg, setCfg] = useState<Config | null>(null); const nt = demoNotices(cfg, t); const [locked, setLocked] = useState<Partial | null>(null); const [nonce, setNonce] = useState(0);
   useEffect(() => { getConfig().then(setCfg); setExisting(new URLSearchParams(location.search).get("existing") === "1"); }, []); const [err, setErr] = useState("");
   useEffect(() => {
     const id = idFromPath("r") || new URLSearchParams(location.search).get("id") || "";
     if (!id) { setR(sample(lang)); return; }
-    api(`/api/report/${encodeURIComponent(id)}`).then((j) => setR(toReport(j))).catch(() => setErr(t.live.notFound));
-  }, [lang, t]);
+    api(`/api/report/${encodeURIComponent(id)}`).then((j) => { if (j.locked) { setLocked(j); return; } setLocked(null); setR(toReport(j)); }).catch(() => setErr(t.live.notFound));
+  }, [lang, t, nonce]);
+  if (locked && !r) return <LockedReport t={t} lang={lang} data={locked} onUnlocked={() => { setLocked(null); setNonce((x) => x + 1); }} />;
   if (err || !r) return <div className="min-h-[70vh] px-5 py-24 text-center text-white"><h1 className="font-head vx-h3">{err || t.live.loading}</h1>{err && <Link href={`/${lang}/scan`} className="btn-cta mt-8">{t.hero.cta}</Link>}</div>;
   return (
     <>

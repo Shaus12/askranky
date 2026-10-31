@@ -23,3 +23,21 @@ public scan form (outreach prospects). Those scans are stored with `internal: tr
 `scanDoneSinceTracking`, `signup` and the conversion percentages. They are counted separately in the funnel as `internalScanStarted` and
 `internalScans` (today / last7Days / last30Days / total), and `recentScans` shows `internal: true`. Their API spend still counts in
 `spend` and against `DAILY_SPEND_CAP_USD`. The allowlist never signs anyone in or opens a dashboard.
+
+## Email-gated free scan (gate1)
+
+The public scan form asks only for business name and city. `POST /api/scan` without an email runs the scan on a guest account
+(`guest: true`, no email) and stores the scan as `locked: true`. While locked, `GET /api/report/:id` returns only `{ locked, business
+{name, city, category}, scan {id, at, mock, summary {score, checks, engines.ran/skipped, topCompetitors (max 3 names + counts)}},
+hiddenCompetitors }`; answers, fixes, sources, per-engine data, history and alerts never leave the server. `POST /api/report/:id/unlock
+{ email, marketingConsent, lang }` (JSON only, rate-limited `UNLOCK_RATE_MAX`/15 min, default 10) attaches the scan to that email's
+account (reused if it exists; a paid account needs sign-in -> 401), sends the report email and removes the lock.
+
+| Step | Source |
+|---|---|
+| emailUnlocked | `funnel.email_unlocked` events. `conversionLast30DaysPct.scanToEmailUnlock` = emailUnlocked / scanDone. |
+| internalEmailUnlocked | Unlocks with an `OWNER_EMAILS` address; the scan is then flagged `internal` and its `scan_started` event too. |
+
+Guest accounts are not signups; the signup is counted when the unlock creates the email account. Limits on the guest path: CAPTCHA,
+scan rate limiter, per-IP 3 free scans/day, `DAILY_SPEND_CAP_USD`. Owners who want to skip the per-IP limit enter their email up front
+(under "more options"), which keeps the previous path. No email verification (dedupe by address; abuse bounded by the limits above).
