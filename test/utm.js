@@ -42,7 +42,7 @@ try {
 }
 // 4. client wiring (static)
 {
-  const u = fs.readFileSync('web/lib/utm.ts', 'utf8'); assert.match(u, /sessionStorage/); assert.match(u, /\[A-Za-z0-9_\.-\]\{1,64\}/); assert.doesNotMatch(u, /document\.cookie|localStorage|fetch\(|navigator|referrer/);
+  const u = fs.readFileSync('web/lib/utm.ts', 'utf8'); assert.match(u, /sessionStorage/); assert.match(u, /\[A-Za-z0-9_\.-\]\{1,64\}/); assert.doesNotMatch(u, /document\.cookie|localStorage|navigator\.|location\.href/); assert.equal((u.match(/fetch\(/g) || []).length, 1, 'utm1: one same-origin landing beacon only'); assert.match(u, /\/api\/v\/land/); assert.match(u, /new URL\(referrer\)\.hostname/, 'referrer: host name only');
   assert.match(fs.readFileSync('web/components/SiteChrome.tsx', 'utf8'), /captureUtm\(\)/); assert.match(fs.readFileSync('web/components/ScanProgress.tsx', 'utf8'), /\.\.\.getUtm\(\)/); const co = fs.readFileSync('web/components/Checkout.tsx', 'utf8'); assert.equal((co.match(/\.\.\.getUtm\(\)/g) || []).length, 2);
   for (const f of ['cookies', 'cookies.he']) assert.ok(fs.readFileSync(`legal/${f}.md`, 'utf8').includes('ranky-utm'), f); for (const f of ['privacy', 'privacy.he']) assert.ok(fs.readFileSync(`legal/${f}.md`, 'utf8').includes('utm_source'), f);
   assert.ok(!/CardForm/.test(u)); assert.doesNotMatch(fs.readFileSync('web/components/CardForm.tsx', 'utf8'), /utm_|getUtm|captureUtm/); ok('client captures utm from the landing URL into sessionStorage and sends it with /api/scan, /api/waitlist, /api/checkout (not the card step); cookie + privacy docs list it');

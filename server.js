@@ -12,7 +12,7 @@ import { TEST_PLAN, TEST_BILLING, TEST_CHECKOUT_TTL_MS, TEST_ACCESS_MS } from '.
 import { validSingleUseToken, looksLikeCardNumber } from './src/payments/sumit.js'; import { checkoutCsp, inlineScriptHashes, adminNonce, JQUERY_PATH, SUMIT_SCRIPT_URL } from './src/security/csp.js';
 import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { buildStatus, recordSync } from './src/status.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js'; import { blogPageHtml } from './src/blog.js';
 import { registerAuth } from './src/auth/routes.js'; import { googleEnabled } from './src/auth/google.js';
-import { applyCompAccounts } from './src/comp.js'; import { visitMiddleware, flushVisits, scanRejectMiddleware } from './src/funnel.js'; import { whatsappNumber } from './src/whatsapp.js'; import { isOwnerEmail } from './src/owner.js'; import { dashboardData, dashboardCsv } from './src/dashboard.js';
+import { applyCompAccounts } from './src/comp.js'; import { visitMiddleware, flushVisits, scanRejectMiddleware } from './src/funnel.js'; import { countLanding } from './src/sources.js'; import { whatsappNumber } from './src/whatsapp.js'; import { isOwnerEmail } from './src/owner.js'; import { dashboardData, dashboardCsv } from './src/dashboard.js';
 
 // TRUST_PROXY=1 (GO-LIVE.md) is a *string* in process.env; Express treats a string as an IP/subnet list ('1' = the address 0.0.0.1), so the proxy was
 // NOT trusted and every visitor shared the proxy's IP in all per-IP limits. Numbers become a hop count, 'true'/'false' booleans, anything else is passed through.
@@ -89,6 +89,9 @@ app.get('/health', (q, r) => r.json({ ok: true, brand: BRAND.name, mockScans: is
 // Keep-warm for free hosting (cold starts): tiny, no DB or provider calls.
 // First-party funnel page-view counter (src/funnel.js): aggregate per-day number only, no cookies, nothing about the visitor stored.
 app.use(visitMiddleware);
+// utm1: one landing beacon per browser tab session with its first-touch attribution (src/sources.js). Aggregate counts only; 204, no body.
+const landLimiter = createRateLimiter({ max: Number(process.env.LAND_RATE_MAX || 60), windowMs: 15 * 60 * 1000, onLimit: (q, r) => r.status(204).end() });
+app.post('/api/v/land', landLimiter, (q, r) => { try { countLanding(q); } catch { /* never breaks a page */ } r.set('Cache-Control', 'no-store').status(204).end(); });
 app.get('/healthz', (q, r) => r.set('Cache-Control', 'no-store').json({ ok: true }));
 // External cron trigger (GitHub Actions / cron-job.org) for the daily billing sync, because the free Render plan has no cron.
 // Disabled (404) unless CRON_SECRET (>= 16 chars) is set. Requires header X-Cron-Secret, compared timing-safe (sha256 + timingSafeEqual).
@@ -508,7 +511,7 @@ app.post('/api/report/:id/unlock', unlockLimiter, async (q, r) => {
   if (b) b.accountId = account.id; s.accountId = account.id; delete s.locked; s.unlockedAt = new Date().toISOString();
   if (owner) { s.internal = true; for (const e of db.events) if (e && String(e.type).endsWith('.scan_started') && guest && e.account === guest.id) e.internal = true; }
   if (guest?.guest) { guest.mergedInto = account.id; guest.usage = {}; }
-  db.events.push({ at: s.unlockedAt, type: 'funnel.email_unlocked', account: account.id, ...(owner ? { internal: true } : {}), ...(known ? { existingAccount: true } : {}) }); save();
+  db.events.push({ at: s.unlockedAt, type: 'funnel.email_unlocked', account: account.id, ...(s.utm ? { src: s.utm } : guest?.utm ? { src: guest.utm } : {}), ...(owner ? { internal: true } : {}), ...(known ? { existingAccount: true } : {}) }); save();
   rememberLang(account, s, lang); await sendReportEmail(account, b, s, lang).catch(() => {});
   r.json({ ok: true, reportId: s.id });
 });

@@ -29,7 +29,7 @@ export async function runScan(account, business, { engines = ENGINES, maxQuestio
   if (!budget.ok) throw Object.assign(new Error(budget.reason), { code: 'CAP', he: budget.reasonHe });
   // Funnel 'scan started': recorded HERE, the one place every scan path goes through (free form, /api/scan, dashboard re-scans, weekly,
   // alerts), so scanStarted >= scanDone. Automatic re-scans and Fix-up scans are excluded, matching scanDone in src/funnel.js.
-    if (!auto && !planOverride) { try { getDb().events.push({ at: new Date().toISOString(), type: 'funnel.scan_started', account: account.id, ...(internal ? { internal: true } : {}) }); save(); } catch {} }
+    if (!auto && !planOverride) { try { getDb().events.push({ at: new Date().toISOString(), type: 'funnel.scan_started', account: account.id, ...(utm ? { src: utm } : account.utm ? { src: account.utm } : {}), ...(internal ? { internal: true } : {}) }); save(); } catch {} }
 
   // Every (question, engine) check runs through a small worker pool (SCAN_CONCURRENCY, default 4 = both engines x 2 questions) with a
   // per-call timeout in the providers, so a full live scan stays well under Cloudflare's ~100s. Results keep question-then-engine order.

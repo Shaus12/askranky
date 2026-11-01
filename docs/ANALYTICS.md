@@ -41,3 +41,13 @@ account (reused if it exists; a paid account needs sign-in -> 401), sends the re
 Guest accounts are not signups; the signup is counted when the unlock creates the email account. Limits on the guest path: CAPTCHA,
 scan rate limiter, per-IP 3 free scans/day, `DAILY_SPEND_CAP_USD`. Owners who want to skip the per-IP limit enter their email up front
 (under "more options"), which keeps the previous path. No email verification (dedupe by address; abuse bounded by the limits above).
+
+## Per-source funnel (utm1)
+
+`GET /api/internal/status` → `funnel.sources` shows which post / campaign brought sessions, including those that never started a scan.
+
+- **First touch per browser tab** (`web/lib/utm.ts`): on the first page view of a tab, `utm_source` / `utm_campaign` / `utm_medium` from the URL are saved in `sessionStorage` (`ranky-utm`). If there is no utm, only the referring site's **host name** is saved (`l.facebook.com` → `facebook.com`, no path or query). Later pages and internal links never overwrite it. No cookie, no localStorage, no identifier; it disappears when the tab closes. Same sanitizing as the server (`[A-Za-z0-9_.-]{1,64}`, host names only; anything else dropped).
+- **One landing beacon per tab session**: `POST /api/v/land` (same origin, 204, no body). The server counts it in memory per UTC day × source × campaign × medium, plus distinct visitors with the same in-memory daily hash as page views (never stored). Bots, link previews, prefetch, empty user agents and monitors (`X-Ranky-Monitor: 1`) are excluded. Persisted with `flushVisits()` as aggregate `funnel.src_visits` events `{day, s, c, m, n, u}`. Rate limited per IP (`LAND_RATE_MAX`, default 60 / 15 min; over the limit = silently not counted).
+- **Carried to conversions**: the same attribution goes with `POST /api/scan` (scan.utm, account.utm first touch), so `funnel.scan_started` and `funnel.email_unlocked` events carry `src`; signup and paid use the account's first touch.
+- **Shape**: `{ trackingSince, top: 20, last7Days: [row], sinceTracking: [row], note }`, row = `{ source, campaign, medium, visits, visitors, scanStarted, scanDone, emailUnlocked, signup, paid }`. `source` = utm_source (lower-case) or `ref:<host>` or `direct`; `campaign` / `medium` or `-`. Top 20 rows by visits; the rest summed into one `other` row (`groupedRows`). Max 300 new keys per day in memory, later ones fold into `other`. Owner (OWNER_EMAILS), test, bot and monitor traffic excluded.
+- **Facebook in-app browser**: works with `sessionStorage`; language / legacy redirects (`/`, `/pricing`, `/blog`, …) keep the query string, so the landing page still sees the utm.
