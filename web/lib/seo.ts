@@ -12,6 +12,7 @@ const T = {
 // Per-page title + description (seo-audit #7), Hebrew and English.
 const PAGE: Record<string, { he: string; en: string; dhe: string; den: string }> = {
   "/pricing": { he: "מחירים", en: "Pricing", dhe: "מחירי Ranky: סריקה חינם, ומסלולים חודשיים מ־₪79 בלי מע\"מ. השוואה כנה של מה שפועל היום ומה בקרוב.", den: "Ranky pricing: a free scan, then monthly plans from ₪79, no VAT. An honest comparison of what runs today and what is coming soon." },
+  "/agencies": { he: "לסוכנויות", en: "For agencies", dhe: "Ranky לסוכנויות ולפרילנסרים: בדיקת נראות ב־ChatGPT ו־Gemini ללקוחות שלכם, תוכנית Agency ב־₪549 לחודש. דוח לפני/אחרי ידני.", den: "Ranky for agencies and freelancers: check how ChatGPT and Gemini answer for your clients. Agency plan ₪549/month. Manual before/after report." },
   "/scan": { he: "סריקת AI חינם", en: "Free AI scan", dhe: "בדקו בחינם אם ChatGPT ו־Gemini ממליצים על העסק שלכם, ומי מומלץ במקומכם. חינם, סריקה אחת לכל אימייל, כדקה.", den: "Check free whether ChatGPT and Gemini recommend your business, and who they name instead. Free, one scan per email, about a minute." },
   "/report": { he: "דוח לדוגמה", en: "Sample report", dhe: "כך נראה דוח נראות ב־AI של Ranky: ציון, מתחרים שמומלצים, מקורות שמצוטטים ו־3 תיקונים.", den: "See a sample Ranky AI visibility report: score, competitors AI recommends, cited sources and 3 fixes." },
   "/login": { he: "כניסה", en: "Sign in", dhe: "כניסה לדשבורד של Ranky עם קישור חד־פעמי במייל.", den: "Sign in to your Ranky dashboard with a one-time email link." },

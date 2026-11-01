@@ -17,7 +17,7 @@ import { LEGAL_DOCS } from './legal.js'; import { blogPosts } from './blog.js';
 // '/blog' is a true he<->en pair (an index in each language). Articles are NOT translations of each other (HE and EN articles differ), so each
 // article is listed once with its own self-canonical URL and no hreflang alternates (see blogPosts()).
 // The sample report /{lang}/report is NOT listed: it is client-rendered (the same export serves /r/:id), so crawlers only get "Loading report…".
-export const SITEMAP_PAGES = ['', '/pricing', '/scan', '/legal', '/blog', ...LEGAL_DOCS.map(d => `/legal/${d}`)];
+export const SITEMAP_PAGES = ['', '/pricing', '/agencies', '/scan', '/legal', '/blog', ...LEGAL_DOCS.map(d => `/legal/${d}`)];
 const x = s => s.replace(/&/g, '&amp;');
 export function sitemapXml() {
   const u = (l, p) => x(`${SITE()}/${l}${p}`);

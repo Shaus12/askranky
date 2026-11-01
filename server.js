@@ -586,7 +586,7 @@ app.get('/api/seller', (q, r) => r.json({ name: BRAND.legalEntity, nameHe: BRAND
 // Pages are plain HTML; dynamic segments (/r/:id, /dashboard/:id) map onto one exported page whose client code reads the id from the URL.
 // Public pages are the same for everyone (language comes from the URL), so they carry no Set-Cookie/Vary and may be cached at a
 // CDN briefly (s-maxage short because a deploy replaces the hashed /_next chunks the HTML points at).
-const PUBLIC_CACHE = 'public, max-age=0, s-maxage=120'; const PUBLIC_PAGES = new Set(['', 'scan', 'report', 'legal', 'blog', 'pricing']); const OUT = path.resolve('web/out'); const LANGS = ['he', 'en'];
+const PUBLIC_CACHE = 'public, max-age=0, s-maxage=120'; const PUBLIC_PAGES = new Set(['', 'scan', 'report', 'legal', 'blog', 'pricing', 'agencies']); const OUT = path.resolve('web/out'); const LANGS = ['he', 'en'];
 const prefLang = q => { const c = /(?:^|;\s*)ranky_lang=(he|en)/.exec(q.get('cookie') || ''); if (c) return c[1]; return /\bhe\b|\biw\b/i.test(q.get('accept-language') || '') ? 'he' : 'en'; };
 const qs = q => { const i = q.originalUrl.indexOf('?'); return i >= 0 ? q.originalUrl.slice(i) : ''; };
 function page(r, lang, name, shared = PUBLIC_PAGES.has(name || '')) {
@@ -605,6 +605,7 @@ app.get('/r/:id', (q, r) => r.redirect(`/${prefLang(q)}/r/${encodeURIComponent(q
 app.get('/dashboard/:id', (q, r) => r.redirect(`/${prefLang(q)}/dashboard/${encodeURIComponent(q.params.id)}${qs(q)}`));
 app.get('/login', (q, r) => r.redirect(`/${prefLang(q)}/login`)); app.get(['/signup', '/account'], (q, r) => r.redirect(`/${prefLang(q)}${q.path}`)); app.get('/dashboard', (q, r) => r.redirect(`/${prefLang(q)}/dashboard`));
 app.get('/pricing', (q, r) => r.redirect(`/${prefLang(q)}/pricing${qs(q)}`));
+app.get('/:lang/agencies', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'agencies') : next());
 app.get('/:lang/pricing', (q, r, next) => LANGS.includes(q.params.lang) ? page(r, q.params.lang, 'pricing') : next());
 // Short legal URLs (/{lang}/privacy, /{lang}/terms, ... and /privacy, /terms) 301 to the canonical /{lang}/legal/{doc} pages (were 404).
 app.get('/:lang(he|en)/:doc', (q, r, next) => isDoc(q.params.doc) ? r.redirect(301, `/${q.params.lang}/legal/${q.params.doc}${qs(q)}`) : next());
