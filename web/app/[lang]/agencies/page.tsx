@@ -46,6 +46,8 @@ export default async function Page({ params }: { params: Promise<{ lang: string 
       <Reveal as="section" className="vx-section mx-auto max-w-3xl !pt-0">
         <div className="grid gap-6 md:grid-cols-2">
           <div data-reveal className="card p-5"><h2 className="text-xl font-bold text-white">{a.fixTitle}</h2><p className="mt-2 text-slate-300">{a.fix}</p></div>
+          <div data-reveal data-pilot className="card p-5"><h2 className="text-xl font-bold text-white">{a.pilotTitle}</h2><p className="mt-2 text-slate-300">{a.pilot}</p></div>
+          <div data-reveal data-partner className="card p-5"><h2 className="text-xl font-bold text-white">{a.partnerTitle}</h2><p className="mt-2 text-slate-300">{a.partner}</p></div>
           <div data-reveal className="card p-5"><h2 className="text-xl font-bold text-white">{a.noTitle}</h2><p className="mt-2 text-slate-300">{a.no}</p></div>
         </div>
       </Reveal>

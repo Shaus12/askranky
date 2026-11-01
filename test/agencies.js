@@ -16,12 +16,13 @@ try {
     const r = await fetch(`${B}/${l}/agencies`); assert.equal(r.status, 200); assert.match(r.headers.get('cache-control'), /public/); const h = await r.text(); const v = vis(h.slice(h.indexOf('<main'), h.indexOf('</main>')));
     assert.ok(h.includes(`<link rel="canonical" href="https://askranky.com/${l}/agencies"/>`) && !/noindex/.test(h) && h.includes('hrefLang="he" href="https://askranky.com/he/agencies"'));
     assert.ok(h.includes('"@type":"FAQPage"'));
-    assert.ok(v.includes('₪549')); assert.ok(!/\$149|₪190|₪290|30%|₪100\b/.test(v));
+    assert.ok(v.includes('₪549')); assert.ok(!/\$149|₪190|190|₪290|290 ₪|₪100\b|100 ₪|12 חודשים|12 months/.test(v));
+    assert.ok(l === 'he' ? /הפיילוט חינם/.test(v) && /עמלה של 30%/.test(v) : /The pilot is free/.test(v) && /30% commission/.test(v), 'pilot free + 30%');
     assert.ok(l === 'he' ? /מופק ידנית/.test(v) && /אין עדיין white-label אוטומטי/.test(v) : /prepared manually/.test(v) && /no automatic white-label yet/.test(v));
     assert.ok(/href="mailto:shaysho1111@gmail.com\?subject=/.test(h) && h.includes(`href="/${l}/scan"`));
     assert.ok(!/dentist|dental|שיניים|Perplexity|Copilot|Claude/i.test(v), 'banned words');
-    assert.ok(!/פיילוט|pilot|תוכנית שותפים|partner program|affiliate|commission|עמלה|שוטשווילי|Shotashvili|TO VERIFY|refund|החזר/i.test(v), 'TO VERIFY items');
-    ok(`/${l}/agencies: built + served 200, canonical/hreflang, indexable, FAQPage, ₪549, manual/no-white-label, mailto + scan CTA, no banned or unverified items`);
+    assert.ok(!/שוטשווילי|Shotashvili|שי |Shai|מייסד|Founder|TO VERIFY|refund|החזר|Fix-up סיטונאי|wholesale/i.test(v), 'TO VERIFY items');
+    ok(`/${l}/agencies: built + served 200, canonical/hreflang, indexable, FAQPage, ₪549, manual/no-white-label, mailto + scan CTA, pilot free + 30%, no ₪190/₪100/₪290/founder, no banned or unverified items`);
   }
   const sm = await (await fetch(B + '/sitemap.xml')).text(); assert.ok(sm.includes('/he/agencies</loc>') && sm.includes('/en/agencies</loc>'));
   assert.ok(fs.readFileSync('web/out/en.html', 'utf8').includes('href="/en/agencies"')); ok('sitemap + footer link');

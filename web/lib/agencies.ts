@@ -2,8 +2,8 @@ import type { Locale } from "./i18n";
 import { PRICES, fmt } from "./prices";
 // /{lang}/agencies: informational agency/partner page (copy: Growth, marketing/agency-partner-page-DRAFT-20261031.md).
 // Plan numbers are read from the display mirror of src/plans.js (PRICES) or must equal it (test/agencies.js asserts both).
-// Deliberately NOT on this page until Shai/Growth confirm ([TO VERIFY] in the draft): agency pilot (free vs ₪190, timing),
-// partner commission terms, wholesale Fix-up price, founder name, cancellation/refund wording. No checkout from here: CTA = free scan + contact.
+// Pilot (free) and partner 30% approved by Shai 1.11. Still NOT shown: pilot launch timing, commission duration, ₪100/Fix-up partner payout,
+// wholesale Fix-up price, founder name, new cancellation/refund wording. No checkout from here: CTA = free scan + contact.
 export const AGENCY = { price: PRICES.agency.ILS, businesses: 10, questions: 20, competitors: 5, fixup: 390 };
 export const CONTACT_EMAIL = "shaysho1111@gmail.com";
 const P = fmt(AGENCY.price, "ILS");
@@ -21,6 +21,8 @@ export const AG = {
     pricing: "לכל המסלולים",
     sellTitle: "איך סוכנויות מוכרות את זה", sell: ["מריצים בדיקה חינם על לקוח אחד ורואים מה המנועים עונים עליו.", "מציגים ללקוח: איפה הוא מוזכר, מי מומלץ במקומו, ומה מקורות המידע.", "מיישמים את התיקונים כחלק מהריטיינר, ובודקים שוב בכל שבוע."], sellNote: "המחיר ללקוח הקצה נקבע על ידכם.",
     fixTitle: "Fix-up (אופציונלי)", fix: `תיקון חד-פעמי שאנחנו מבצעים: ${fmt(AGENCY.fixup, "ILS")} לעסק.`,
+    pilotTitle: "פיילוט לסוכנויות ראשונות", pilot: "אנחנו פותחים פיילוט ל-2-3 סוכנויות בלבד: 30 יום, עד 3 לקוחות קצה, בדיקה בסיסית ובדיקה חוזרת, ודוח לפני/אחרי. הפיילוט חינם.",
+    partnerTitle: "תוכנית שותפים (לבעלי קהילות ויועצים)", partner: "עמלה של 30% על לקוחות משלמים שהגיעו דרך קישור אישי. שותפים מחויבים לגילוי נאות \"קישור שותפים\", בלי ספאם ובלי פניות פרטיות ללא הסכמה.",
     noTitle: "מה אנחנו לא מבטיחים", no: "אף אחד לא שולט במה שמנועי AI עונים. אנחנו לא מבטיחים מקום ראשון, אזכור או שיעור הופעה מסוים. התשובות משתנות בין הרצות, ולכן אנחנו בודקים שוב בכל שבוע ומציגים מגמה. כרגע נבדקים רק ChatGPT ו-Gemini.",
     faqTitle: "שאלות נפוצות",
     faq: [["אילו מנועים נבדקים?", "ChatGPT ו-Gemini בלבד, דרך ה-API שלהם עם חיפוש ברשת."], ["האם זה דירוג?", "לא. אנחנו מראים מה המנועים ענו בבדיקה מסוימת, לא דירוג קבוע."], ["אפשר להתחיל בלי להתחייב?", "כן. הבדיקה הראשונה חינם, והמנוי חודשי."], ["יש מע\"מ?", "לא, אנחנו עוסק פטור."]] as [string, string][],
@@ -40,6 +42,8 @@ export const AG = {
     pricing: "See all plans",
     sellTitle: "How agencies sell it", sell: ["Run a free check on one client and see what the engines say.", "Show the client where they appear, who is recommended instead, and which sources are cited.", "Apply the fixes as part of your retainer and re-check weekly."], sellNote: "You set the price to your client.",
     fixTitle: "Fix-up (optional)", fix: `One-time fix we carry out: ${fmt(AGENCY.fixup, "ILS")} per business.`,
+    pilotTitle: "Early agency pilot", pilot: "Open to 2–3 agencies only: 30 days, up to 3 client businesses, baseline and re-check, before/after report. The pilot is free.",
+    partnerTitle: "Partner program", partner: "30% commission on paying customers referred through a personal link. Partners must disclose \"affiliate link\"; no spam or unsolicited private messages.",
     noTitle: "What we don't promise", no: "Nobody controls what AI engines answer. We don't guarantee a top spot, a mention, or any mention rate. Answers vary between runs, so we re-check weekly and show the trend. Today we check ChatGPT and Gemini only.",
     faqTitle: "FAQ",
     faq: [["Which engines?", "ChatGPT and Gemini only, via their APIs with web search."], ["Is this a ranking?", "No. It's what the engines answered in a given check."], ["Can I start without committing?", "Yes: the first check is free; plans are monthly."]] as [string, string][],
