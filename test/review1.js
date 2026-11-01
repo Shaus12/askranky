@@ -15,7 +15,7 @@ assert.ok(/"10 businesses", "20 questions each/.test(i18n) && /"10 עסקים", 
 const scan = fs.readFileSync('src/scan.js', 'utf8'); assert.match(scan, /plan\.questionsPerBusiness/); ok('Agency 20 questions/business in config, UI and the scan pipeline (reads plan.questionsPerBusiness)');
 assert.deepEqual(Object.keys(PLANS).map(k => PLANS[k].prices.ILS), [0, 79, 179, 549]); assert.equal(PRODUCTS.fixup.prices.ILS, 390); ok('prices unchanged');
 const home = fs.readFileSync('web/lib/home.ts', 'utf8'); assert.match(home, /export const HERO_VARIANT: HeroVariant = "B";/);
-const B = home.slice(home.indexOf('  B: {')); assert.ok(!/\d+%|\d+ מתוך|\d+ of \d+/.test(B.slice(0, B.indexOf('} as const')))); assert.match(home, /11 מתוך 12 מרפאות שיניים/); assert.match(home, /1 מתוך 12 מרפאות הוזכרה בשם \(8%\)/); assert.match(home, /לא מחקר/);
+const B = home.slice(home.indexOf('  B: {')); assert.ok(!/\d+%|\d+ מתוך|\d+ of \d+/.test(B.slice(0, B.indexOf('} as const')))); assert.match(home, /11 מתוך 12 עסקים מקומיים/); assert.match(home, /1 מתוך 12 עסקים הוזכר בשם \(8%\)/); assert.match(home, /לא מחקר/);
 const R = '../research/scans/day1-rerun/results-IL-1.md'; if (fs.existsSync(R)) assert.match(fs.readFileSync(R, 'utf8').replace(/\s+/g, ' '), /k_named \| 1 \|.*pct_mentioned_chatgpt \| 8/); ok('hero variant: default B (no numbers); A cites the real Tel Aviv sample (1/12, 8%) as directional');
 const ref = fs.readFileSync('legal/refunds.md', 'utf8'); const refHe = fs.readFileSync('legal/refunds.he.md', 'utf8');
 const g = [...i18n.matchAll(/guarantee: "(Deliver-or-refund: if we have not[^"]*|מסירה או החזר: אם לא מסרנו את שלושת[^"]*)"/g)].map(m => m[1]); assert.equal(g.length, 2);

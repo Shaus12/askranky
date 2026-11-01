@@ -31,7 +31,7 @@ OpenAI doesn't publish a formula, but when you look at the answers and the sourc
 4. **Make NAP consistent.** Use the same name, address, phone and description on Google Business Profile, Bing Places, Yelp, Facebook, Apple Business Connect and your industry directories.
 5. **Claim Bing Places and verify Bing Webmaster Tools.** It's free, and it's often skipped.
 6. **Add an FAQ page that answers like you do on the phone.** Cover price ranges, timing, areas served and "X vs Y" choices, with 2–4 sentences each.
-7. **Add LocalBusiness schema** (or a specific type such as `Dentist`, `Plumber` or `Attorney`) and FAQPage markup that matches what's visible on the page.
+7. **Add LocalBusiness schema** (or a specific type such as `Plumber`, `Electrician` or `Attorney`) and FAQPage markup that matches what's visible on the page.
 8. **Ask for specific reviews.** "Fixed our water heater in South Austin same day" helps more than "Great service!" Never buy reviews.
 9. **Get into the sources AI already cites.** From your baseline, list the 3–5 most-cited URLs for your category and city. Request a listing, pitch an update, or offer a quote or data point.
 10. **Don't block AI crawlers.** Check that robots.txt (and any Cloudflare "block AI bots" setting) allows OAI-SearchBot, ChatGPT-User and GPTBot (plus the crawlers of any other AI tool you care about), and that key content is in the HTML, not loaded only by JavaScript.

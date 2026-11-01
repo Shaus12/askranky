@@ -18,7 +18,7 @@ export const HOME = {
     picked: "Who gets picked instead", youRow: "Sample Plumbing (you)",
     caption: "Illustration only: a fictional business with example numbers, not a real scan.",
     dataTitle: "Real data from our own scans, 25 October 2026", dataLink: "Read our guides",
-    stats: [["25-33%", "Austin: ", "3 to 4 of 12", " (about 25-33%), a small directional check, results vary between runs"], ["8%", "Tel Aviv: ", "1 of 12", " named"], ["20 × 2", "Questions per city, in ChatGPT and Gemini via the API", "", ""], ["Directional", "A small directional check of local businesses; we used dental clinics as one example category. Results vary between runs.", "", ""]],
+    stats: [["25-33%", "Austin: ", "3 to 4 of 12", " (about 25-33%), a small directional check, results vary between runs"], ["8%", "Tel Aviv: ", "1 of 12", " named"], ["20 × 2", "Questions per city, in ChatGPT and Gemini via the API", "", ""], ["Directional", "A small directional check of 12 local businesses in one category. Results vary between runs.", "", ""]],
     probEy: "The problem", probT: "Customers no longer scroll ten results. They ask, and get a few names.",
     prob: [["One answer, not a list", "An AI engine recommends a handful of businesses. If you are not there, you are not in the conversation."], ["Google won't tell you", "Regular SEO tools don't show what ChatGPT and Gemini answer about your business."], ["Competitors are already there", "In our small check in Austin and Tel Aviv, most of the local businesses we looked at were not named. Whoever fixes it first gets picked."]],
     methEy: "How we measure", methT: "Full transparency. No black box.", methP: "We use each engine's official API with web search. It is close to the consumer apps, but not identical to them.",
@@ -40,7 +40,7 @@ export const HOME = {
     picked: "מי נבחר במקומך", youRow: "אינסטלציה לדוגמה (אתה)",
     caption: "המחשה בלבד: עסק פיקטיבי ומספרים לדוגמה, לא סריקה אמיתית.",
     dataTitle: "נתונים אמיתיים מהסריקות שלנו, 25 באוקטובר 2026", dataLink: "למדריכים שלנו",
-    stats: [["25%-33%", "אוסטין: ", "3 עד 4 מתוך 12", " (כ-25%-33%), בדיקה כיוונית קטנה, התוצאות משתנות בין הרצות"], ["8%", "תל אביב: ", "1 מתוך 12", " הוזכר בשמו"], ["20 × 2", "שאלות בכל עיר, ב־ChatGPT וב־Gemini דרך ה־API", "", ""], ["מגמה", "בדיקה כיוונית קטנה של עסקים מקומיים. כקטגוריה לדוגמה בדקנו מרפאות שיניים. התוצאות משתנות בין הרצות.", "", ""]],
+    stats: [["25%-33%", "אוסטין: ", "3 עד 4 מתוך 12", " (כ-25%-33%), בדיקה כיוונית קטנה, התוצאות משתנות בין הרצות"], ["8%", "תל אביב: ", "1 מתוך 12", " הוזכר בשמו"], ["20 × 2", "שאלות בכל עיר, ב־ChatGPT וב־Gemini דרך ה־API", "", ""], ["מגמה", "בדיקה כיוונית קטנה של 12 עסקים מקומיים מתחום אחד. התוצאות משתנות בין הרצות.", "", ""]],
     probEy: "הבעיה", probT: "לקוחות כבר לא גוללים עשר תוצאות. הם שואלים, ומקבלים כמה שמות.",
     prob: [["תשובה אחת במקום רשימה", "מנוע AI ממליץ על כמה עסקים בודדים. אם אתה לא שם, אתה לא קיים בשיחה."], ["גוגל לא מספר לך", "כלי SEO רגילים לא מראים מה ChatGPT ו־Gemini עונים על העסק שלך."], ["המתחרים כבר שם", "בבדיקה הקטנה שלנו באוסטין ובתל אביב, רוב העסקים המקומיים שבדקנו לא הוזכרו בשמם. מי שמתקן קודם, נבחר."]],
     methEy: "איך אנחנו מודדים", methT: "שקיפות מלאה. בלי קופסה שחורה.", methP: "אנחנו משתמשים ב־API הרשמי של כל מנוע עם חיפוש ברשת, שמקרב את האפליקציות לצרכנים, אבל לא זהה להן.",
@@ -50,17 +50,17 @@ export const HOME = {
 } as const;
 export const homeFor = (l: Locale) => HOME[l];
 
-// Hero headline variant (owner picks). "A" leads with our real Tel Aviv dental sample (research/scans/day1-rerun/results-IL-1.md:
-// 12 clinics, 5 questions × ChatGPT + Gemini × 2 runs, 25.10.2026: k_named 1, ChatGPT 1/12 = 8%, Gemini 1/12 = 8%), labelled directional.
+// Hero headline variant (owner picks). "A" leads with our real Tel Aviv sample (research/scans/day1-rerun/results-IL-1.md:
+// 12 local businesses, 5 questions × ChatGPT + Gemini × 2 runs, 25.10.2026: k_named 1, ChatGPT 1/12 = 8%, Gemini 1/12 = 8%), labelled directional.
 // "B" is problem-led with no numbers. Default B until Shai chooses.
 export type HeroVariant = "A" | "B";
 export const HERO_VARIANT: HeroVariant = "B";
 export const HERO = {
   A: {
-    he: { rot: false, h1a: "בתל אביב, 11 מתוך 12 מרפאות שיניים שבדקנו לא הוזכרו ב־ChatGPT.", h1b: "העסק שלך מוזכר?",
-      lede: "בדיקה כיוונית שלנו מ־25.10.2026: רק 1 מתוך 12 מרפאות הוזכרה בשם (8%), גם ב־ChatGPT וגם ב־Gemini. זה מדגם קטן, לא מחקר. Ranky בודק את אותו הדבר על העסק שלך: איפה אתה מדורג, מי נבחר במקומך, ו־3 תיקונים." },
-    en: { rot: false, h1a: "In Tel Aviv, 11 of 12 dental clinics we checked weren't named by ChatGPT.", h1b: "Is your business named?",
-      lede: "Our directional check, 25 Oct 2026: only 1 of 12 clinics was named (8%), on ChatGPT and on Gemini. A small sample, not a study. Ranky runs the same check on your business: where you rank, who gets picked instead, and 3 fixes." },
+    he: { rot: false, h1a: "בתל אביב, 11 מתוך 12 עסקים מקומיים שבדקנו לא הוזכרו ב־ChatGPT.", h1b: "העסק שלך מוזכר?",
+      lede: "בדיקה כיוונית שלנו מ־25.10.2026: רק 1 מתוך 12 עסקים הוזכר בשם (8%), גם ב־ChatGPT וגם ב־Gemini. זה מדגם קטן, לא מחקר. Ranky בודק את אותו הדבר על העסק שלך: איפה אתה מדורג, מי נבחר במקומך, ו־3 תיקונים." },
+    en: { rot: false, h1a: "In Tel Aviv, 11 of 12 local businesses we checked weren't named by ChatGPT.", h1b: "Is your business named?",
+      lede: "Our directional check, 25 Oct 2026: only 1 of 12 local businesses was named (8%), on ChatGPT and on Gemini. A small sample, not a study. Ranky runs the same check on your business: where you rank, who gets picked instead, and 3 fixes." },
   },
   B: {
     he: { rot: true, h1a: "לקוחות מבקשים המלצה מ־", h1b: "אם אתה לא בתשובה, הם הולכים למתחרה.",

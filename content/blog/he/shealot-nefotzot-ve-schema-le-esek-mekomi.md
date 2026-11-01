@@ -72,7 +72,7 @@ Schema הוא קוד שמוסיפים לדף (בדרך כלל בפורמט JSON-
 
 **שלושה כללים חשובים:**
 1. **מה שבקוד חייב להופיע גם בדף.** לא מסמנים שאלות או פרטים שהגולש לא רואה.
-2. **בחרו את הסוג הכי מדויק.** ב-schema.org יש סוגים ספציפיים כמו Dentist, ‏Electrician, ‏Plumber ו-Attorney. אם אין סוג מתאים, השתמשו ב-LocalBusiness.
+2. **בחרו את הסוג הכי מדויק.** ב-schema.org יש סוגים ספציפיים כמו Electrician, ‏Plumber ו-Attorney. אם אין סוג מתאים, השתמשו ב-LocalBusiness.
 3. **אל תוסיפו דירוגים בעצמכם.** סימון ביקורות או דירוג שלא מבוסס על ביקורות אמיתיות באתר מפר את ההנחיות של גוגל.
 
 אחרי ההוספה, בדקו את הדף בכלי [Rich Results Test](https://search.google.com/test/rich-results) של גוגל או ב-[validator.schema.org](https://validator.schema.org).
