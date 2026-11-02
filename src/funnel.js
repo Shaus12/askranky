@@ -7,7 +7,7 @@
 //  * scan started: 'funnel.scan_started' event per accepted scan request (after CAPTCHA). scan done: stored scans (not automatic re-scans
 //    or Fix-up scans). signup: accounts created. checkout started: 'checkout.started' events. paid: 'subscription.activated' + 'order.paid'.
 // Test/admin activity is excluded.
-import crypto from 'node:crypto'; import { isOwnerEmail } from './owner.js'; import { getDb, save } from './store.js'; import { flushSources, buildSources, resetSourcesMemory } from './sources.js';
+import crypto from 'node:crypto'; import { isOwnerEmail } from './owner.js'; import { getDb, save } from './store.js'; import { flushSources, buildSources, resetSourcesMemory } from './sources.js'; import { flushEvents, buildClientEvents, resetEventsMemory } from './dropoff.js';
 // audit1: also link-preview / fetcher clients that do not say "bot" (WhatsApp, Meta's crawler, Go/Java/OkHttp/PHP clients) and our own
 // monitors, which send the header X-Ranky-Monitor: 1 (or a UA containing RankyMonitor).
 export const BOT = /^node$|undici|bot|crawl|spider|slurp|preview|monitor|facebookexternalhit|facebookcatalog|externalagent|whatsapp|telegram|discord|skype|embedly|vkshare|curl|wget|python|httpclient|http-client|okhttp|java\/|libwww|php\/|ruby|scrapy|axios|node-fetch|got \(|headless|phantom|lighthouse|pagespeed|gtmetrix|pingdom|uptime|statuscake|datadog|newrelic|render\/|screenshot/i;
@@ -17,7 +17,7 @@ export const PAGE = /^\/(?:he|en)(?:\/(?:pricing|scan|report|blog(?:\/[^/]+)?|le
 let mem = {}; let memU = {}; let lastFlush = Date.now();
 const day = (d = new Date()) => d.toISOString().slice(0, 10);
 export function flushVisits(now = new Date()) {
-  const db0 = getDb(); const ns = flushSources(db0, now); const entries = Object.entries(mem).filter(([, n]) => n > 0); if (!entries.length) { if (ns) save(); return 0; } const db = db0;
+  const db0 = getDb(); const ns = flushSources(db0, now) + flushEvents(db0, now); const entries = Object.entries(mem).filter(([, n]) => n > 0); if (!entries.length) { if (ns) save(); return 0; } const db = db0;
   for (const [d, n] of entries) db.events.push({ at: now.toISOString(), type: 'funnel.visits', day: d, n, u: memU[d] || 0 }); mem = {}; memU = {}; lastFlush = +now; save(); return entries.length;
 }
 export function countVisit(q, now = new Date()) {
@@ -34,7 +34,7 @@ export function countVisit(q, now = new Date()) {
   return true;
 }
 export const visitMiddleware = (q, r, next) => { if (q.method === 'GET' && PAGE.test(q.path)) r.on('finish', () => { if (r.statusCode === 200) countVisit(q); }); next(); };
-export const resetFunnelMemory = () => { resetSourcesMemory(); mem = {}; memU = {}; seen.clear(); salt = crypto.randomBytes(16).toString('hex'); lastFlush = Date.now(); };
+export const resetFunnelMemory = () => { resetSourcesMemory(); resetEventsMemory(); mem = {}; memU = {}; seen.clear(); salt = crypto.randomBytes(16).toString('hex'); lastFlush = Date.now(); };
 // Rejected scan requests (CAPTCHA missing/failed, validation, rate / free limits, login required, already used): aggregate by HTTP status
 // only, so a form that users submit but never get through (e.g. Turnstile blocked in an in-app browser) is visible in the funnel.
 export const scanRejectMiddleware = (q, r, next) => { r.on('finish', () => { if (r.statusCode >= 400) { getDb().events.push({ at: new Date().toISOString(), type: 'funnel.scan_rejected', status: r.statusCode }); save(); } }); next(); };
@@ -56,7 +56,7 @@ export function buildFunnel(db, now = new Date()) {
   }
   for (const [d, n] of Object.entries(mem)) add('visit', `${d}T12:00:00.000Z`, n);
   for (const [d, n] of Object.entries(memU)) add('visitor', `${d}T12:00:00.000Z`, n);
-  const since = (db.events || []).filter(e => e && /^funnel\./.test(e.type)).map(e => e.at).sort()[0] || null;
+  const since = (db.events || []).filter(e => e && /^funnel\./.test(e.type) && e.type !== 'funnel.client').map(e => e.at).sort()[0] || null;
   // scanDone is backfilled from all stored scans; scanDoneSinceTracking only counts scans after trackingSince, comparable to scanStarted.
   for (const s of Object.values(db.scans || {})) if (s && !s.auto && !s.fixupOrder && !test.has(s.accountId)) { if (s.internal) { add('internalScans', s.at); continue; } add('scanDone', s.at); if (since && s.at >= since) add('scanDoneSinceTracking', s.at); }
   for (const a of Object.values(db.accounts || {})) if (a && !a.guest && !test.has(a.id) && !isOwnerEmail(a.email)) add('signup', a.createdAt); // owner accounts (OWNER_EMAILS) are not signups
@@ -65,6 +65,7 @@ export function buildFunnel(db, now = new Date()) {
   out.scanRejectedLast7DaysByStatus = rej; // 400 validation, 401 login required, 403 CAPTCHA, 409 free scan used, 429 rate/free limit
   out.scanFailedLast7DaysByReason = failed; out.lastScanFailure = lastFail; // accepted scans that died after the CAPTCHA (no_engine = every AI engine errored)
   out.sources = buildSources(db, now, test); // utm1: per-source funnel (src/sources.js)
+  out.clientEvents = buildClientEvents(db, now); // dropoff1: where free-scan visitors stop (src/dropoff.js)
   out.trackingSince = since; // visit/scanStarted only exist from this moment (first deploy of the funnel); scanDone/signup are backfilled from stored records
   out.note = 'visit and scanStarted are counted only since trackingSince; scanDone and signup include older records; visit = server-side count of public page views (bots/prefetch/monitors excluded, no cookies, no personal data); visitor = distinct browsers per UTC day (in-memory hash only, restarts can double count); scanRejected = scan requests refused (by status); emailUnlocked = locked free scans unlocked with an email (gate1); internalScanStarted/internalScans = owner (OWNER_EMAILS) scans, excluded from scanStarted/scanDone/signup but their spend still counts; days are UTC';
   return out;

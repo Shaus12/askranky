@@ -8,6 +8,7 @@ import { ISRAELI_CITIES } from "@/lib/cities";
 import Turnstile from "./Turnstile";
 import { cityHint } from "@/lib/city-hint";
 import { GATE } from "@/lib/gate";
+import { track } from "@/lib/track";
 
 // gate1: only business name + city up front; category, website, other names and an optional email live under "more options".
 const fields = ["name", "city"] as const;
@@ -22,13 +23,13 @@ export default function ScanForm({ t, lang, onStart }: { t: Dict; lang: Locale; 
   useEffect(() => { getConfig().then((c) => { setSiteKey(c.turnstileSiteKey); setCfg(c); }); }, []);
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); const fd = new FormData(e.currentTarget); const d: Record<string, string> = {};
-    fd.forEach((v, k) => { d[k] = String(v).trim(); });
+    fd.forEach((v, k) => { d[k] = String(v).trim(); }); track("form_submit_attempted");
     if (d.name && !d.city) return setErr(a.cityRequired);
     if (!d.name || !d.city) return setErr(t.form.required);
-    if (siteKey && !d["cf-turnstile-response"]) return setErr(t.form.captcha);
+    if (siteKey && !d["cf-turnstile-response"]) { track("turnstile_missing"); return setErr(t.form.captcha); }
     // Gentle check: the name/website names a different city (e.g. "The Ritz-Carlton Herzliya" entered as Tel Aviv).
     const hint = cityHint({ name: d.name, website: d.website, city: d.city });
-    if (hint) { setErr(""); return setConfirm({ d, city: hint[lang] }); }
+    if (hint) { setErr(""); track("city_confirm_shown"); return setConfirm({ d, city: hint[lang] }); }
     go(d);
   }
   function go(d: Record<string, string>) {

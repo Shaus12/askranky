@@ -1,7 +1,7 @@
 import { parseOtherNames } from './src/names.js';
 import express from 'express'; import fs from 'node:fs'; import path from 'node:path'; import { createHash } from 'node:crypto';
 import { BRAND } from './src/brand.js'; import { PLANS, isPaid, CURRENCIES, PRODUCTS, productBilling, foundingLimit } from './src/plans.js'; import { detectCurrency, billingFor, publicPlans, usdBillingEnabled } from './src/currency.js';
-import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan } from './src/scan.js'; import { utmFrom, applyUtm } from './src/utm.js';
+import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan , recordScanFailure } from './src/scan.js'; import { sanitize as sanitizeErr } from './src/providers/http.js'; import { utmFrom, applyUtm } from './src/utm.js';
 import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail, reportSubject } from './src/email/report.js'; import { sendEmail, sendEmailSoft, emailIsMock } from './src/email/send.js';
 import * as V from './src/views.js'; import { isMockMode } from './src/providers/index.js';
 import { token, safeEqual, issueMagicLink, consumeMagic } from './src/security/tokens.js'; import { createRateLimiter } from './src/security/ratelimit.js';
@@ -12,7 +12,7 @@ import { TEST_PLAN, TEST_BILLING, TEST_CHECKOUT_TTL_MS, TEST_ACCESS_MS } from '.
 import { validSingleUseToken, looksLikeCardNumber } from './src/payments/sumit.js'; import { checkoutCsp, inlineScriptHashes, adminNonce, JQUERY_PATH, SUMIT_SCRIPT_URL } from './src/security/csp.js';
 import { startBillingCron, ymd, syncAll } from './src/jobs/billing-sync.js'; import { buildStatus, recordSync } from './src/status.js'; import { LEGAL_DOCS, legalDoc, legalPageHtml } from './src/legal.js'; import { blogPageHtml } from './src/blog.js';
 import { registerAuth } from './src/auth/routes.js'; import { googleEnabled } from './src/auth/google.js';
-import { applyCompAccounts } from './src/comp.js'; import { visitMiddleware, flushVisits, scanRejectMiddleware } from './src/funnel.js'; import { countLanding } from './src/sources.js'; import { whatsappNumber } from './src/whatsapp.js'; import { isOwnerEmail } from './src/owner.js'; import { dashboardData, dashboardCsv } from './src/dashboard.js';
+import { applyCompAccounts } from './src/comp.js'; import { visitMiddleware, flushVisits, scanRejectMiddleware } from './src/funnel.js'; import { eventHandler, scanClientLeftMiddleware } from './src/dropoff.js'; import { countLanding } from './src/sources.js'; import { whatsappNumber } from './src/whatsapp.js'; import { isOwnerEmail } from './src/owner.js'; import { dashboardData, dashboardCsv } from './src/dashboard.js';
 
 // TRUST_PROXY=1 (GO-LIVE.md) is a *string* in process.env; Express treats a string as an IP/subnet list ('1' = the address 0.0.0.1), so the proxy was
 // NOT trusted and every visitor shared the proxy's IP in all per-IP limits. Numbers become a hop count, 'true'/'false' booleans, anything else is passed through.
@@ -515,7 +515,12 @@ app.post('/api/report/:id/unlock', unlockLimiter, async (q, r) => {
   rememberLang(account, s, lang); await sendReportEmail(account, b, s, lang).catch(() => {});
   r.json({ ok: true, reportId: s.id });
 });
-app.post('/api/scan', scanRejectMiddleware, scanLimiter, captcha, async (q, r) => {
+// dropoff1: an unexpected error after the scan started (not NO_ENGINE, which runScan records itself, and not the CAP refusal before any
+// spend) used to answer 500 with nothing in logs or the funnel. Now: one sanitized log line + an aggregate scan.failed {reason:'exception'}.
+function scanException(e) { if (e?.code === 'NO_ENGINE' || e?.code === 'CAP') return; console.error(`[scan] EXCEPTION ${sanitizeErr(e?.message, 160)}`); recordScanFailure('exception'); }
+// dropoff1: privacy-safe client drop-off events (src/dropoff.js). Always 204; bots/monitors/cross-site/over-limit are dropped silently.
+app.post('/api/funnel/e', express.text({ type: 'text/plain', limit: '1kb' }), eventHandler);
+app.post('/api/scan', scanRejectMiddleware, scanClientLeftMiddleware, scanLimiter, captcha, async (q, r) => {
   const { name, website, city, email } = q.body || {}; let { category } = q.body || {};
   if (blank(email)) { // gate1 guest path: name + city only
     if (blank(city)) return r.status(400).json({ error: q.body?.lang === 'he' ? CITY_REQUIRED.he : CITY_REQUIRED.en, code: 'city_required', message: CITY_REQUIRED.en });
@@ -526,7 +531,7 @@ app.post('/api/scan', scanRejectMiddleware, scanLimiter, captcha, async (q, r) =
     const business = { id: id(10), accountId: guest.id, name: name.trim().slice(0, 120), website: website?.trim(), category: String(category).trim().slice(0, 80), city: city.trim().slice(0, 80), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
     db.businesses[business.id] = business; save();
     try { const scan = await runScan(guest, business, { utm: utmFrom(q.body) }); freeScanIps.set(q.ip, ipCount + 1); scan.locked = true; scan.lang = q.body?.lang === 'he' ? 'he' : 'en'; save(); return r.json({ reportId: scan.id, locked: true }); }
-    catch (e) { if (e.code === 'NO_ENGINE') return r.status(503).json({ error: 'scan_unavailable', code: 'scan_unavailable', message: e.message }); return r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }
+    catch (e) { scanException(e); if (e.code === 'NO_ENGINE') return r.status(503).json({ error: 'scan_unavailable', code: 'scan_unavailable', message: e.message }); return r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }
   }
   // City is required (no default anywhere): a scan for the wrong city scores 0 and looks like a broken product.
   if (blank(city)) return r.status(400).json({ error: q.body?.lang === 'he' ? CITY_REQUIRED.he : CITY_REQUIRED.en, code: 'city_required', message: CITY_REQUIRED.en });
@@ -543,7 +548,7 @@ app.post('/api/scan', scanRejectMiddleware, scanLimiter, captcha, async (q, r) =
     const scan = await runScan(account, business, { utm: utmFrom(q.body) }); if (!owner) freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
     await sendReportEmail(account, business, scan, lang);
     r.json({ reportId: scan.id });
-  } catch (e) { if (e.code === 'NO_ENGINE') return r.status(503).json({ error: 'scan_unavailable', code: 'scan_unavailable', message: e.message }); r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }
+  } catch (e) { scanException(e); if (e.code === 'NO_ENGINE') return r.status(503).json({ error: 'scan_unavailable', code: 'scan_unavailable', message: e.message }); r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }
 });
 app.get('/api/report/:id', (q, r) => { const db = getDb(); const s = Object.hasOwn(db.scans, q.params.id) ? db.scans[q.params.id] : null; if (!s) return r.status(404).json({ error: 'not found' });
   const b = db.businesses[s.businessId]; r.set('Cache-Control', 'no-store'); r.set('X-Robots-Tag', 'noindex, nofollow'); if (s.locked) return r.json(partialReport(s, b)); const hist = (b.scanIds || []).map(i => db.scans[i]).filter(Boolean); const idx = hist.findIndex(x => x.id === s.id);

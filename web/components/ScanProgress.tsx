@@ -13,6 +13,7 @@ import FreeLimitNotice from "./FreeLimitNotice";
 import LoginRequiredNotice from "./LoginRequiredNotice";
 import Reveal from "./Reveal";
 import MaskHeading from "./MaskHeading";
+import { track } from "@/lib/track";
 
 
 const TICK_MS = 500;
@@ -31,7 +32,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   const [mode, setMode] = useState<"init" | "form" | "run" | "demo">("init");
   const [biz, setBiz] = useState<Pending | null>(null); const [cfg, setCfg] = useState<Config | null>(null); const nt = demoNotices(cfg, t);
   const [step, setStep] = useState(0); const [reportId, setReportId] = useState(""); const [existing, setExisting] = useState(false); const [error, setError] = useState(""); const [used, setUsed] = useState<{ reportId?: string } | null>(null); const [loginReq, setLoginReq] = useState<{ loginUrl?: string } | null>(null);
-  const started = useRef(false); const t0 = useRef(0); const maxPct = useRef(0); const [elapsed, setElapsed] = useState(0);
+  const started = useRef(false); const waiting = useRef(false); const left = useRef(false); const t0 = useRef(0); const maxPct = useRef(0); const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     getConfig().then(setCfg);
     const q = new URLSearchParams(window.location.search);
@@ -43,11 +44,13 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   }, [lang, n]);
   // Starts the scan (from the stored pending form after /[lang] → /[lang]/scan, or directly from the form shown on this page).
   function run(p: Pending) {
-    t0.current = Date.now(); maxPct.current = 0; setElapsed(0); setBiz(p); setStep(0); setReportId(""); setExisting(false); setError(""); setUsed(null); setLoginReq(null); setMode("run");
+    t0.current = Date.now(); maxPct.current = 0; setElapsed(0); setBiz(p); setStep(0); setReportId(""); setExisting(false); setError(""); setUsed(null); setLoginReq(null); setMode("run"); track("scan_request_sent"); waiting.current = true;
     api<{ reportId: string; existing?: boolean }>("/api/scan", { body: { ...p, lang, ...getUtm() }, headers: sessionHeaders() })
-      .then((j) => { sessionStorage.removeItem(PENDING); setExisting(!!j.existing); setReportId(j.reportId); })
-      .catch((e) => { sessionStorage.removeItem(PENDING); if (e?.code === "login_required") setLoginReq({ loginUrl: typeof e.data?.loginUrl === "string" ? e.data.loginUrl : undefined }); else if (e?.code === "free_scan_used") setUsed({ reportId: typeof e.data?.reportId === "string" ? e.data.reportId : undefined }); else setError(errMessage(e, t)); });
+      .then((j) => { waiting.current = false; track("scan_report_ready"); sessionStorage.removeItem(PENDING); setExisting(!!j.existing); setReportId(j.reportId); })
+      .catch((e) => { waiting.current = false; sessionStorage.removeItem(PENDING); if (e?.code !== "login_required" && e?.code !== "free_scan_used") track("scan_error_shown"); if (e?.code === "login_required") setLoginReq({ loginUrl: typeof e.data?.loginUrl === "string" ? e.data.loginUrl : undefined }); else if (e?.code === "free_scan_used") setUsed({ reportId: typeof e.data?.reportId === "string" ? e.data.reportId : undefined }); else setError(errMessage(e, t)); });
   }
+  // dropoff1: count (once) a visitor who hides/leaves the tab while the scan request is still running.
+  useEffect(() => { const h = (ev: Event) => { if (waiting.current && !left.current && (ev.type === "pagehide" || document.visibilityState === "hidden")) { left.current = true; track("scan_progress_left"); } }; document.addEventListener("visibilitychange", h); window.addEventListener("pagehide", h); return () => { document.removeEventListener("visibilitychange", h); window.removeEventListener("pagehide", h); }; }, []);
   // Progress creeps asymptotically (never visibly stalls while a real scan takes 1-2 min); it finishes only once the server answered.
   useEffect(() => {
     if (mode !== "run") return;

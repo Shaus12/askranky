@@ -1,4 +1,5 @@
 "use client";
+import { track } from "@/lib/track";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Dict, Locale } from "@/lib/i18n";
@@ -17,7 +18,7 @@ export default function ReportView({ t, lang }: { t: Dict; lang: Locale }) {
   useEffect(() => {
     const id = idFromPath("r") || new URLSearchParams(location.search).get("id") || "";
     if (!id) { setR(sample(lang)); return; }
-    api(`/api/report/${encodeURIComponent(id)}`).then((j) => { if (j.locked) { setLocked(j); return; } setLocked(null); setR(toReport(j)); }).catch(() => setErr(t.live.notFound));
+    api(`/api/report/${encodeURIComponent(id)}`).then((j) => { if (nonce === 0) track(j.locked ? "locked_report_viewed" : "report_viewed"); if (j.locked) { setLocked(j); return; } setLocked(null); setR(toReport(j)); }).catch(() => setErr(t.live.notFound));
   }, [lang, t, nonce]);
   if (locked && !r) return <LockedReport t={t} lang={lang} data={locked} onUnlocked={() => { setLocked(null); setNonce((x) => x + 1); }} />;
   if (err || !r) return <div className="min-h-[70vh] px-5 py-24 text-center text-white"><h1 className="font-head vx-h3">{err || t.live.loading}</h1>{err && <Link href={`/${lang}/scan`} className="btn-cta mt-8">{t.hero.cta}</Link>}</div>;

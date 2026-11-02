@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { track } from "@/lib/track";
 // Cloudflare Turnstile widget. Rendered only when the server reports a site key (TURNSTILE_SITE_KEY + secret set); otherwise a no-op.
 // The widget injects a hidden "cf-turnstile-response" input into the surrounding form (read it via FormData).
 // Bump `resetKey` after a failed submit to get a fresh challenge (tokens are single use).
@@ -12,11 +13,11 @@ const load = () => (loader ||= new Promise<void>((res, rej) => {
 export default function Turnstile({ siteKey, lang, resetKey = 0 }: { siteKey: string | null; lang: string; resetKey?: number }) {
   const ref = useRef<HTMLDivElement>(null); const id = useRef<string | null>(null); const [failed, setFailed] = useState(false);
   // audit1: if the script is blocked (in-app browsers, privacy blockers) or the widget errors, say so instead of a silent dead form.
-  const fail = () => setFailed(true);
+  const fail = () => setFailed(true); const sent = useRef<Record<string, boolean>>({}); const once = (e: "turnstile_error" | "turnstile_unsupported" | "turnstile_load_failed" | "turnstile_expired") => { if (!sent.current[e]) { sent.current[e] = true; track(e); } };
   useEffect(() => {
     if (!siteKey || !ref.current) return; let dead = false; const el = ref.current;
-    const t = window.setTimeout(() => { if (!dead && !(window as any).turnstile) fail(); }, 12000);
-    load().then(() => { if (!dead && !id.current) { setFailed(false); id.current = (window as any).turnstile?.render(el, { sitekey: siteKey, language: lang, theme: "dark", "error-callback": () => { fail(); return true; }, "unsupported-callback": fail, callback: () => setFailed(false) }) ?? null; } }).catch(() => { if (!dead) fail(); });
+    const t = window.setTimeout(() => { if (!dead && !(window as any).turnstile) { once("turnstile_load_failed"); fail(); } }, 12000);
+    load().then(() => { if (!dead && !id.current) { setFailed(false); id.current = (window as any).turnstile?.render(el, { sitekey: siteKey, language: lang, theme: "dark", "error-callback": () => { once("turnstile_error"); fail(); return true; }, "unsupported-callback": () => { once("turnstile_unsupported"); fail(); }, "expired-callback": () => once("turnstile_expired"), callback: () => setFailed(false) }) ?? null; } }).catch(() => { if (!dead) { once("turnstile_load_failed"); fail(); } });
     return () => { dead = true; window.clearTimeout(t); if (id.current) { try { (window as any).turnstile?.remove(id.current); } catch {} id.current = null; } };
   }, [siteKey, lang]);
   useEffect(() => { if (resetKey && id.current) { try { (window as any).turnstile?.reset(id.current); } catch {} } }, [resetKey]);
