@@ -5,16 +5,18 @@ import { api } from "@/lib/api";
 import { GATE } from "@/lib/gate";
 import ScoreGauge from "./ScoreGauge";
 
-// gate1: partial report (served by GET /api/report/:id while the scan is locked). The server sends only the score, engines ran and the
-// top competitor names; the locked rows below are static placeholders, not hidden data. Email unlocks via POST /api/report/:id/unlock.
-export type Partial = { locked: true; business: { name: string; city: string; category: string }; scan: { id: string; at: string; mock: boolean; summary: { score: number; checks: number; engines: { ran: string[] }; topCompetitors: { name: string; count: number }[] } }; hiddenCompetitors: number };
+// gate1 + free-view: the free result (GET /api/report/:id while the scan is locked): score, who the engines named and the exact answers.
+// The email unlock (POST /api/report/:id/unlock) adds the 3-fix plan, cited sources, the emailed copy and an opt-in weekly re-check request
+// (stored, queued: no free weekly re-check runs yet, and the copy says so). The rows under "unlock" are static labels, not hidden data.
+export type Partial = { locked: true; business: { name: string; city: string; category: string }; scan: { id: string; at: string; mock: boolean; summary: { score: number; checks: number; engines: { ran: string[] }; topCompetitors: { name: string; count: number }[] }; answers?: { question: string; engine: string; text: string; mentioned: boolean }[] }; hiddenCompetitors: number; fixCount?: number };
+const ENG: Record<string, string> = { chatgpt: "ChatGPT", gemini: "Gemini" };
 export default function LockedReport({ t, lang, data, onUnlocked }: { t: Dict; lang: Locale; data: Partial; onUnlocked: () => void }) {
   const g = GATE[lang]; const s = data.scan.summary; const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); const fd = new FormData(e.currentTarget); const email = String(fd.get("email") || "").trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return setErr(g.invalid);
     setBusy(true); setErr("");
-    try { await api(`/api/report/${encodeURIComponent(data.scan.id)}/unlock`, { body: { email, lang, marketingConsent: fd.get("marketingConsent") ? "on" : "" } }); onUnlocked(); }
+    try { await api(`/api/report/${encodeURIComponent(data.scan.id)}/unlock`, { body: { email, lang, marketingConsent: fd.get("marketingConsent") ? "on" : "", weeklyRecheck: fd.get("weeklyRecheck") ? "on" : "" } }); onUnlocked(); }
     catch (x: any) { setErr(x?.code === "login_required" ? g.loginRequired : x?.code === "email_invalid" ? g.invalid : x?.code === "rate_limited" ? t.form.rateLimited.replace("{m}", "15") : g.error); }
     finally { setBusy(false); }
   }
@@ -32,6 +34,16 @@ export default function LockedReport({ t, lang, data, onUnlocked }: { t: Dict; l
           {data.hiddenCompetitors > 0 && <p className="mt-3 text-sm text-slate-400">{g.more(data.hiddenCompetitors)}</p>}
         </div>
       </div>
+      {!!data.scan.answers?.length && <div className="card mt-5 p-6" data-free-answers>
+        <h2 className="vx-h3">{g.answersTitle}</h2>
+        <p className="mt-1 text-sm text-slate-400">{g.answersSub}</p>
+        <ol className="mt-4 space-y-3">{data.scan.answers.map((a, i) => (
+          <li key={i}><details className="rounded-lg border border-white/10 bg-white/5 px-4 py-3" open={i === 0}>
+            <summary className="cursor-pointer font-semibold"><span className="break-words">{a.question}</span>
+              <span className="mt-2 flex flex-wrap gap-2 font-normal"><span className="rounded-full border border-white/15 px-2 py-0.5 text-xs text-slate-300">{ENG[a.engine] || a.engine}</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs ${a.mentioned ? "bg-score-high/15 text-emerald-200" : "bg-white/10 text-slate-300"}`}>{a.mentioned ? g.mentionedYes : g.mentionedNo}</span></span></summary>
+            <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed text-slate-300" data-answer-text>{a.text}</p></details></li>))}</ol>
+      </div>}
       <div className="card mt-5 p-6" data-unlock>
         <h2 className="vx-h3">{g.unlockTitle}</h2>
         <p className="mt-2 text-slate-300">{g.unlockBody}</p>
@@ -42,6 +54,9 @@ export default function LockedReport({ t, lang, data, onUnlocked }: { t: Dict; l
           <label className="flex items-start gap-2 text-sm text-slate-300">
             <input type="checkbox" name="marketingConsent" value="on" defaultChecked={false} className="mt-0.5 h-6 w-6 shrink-0 accent-blue-600" />
             <span>{t.form.consent}</span></label>
+          <label className="flex items-start gap-2 text-sm text-slate-300">
+            <input type="checkbox" name="weeklyRecheck" value="on" defaultChecked={false} className="mt-0.5 h-6 w-6 shrink-0 accent-blue-600" data-weekly-optin />
+            <span>{g.weeklyOptIn}</span></label>
           <p className="text-xs text-slate-400">{g.noSpam} <a className="vx-link underline" href={`/${lang}/legal/privacy`}>{t.form.privacyLink}</a>.</p>
           {err && <p role="alert" className="rounded-lg bg-score-low/15 px-3 py-2 text-sm text-red-200">{err}</p>}
           <button className="btn-cta w-full" disabled={busy}>{busy ? g.unlocking : g.unlockBtn}</button>

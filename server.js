@@ -488,12 +488,23 @@ app.get('/api/config', (q, r) => r.json({ brand: BRAND, plans: publicPlans(), us
 // rate limiter, the per-IP free-scan limit (3/day), DAILY_SPEND_CAP_USD and the plan budget, all unchanged. The per-email rule is checked
 // at unlock (a paid account still needs its own sign-in; it never receives a guest scan). Owner emails unlocking mark the scan internal.
 const GUEST_CATEGORY = { he: 'עסק מקומי', en: 'local business' };
-const PARTIAL_COMPETITORS = 3;
+// free-view (trade1 B): the locked view now shows the basic result: the score, every business the engines named (the same list the full
+// report shows) and the exact question + answer text of this free scan (with per-answer "you were mentioned" yes/no). Still withheld
+// server-side until the email unlock: the 3-fix plan, cited sources (topCitedHosts / per-answer citations), rank, sentiment, fact checks,
+// alerts, history, website and cost. The unlock adds the 3-fix plan, the source list, the emailed copy and an opt-in weekly re-check request.
 export function partialReport(s, b) {
   const sum = s.summary || {};
-  return { locked: true, demo: !!s.mock, business: { name: b.name, city: b.city, category: b.category },
-    scan: { id: s.id, at: s.at, mock: !!s.mock, summary: { score: sum.score, checks: sum.checks, engines: { ran: sum.engines?.ran || [], skipped: (sum.engines?.skipped || []).map(x => ({ engine: x.engine, reason: x.reason })) }, topCompetitors: (sum.topCompetitors || []).slice(0, PARTIAL_COMPETITORS).map(c => ({ name: c.name, count: c.count })) } },
-    hiddenCompetitors: Math.max(0, (sum.topCompetitors || []).length - PARTIAL_COMPETITORS) };
+  return { locked: true, demo: !!s.mock, business: { name: b.name, city: b.city, category: b.category, ...(b.trade ? { trade: b.trade } : {}) },
+    scan: { id: s.id, at: s.at, mock: !!s.mock, summary: { score: sum.score, checks: sum.checks, engines: { ran: sum.engines?.ran || [], skipped: (sum.engines?.skipped || []).map(x => ({ engine: x.engine, reason: x.reason })) }, topCompetitors: (sum.topCompetitors || []).map(c => ({ name: c.name, count: c.count })) },
+      answers: (s.results || []).filter(r => !r.error && typeof r.answer === 'string').map(r => ({ question: r.question, engine: r.engine, text: r.answer, mentioned: !!r.mentioned })) },
+    hiddenCompetitors: 0, fixCount: Array.isArray(s.fixes) ? s.fixes.length : 0 };
+}
+// Opt-in weekly re-check request (free-view). Stored only with explicit consent at unlock; NOT run by any scheduler yet (src/rescan.js is
+// paid-only and AUTO_RESCAN gated). Kept so the request is honoured once a free weekly re-check exists; the page says "queued, not running".
+function recordRecheckOptIn(a, b, body) {
+  const v = body?.weeklyRecheck; if (!(v === true || v === 'on' || v === '1' || v === 'true') || !b) return false;
+  a.recheck = { optIn: true, at: new Date().toISOString(), businessId: b.id, status: 'queued', lang: body?.lang === 'he' ? 'he' : 'en' };
+  getDb().events.push({ at: a.recheck.at, type: 'recheck.optin', account: a.id }); return true;
 }
 const unlockLimiter = createRateLimiter({ max: Number(process.env.UNLOCK_RATE_MAX || 10), windowMs: 15 * 60 * 1000, onLimit: (q, r, retry) => r.status(429).json({ error: 'rate_limited', code: 'rate_limited', retryAfter: retry, message: 'Too many requests' }) });
 const validEmail = e => { const v = String(e || '').trim().toLowerCase(); return v.length <= 200 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) ? v : null; };
@@ -507,13 +518,13 @@ app.post('/api/report/:id/unlock', unlockLimiter, async (q, r) => {
   const owner = isOwnerEmail(email); const known = findAccountByEmail(email);
   if (known && !owner && !paidScanAllowed(q, known)) return r.status(401).json(loginRequiredBody(lang));
   const guest = db.accounts[s.accountId]; const b = db.businesses[s.businessId]; const account = findOrCreateAccount(email);
-  recordConsent(account, q.body); if (guest?.utm && !account.utm) account.utm = guest.utm;
+  recordConsent(account, q.body); const recheck = recordRecheckOptIn(account, b, q.body); if (guest?.utm && !account.utm) account.utm = guest.utm;
   if (b) b.accountId = account.id; s.accountId = account.id; delete s.locked; s.unlockedAt = new Date().toISOString();
   if (owner) { s.internal = true; for (const e of db.events) if (e && String(e.type).endsWith('.scan_started') && guest && e.account === guest.id) e.internal = true; }
   if (guest?.guest) { guest.mergedInto = account.id; guest.usage = {}; }
   db.events.push({ at: s.unlockedAt, type: 'funnel.email_unlocked', account: account.id, ...(s.utm ? { src: s.utm } : guest?.utm ? { src: guest.utm } : {}), ...(owner ? { internal: true } : {}), ...(known ? { existingAccount: true } : {}) }); save();
   rememberLang(account, s, lang); await sendReportEmail(account, b, s, lang).catch(() => {});
-  r.json({ ok: true, reportId: s.id });
+  r.json({ ok: true, reportId: s.id, ...(recheck ? { recheck: 'queued' } : {}) });
 });
 // dropoff1: an unexpected error after the scan started (not NO_ENGINE, which runScan records itself, and not the CAP refusal before any
 // spend) used to answer 500 with nothing in logs or the funnel. Now: one sanitized log line + an aggregate scan.failed {reason:'exception'}.

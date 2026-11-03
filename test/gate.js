@@ -10,7 +10,7 @@ const outbound = []; globalThis.fetch = async (u, o) => { u = String(u); if (u.s
 let n = 0; const ok = m => { n++; console.log('  ✓', m); };
 const post = (p, body, ip = '203.0.113.20', h = {}) => realFetch(B + p, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-forwarded-for': ip, ...h }, body: JSON.stringify(body) });
 const get = p => realFetch(B + p).then(async r => ({ status: r.status, headers: r.headers, j: await r.json() }));
-const LOCKED = ['results', 'fixes', 'alerts', 'topCitedHosts', 'byEngine', 'sentiment', 'facts', 'mentionRate', 'avgRank', 'answer', 'history', 'website', 'estCostUsd'];
+const LOCKED = ['results', 'fixes', 'citations', 'rank', 'alerts', 'topCitedHosts', 'byEngine', 'sentiment', 'facts', 'mentionRate', 'avgRank', 'answer', 'history', 'website', 'estCostUsd'];
 const quiet = async f => { const w = console.warn, e = console.error; console.warn = () => {}; console.error = () => {}; try { return await f(); } finally { console.warn = w; console.error = e; } };
 try {
   const r1 = await post('/api/scan', { name: 'Sample Studio', city: 'תל אביב-יפו', lang: 'he' }); assert.equal(r1.status, 200); const j1 = await r1.json(); assert.ok(j1.reportId); assert.equal(j1.locked, true);
@@ -19,7 +19,7 @@ try {
   const p = await get(`/api/report/${j1.reportId}`); assert.equal(p.status, 200); assert.equal(p.j.locked, true); const raw = JSON.stringify(p.j);
   for (const k of LOCKED) assert.ok(!raw.includes(`"${k}"`), `partial response leaks ${k}`);
   assert.equal(typeof p.j.scan.summary.score, 'number'); assert.ok(p.j.scan.summary.topCompetitors.length <= 3); assert.match(p.headers.get('x-robots-tag') || '', /noindex/); assert.equal(p.headers.get('cache-control'), 'no-store');
-  ok('partial GET /api/report/:id: score + max 3 competitor names only; no answers, fixes, sources, per-engine data or history; noindex + no-store');
+  ok('partial GET /api/report/:id: score, competitor names and answer text only (free-view); no fixes, sources, per-engine data or history; noindex + no-store');
   // funnel: guest account is not a signup yet
   assert.equal(buildFunnel(db).total.signup, 0); assert.equal(buildFunnel(db).total.scanStarted, 1); assert.equal(buildFunnel(db).total.scanDone, 1); ok('funnel: guest scan counts scanStarted + scanDone, not signup');
   assert.equal((await post(`/api/report/${j1.reportId}/unlock`, { email: 'not-an-email' })).status, 400);
