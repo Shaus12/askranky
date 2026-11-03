@@ -46,6 +46,10 @@ export const LANDING_HE = {
   ],
   honestT: "מה אנחנו לא מבטיחים",
   honest: "לא נבטיח שתופיעו. רק ChatGPT ו-Gemini. התשובות משתנות בין בדיקות.",
+  // Founder note: draft wording verbatim from the copy file (Shai sees and may edit it in the approval card). His name appears only here.
+  founderT: "מי עומד מאחורי Ranky",
+  founder: "בניתי את Ranky כי ראיתי שאנשים שואלים את ChatGPT על עסקים, ובעלי העסקים לא יודעים מה הוא עונה.",
+  founderSig: "— שי, בת ים",
   faqT: "שאלות ותשובות",
   faq: [
     ["מה זה בעצם?", "בדיקה שמראה אם ChatGPT ו-Gemini ממליצים על העסק שלכם כשלקוח שואל עליו."],

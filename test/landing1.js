@@ -31,4 +31,11 @@ assert.ok(/<link rel="canonical" href="https:\/\/askranky.com\/he"/.test(html) &
 const css = fs.readFileSync('web/components/landing-dark.css', 'utf8'); assert.match(css, /prefers-reduced-motion/); assert.match(css, /focus-visible/); assert.ok(!/@import|url\(http/.test(css));
 assert.ok(!fs.readFileSync('web/components/HeLanding.tsx', 'utf8').includes('"use client"')); ok('dark style scoped to .lpd, CSS-only aurora, reduced-motion + focus-visible, no external CSS; server component');
 assert.ok(en.includes('Not measured yet, coming soon:') && en.includes('class="v3-win"') && !en.includes('class="lpd"')); ok('en: home unchanged (old layout, "coming soon" line kept)');
+const fsec = html.slice(html.indexOf('data-note="founder"'), html.indexOf('id="faq"')); const fvis = vis(fsec);
+assert.ok(fvis.includes('בניתי את Ranky כי ראיתי שאנשים שואלים את ChatGPT על עסקים, ובעלי העסקים לא יודעים מה הוא עונה.') && fvis.includes('— שי, בת ים')); assert.ok(!/<img/.test(fsec));
+assert.ok(html.indexOf('data-note="founder"') > html.indexOf('id="pricing"') && html.indexOf('data-note="founder"') < html.indexOf('id="faq"'));
+const NAME = /(^|[\s,—(])שי([\s,.)]|$)|שוטשוילי|Shai|Shotashvili/; assert.ok(!NAME.test(vis(html.slice(html.indexOf('class="lpd"'), html.indexOf('<footer')).replace(fsec, ' '))), 'founder name outside the founder note');
+ok('he: founder note with the exact draft text (no photo), between pricing and FAQ; founder name nowhere else in the page body');
+assert.ok(!fs.readFileSync('web/components/HeLanding.tsx', 'utf8').match(/<Link[^>]*legal\//)); assert.ok(!fs.readFileSync('web/components/Pricing.tsx', 'utf8').match(/<Link[^>]*legal\//));
+ok('legal links are plain <a> (no next/link RSC prefetch of server-rendered legal pages, which 404ed)');
 console.log(`ALL LANDING1 TESTS PASSED (${n})`);

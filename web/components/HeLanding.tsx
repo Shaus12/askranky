@@ -83,7 +83,7 @@ export default function HeLanding({ t }: { t: Dict }) {
             <p className="lpd-lede">{c.pricingIntro}</p>
             <div className="lpd-card lpd-hl lpd-fixup" data-plan="fixup">
               <div><h3 className="lpd-h3">{c.fixup.name}</h3><p className="lpd-ptext">{c.fixup.body}</p>
-                <p className="lpd-fine" data-fixup-guarantee>{c.fixup.refund} <Link href={`${base}/legal/refunds`}>{c.fixup.refundLink}</Link></p></div>
+                <p className="lpd-fine" data-fixup-guarantee>{c.fixup.refund} <a href={`${base}/legal/refunds`}>{c.fixup.refundLink}</a></p></div>
               <div className="lpd-fixup-r"><p className="lpd-price" dir="ltr">{c.fixup.price}</p><Link href={`${base}/checkout?plan=fixup`} className="lpd-btn">{c.fixup.cta}</Link></div>
             </div>
             <div className="lpd-grid3 lpd-plans">
@@ -96,6 +96,13 @@ export default function HeLanding({ t }: { t: Dict }) {
                 </div>))}
             </div>
             <div className="lpd-card lpd-honest"><h3 className="lpd-h3">{c.honestT}</h3><p className="lpd-ptext">{c.honest}</p></div>
+          </div>
+        </section>
+
+        <section id="founder-note" className="lpd-sec scroll-mt-16" aria-labelledby="lpd-founder-t" data-note="founder">
+          <div className="lpd-wrap lpd-narrow">
+            <h2 id="lpd-founder-t" className="lpd-label">{c.founderT}</h2>
+            <figure className="lpd-card lpd-founder"><blockquote className="lpd-fquote">{c.founder}</blockquote><figcaption className="lpd-fsig">{c.founderSig}</figcaption></figure>
           </div>
         </section>
 

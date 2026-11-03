@@ -30,7 +30,7 @@ export default function Pricing({ t, lang }: { t: Dict; lang: Locale }) {
         <p className="mt-4 text-sm font-semibold text-slate-200">{t.pricing.fixup.stackTitle}</p>
         <ul className="mt-2 grid gap-2 text-slate-300 sm:grid-cols-2" data-fixup-stack>{t.pricing.fixup.items.map((it) => <li key={it} className="flex gap-2"><span aria-hidden className="text-sky-400">✓</span>{it}</li>)}</ul>
         <p className="mt-3 text-sm text-slate-400">{t.pricing.fixup.manual}</p>
-        <p className="mt-2 text-sm text-slate-300" data-fixup-guarantee>{t.pricing.fixup.guarantee} <Link className="underline" href={`/${lang}/legal/refunds`}>{t.pricing.fixup.terms}</Link></p></div>
+        <p className="mt-2 text-sm text-slate-300" data-fixup-guarantee>{t.pricing.fixup.guarantee} <a className="underline" href={`/${lang}/legal/refunds`}>{t.pricing.fixup.terms}</a></p></div>
       <div className="text-center md:text-end"><div className="font-head text-5xl font-bold text-white"><span dir="ltr" data-price="fixup">{t.pricing.fixup.price}</span></div><p className="text-sm text-slate-400">{t.pricing.fixup.once}</p>
         <Link href={`/${lang}/checkout?plan=fixup`} className="btn-cta mt-4">{t.pricing.fixup.cta}</Link></div>
     </div>
@@ -56,7 +56,7 @@ export default function Pricing({ t, lang }: { t: Dict; lang: Locale }) {
       <span className="rounded-full bg-brand-600 px-3 py-1 text-xs font-semibold text-white">{t.pricing.founding.badge}</span>
       <h3 className="mt-3 text-lg font-bold text-white">{t.pricing.founding.title.replace("{n}", String(data.founding.limit))}</h3>
       <p className="mx-auto mt-2 max-w-2xl text-slate-300">{t.pricing.founding.body.replace("{n}", String(data.founding.limit))}</p>
-      <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-400" data-guarantee>{t.pricing.founding.guarantee} <Link className="underline" href={`/${lang}/legal/refunds`}>{t.pricing.founding.terms}</Link></p>
+      <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-400" data-guarantee>{t.pricing.founding.guarantee} <a className="underline" href={`/${lang}/legal/refunds`}>{t.pricing.founding.terms}</a></p>
     </div>}
     <p data-reveal className="mx-auto mt-6 max-w-2xl text-center text-sm text-slate-400">{t.pricing.vatNote}</p>
   </>);

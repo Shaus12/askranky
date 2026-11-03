@@ -30,7 +30,7 @@ export default async function Page({ params }: { params: Promise<{ lang: string 
         <dl className="mt-8 space-y-5">{p.faq.map(([q, a]) => <div data-reveal key={q} className="card p-5"><dt className="font-bold text-white">{q}</dt><dd className="mt-2 text-slate-300">{a}</dd></div>)}</dl>
         <div data-reveal className="mt-8 flex flex-wrap justify-center gap-3">
           <Link href={`/${lang}/scan`} className="btn-cta">{p.scan}</Link>
-          <Link href={`/${lang}/legal/refunds`} className="btn-outline">{p.refunds}</Link>
+          <a href={`/${lang}/legal/refunds`} className="btn-outline">{p.refunds}</a>
         </div>
       </Reveal>
     </main></div><Footer t={t} lang={lang} /></>);
