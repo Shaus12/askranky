@@ -27,7 +27,7 @@ export default function Hero({ t, lang }: { t: Dict; lang: Locale }) {
           <a href="#how" className="hm-btn-d hm-btn-lg">{m.how}</a>
         </div>
         <p className="hm-xs hm-in hm-d4 hm-note">{h.note}</p>
-        <p className="hm-soon hm-in hm-d4" data-engines-soon><span>{lang === "he" ? "עדיין לא נבדקים, בקרוב:" : "Not measured yet, coming soon:"}</span> <span dir="ltr">Perplexity · Copilot · Claude</span></p>
+        {lang === "en" && <p className="hm-soon hm-in hm-d4" data-engines-soon><span>Not measured yet, coming soon:</span> <span dir="ltr">Perplexity · Copilot · Claude</span></p>}
 
         <div className="hm-in hm-d4"><AgentDemo d={home3For(lang).demo} /></div>
       </section>

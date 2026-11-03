@@ -1,4 +1,3 @@
-import { LANDING_HE } from "@/lib/landing-he";
 import type { Metadata } from "next";
 import type { Locale } from "./i18n";
 import { dict } from "./i18n";
@@ -61,6 +60,6 @@ export function siteJsonLd(lang: Locale, checkoutLive = process.env.NEXT_PUBLIC_
 }
 // FAQPage from the FAQ items that are visible on the home page.
 export const faqJsonLd = (lang: Locale) => ({ "@context": "https://schema.org", "@type": "FAQPage", inLanguage: lang === "he" ? "he-IL" : "en-US",
-  mainEntity: (lang === "he" ? LANDING_HE.faq : dict(lang).faq.items).map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) });
+  mainEntity: dict(lang).faq.items.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) });
 // Safe for <script> embedding: escape "<" so no "</script>" can appear inside the JSON.
 export const ldScript = (o: unknown) => JSON.stringify(o).replace(/</g, "\\u003c");

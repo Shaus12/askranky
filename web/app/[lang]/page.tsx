@@ -20,32 +20,32 @@ import { home3For } from "@/lib/home-v3";
 import JobsTabs from "@/components/JobsTabs";
 import { ContextBento, FeatureGrid, CommandCenter } from "@/components/HomeV3Sections";
 import { postsFor, fmtDate } from "@/lib/blog";
-import HeLanding from "@/components/HeLanding";
+import { LANDING_HE } from "@/lib/landing-he";
 
 export default async function Landing({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: l } = await params; const lang = (isLocale(l) ? l : "en") as Locale; const t = dict(lang); const h = t.hero; const m = homeFor(lang); const v = home3For(lang); const posts = postsFor(lang).slice(0, 3);
-  if (lang === "he") return (
-    <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldScript(faqJsonLd(lang)) }} />
-      <Nav t={t} lang={lang} />
-      <HeLanding t={t} />
-      <Footer t={t} lang={lang} />
-      <StickyScanCta lang={lang} label={t.growth.freeScan} />
-    </>
-  );
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldScript(faqJsonLd(lang)) }} />
       <Nav t={t} lang={lang} />
       <Hero t={t} lang={lang} />
       <main className="vx-below text-white">
+        {lang === "he" ? <section id="data" className="hm-sec scroll-mt-16" aria-labelledby="hm-data-t" data-proof><div className="hm-wrap">
+          <div className="hm-datahead"><h2 id="hm-data-t" className="hm-ps">{LANDING_HE.proofEy}</h2></div>
+          <div className="hm-cells">
+            {LANDING_HE.proof.map((p) => (
+              <div key={p.big} className="hm-cell"><p className="hm-stat" dir="ltr">{p.big}</p><p className="hm-ps">{p.text}</p>
+                <p className="hm-xs mt-2">{LANDING_HE.sourceLabel}: <a className="underline" data-source href={p.url} target="_blank" rel="noopener noreferrer nofollow">{p.src}</a></p></div>))}
+            <div className="hm-cell"><p className="hm-stat sm">ארה&quot;ב</p><p className="hm-ps">{LANDING_HE.proofNote}</p></div>
+          </div>
+        </div></section> :
         <section id="data" className="hm-sec scroll-mt-16" aria-labelledby="hm-data-t"><div className="hm-wrap">
           <div className="hm-datahead"><h2 id="hm-data-t" className="hm-ps">{m.dataTitle}</h2><Link className="hm-ps" href={`/${lang}/blog`}>{m.dataLink} <span aria-hidden="true" className="inline-block rtl:rotate-180">→</span></Link></div>
           <div className="hm-cells">
             {m.stats.map(([big, a, b, c], i) => (
               <div key={i} className="hm-cell"><p className={i === 3 ? "hm-stat sm" : "hm-stat"} dir={i === 3 ? undefined : "ltr"}>{big}</p><p className="hm-ps">{a}{b && <b>{b}</b>}{c}</p></div>))}
           </div>
-        </div></section>
+        </div></section>}
 
         <section className="hm-sec"><div className="hm-wrap hm-pad">
           <p className="hm-mono">{m.probEy}</p>
@@ -67,7 +67,7 @@ export default async function Landing({ params }: { params: Promise<{ lang: stri
 
         <section id="home-sample" className="vx-section relative scroll-mt-16 !pb-0" aria-labelledby="home-sample-t">
           <div className="mx-auto max-w-6xl px-5 text-center"><h2 id="home-sample-t" className="vx-h3">{SAMPLE_COPY[lang].title}</h2><p className="vx-lede mt-3">{SAMPLE_COPY[lang].sub}</p></div>
-          <div className="mt-8 px-5"><HomeSample lang={lang} /></div>
+          <div className="mt-8 px-5">{lang === "he" && <span id="sample" className="block scroll-mt-16" aria-hidden />}<HomeSample lang={lang} /></div>
         </section>
 
         <Reveal as="section" id="scan-form" className="vx-section mx-auto grid max-w-6xl scroll-mt-20 items-center gap-12 !pt-10 md:grid-cols-[1.05fr_1fr]">
@@ -97,19 +97,25 @@ export default async function Landing({ params }: { params: Promise<{ lang: stri
           </ol>
         </Reveal>
 
-        <section id="sample" className="vx-depth vx-section relative scroll-mt-16">
+        {lang !== "he" &&         <section id="sample" className="vx-depth vx-section relative scroll-mt-16">
           <span className="hairline absolute inset-x-0 top-0 block" />
           <div className="mx-auto max-w-6xl">
             <Reveal><SectionHead eyebrow={t.nav.sample} title={t.sample.title} sub={t.sample.sub} /></Reveal>
             <div className="mt-14"><SampleReportHome t={t} lang={lang} /></div>
             <div className="mt-10 text-center"><Link href={`/${lang}/report`} className="btn-outline">{t.sample.open} <span aria-hidden className="inline-block rtl:rotate-180">→</span></Link></div>
           </div>
-        </section>
+        </section>}
 
         <Reveal as="section" id="pricing" className="vx-section relative mx-auto max-w-6xl scroll-mt-16">
           <SectionHead eyebrow={t.nav.pricing} title={t.pricing.title} sub={t.pricing.sub} />
           <Pricing t={t} lang={lang} />
         </Reveal>
+
+        {lang === "he" && <Reveal as="section" id="founder-note" className="vx-section mx-auto max-w-3xl scroll-mt-16 !pt-0">
+          <span data-note="founder" hidden />
+          <h2 data-reveal className="text-center text-sm font-semibold text-slate-400">{LANDING_HE.founderT}</h2>
+          <figure data-reveal className="card mt-5 p-7 text-center"><blockquote className="font-head text-xl leading-relaxed text-white">{LANDING_HE.founder}</blockquote><figcaption className="mt-4 text-slate-400">{LANDING_HE.founderSig}</figcaption></figure>
+        </Reveal>}
 
         {FOUNDER_PHOTO_READY && <Reveal as="section" id="founder" className="vx-section mx-auto max-w-6xl scroll-mt-16 !pt-0">
           <SectionHead eyebrow={founderFor(lang).eyebrow} title={founderFor(lang).title} />
