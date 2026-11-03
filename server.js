@@ -98,7 +98,7 @@ app.get('/healthz', (q, r) => r.set('Cache-Control', 'no-store').json({ ok: true
 // Not behind the CAPTCHA. Only wrong-secret attempts are rate limited (CRON_FAIL_MAX per 15 min per IP). Concurrent runs are collapsed
 // by an in-process lock (the second caller gets 202 {running:true}). The sync is idempotent. Responses never include sync data.
 import { runRescans, autoRescanEnabled, nextScanAt } from './src/rescan.js'; import { runDigest, digestEnabled } from './src/digest.js'; import { runFixupScans, fixupScansEnabled } from './src/fixup.js';
-import { runWeekly } from './src/weekly.js'; import { runAlerts, alertsEnabled } from './src/alerts.js'; import { runFollowup, followupEmailsEnabled } from './src/followup.js';
+import { runWeekly } from './src/weekly.js'; import { runAlerts, alertsEnabled } from './src/alerts.js'; import { runFollowup, followupEmailsEnabled } from './src/followup.js'; import { categoryFromBody } from './src/trades.js';
 export const cronHooks = { sync: syncAll, weekly: () => runWeekly({ base: BASE }), followup: () => runFollowup({ base: BASE, send: sendEmailSoft, allow: reportEmailAllowed }), alerts: () => runAlerts({ base: BASE, send: sendEmailSoft, allow: reportEmailAllowed }), rescan: () => runRescans(), digest: () => runDigest({ base: BASE, send: sendEmailSoft }), fixup: () => runFixupScans() };
 const cronFailLimiter = createRateLimiter({ max: Number(process.env.CRON_FAIL_MAX || 10), windowMs: 15 * 60 * 1000, onLimit: (q, r) => r.status(429).json({ ok: false }) });
 // Same semantics for every cron endpoint: 404 disabled, 401 wrong secret, 202 already running, 500 {ok:false}, 200 {ok, ranAt}. `enabled` (optional)
@@ -521,14 +521,14 @@ function scanException(e) { if (e?.code === 'NO_ENGINE' || e?.code === 'CAP') re
 // dropoff1: privacy-safe client drop-off events (src/dropoff.js). Always 204; bots/monitors/cross-site/over-limit are dropped silently.
 app.post('/api/funnel/e', express.text({ type: 'text/plain', limit: '1kb' }), eventHandler);
 app.post('/api/scan', scanRejectMiddleware, scanClientLeftMiddleware, scanLimiter, captcha, async (q, r) => {
-  const { name, website, city, email } = q.body || {}; let { category } = q.body || {};
+  const { name, website, city, email } = q.body || {}; let { category, trade } = categoryFromBody(q.body || {}); // trade1: trade id from the form list, or free-text category (old shape)
   if (blank(email)) { // gate1 guest path: name + city only
     if (blank(city)) return r.status(400).json({ error: q.body?.lang === 'he' ? CITY_REQUIRED.he : CITY_REQUIRED.en, code: 'city_required', message: CITY_REQUIRED.en });
     if (blank(name)) return r.status(400).json({ error: 'Please fill all required fields.' });
     const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).json({ error: 'free_limit_reached', code: 'free_limit_reached', message: 'Free scan limit reached for today.' });
     if (blank(category)) category = GUEST_CATEGORY[q.body?.lang === 'he' ? 'he' : 'en'];
     const db = getDb(); const guest = { id: id(10), key: token(32), email: null, guest: true, plan: 'free', createdAt: new Date().toISOString(), usage: {} }; db.accounts[guest.id] = guest; applyUtm(guest, q.body);
-    const business = { id: id(10), accountId: guest.id, name: name.trim().slice(0, 120), website: website?.trim(), category: String(category).trim().slice(0, 80), city: city.trim().slice(0, 80), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
+    const business = { id: id(10), accountId: guest.id, name: name.trim().slice(0, 120), website: website?.trim(), category: String(category).trim().slice(0, 80), city: city.trim().slice(0, 80), ...(trade ? { trade } : {}), ...(trade ? { trade } : {}), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
     db.businesses[business.id] = business; save();
     try { const scan = await runScan(guest, business, { utm: utmFrom(q.body) }); freeScanIps.set(q.ip, ipCount + 1); scan.locked = true; scan.lang = q.body?.lang === 'he' ? 'he' : 'en'; save(); return r.json({ reportId: scan.id, locked: true }); }
     catch (e) { scanException(e); if (e.code === 'NO_ENGINE') return r.status(503).json({ error: 'scan_unavailable', code: 'scan_unavailable', message: e.message }); return r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }
@@ -542,7 +542,7 @@ app.post('/api/scan', scanRejectMiddleware, scanClientLeftMiddleware, scanLimite
   const hit = owner ? null : freeScanLookup(db, account, q.body); // owner1: OWNER_EMAILS skip the one-free-scan rule
   if (hit && hit.same) return r.json({ reportId: hit.reportId, existing: true });
   if (hit) return r.status(409).json(freeUsedBody(hit, q.body?.lang));
-  const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim().slice(0, 80), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
+  const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim().slice(0, 80), ...(trade ? { trade } : {}), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
   db.businesses[business.id] = business; save();
   try {
     const scan = await runScan(account, business, { utm: utmFrom(q.body) }); if (!owner) freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);

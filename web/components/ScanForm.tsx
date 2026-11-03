@@ -9,22 +9,25 @@ import Turnstile from "./Turnstile";
 import { cityHint } from "@/lib/city-hint";
 import { GATE } from "@/lib/gate";
 import { track } from "@/lib/track";
+import { TRADES } from "@/lib/trades";
 
-// gate1: only business name + city up front; category, website, other names and an optional email live under "more options".
-const fields = ["name", "city"] as const;
-const extra = ["category", "website", "email"] as const;
+// gate1 + trade1: trade (from a list of ~20, or "other" with free text) + city, then the business name (needed to find it in the answers).
+// Website, other names and an optional email live under "more options". The trade id goes to POST /api/scan as `trade`.
+const extra = ["website", "email"] as const;
 export const PENDING = "ranky-pending-scan";
 // Collects the business details, then hands off to /[lang]/scan which calls POST /api/scan while showing progress.
 // `onStart`: used when the form already lives on /[lang]/scan (router.push to the same URL would do nothing); the parent runs the scan directly.
 export default function ScanForm({ t, lang, onStart }: { t: Dict; lang: Locale; onStart?: (p: Record<string, string>) => void }) {
   const h = t.hero; const router = useRouter();
   const a = t.accuracy; const [confirm, setConfirm] = useState<{ d: Record<string, string>; city: string } | null>(null);
-  const [siteKey, setSiteKey] = useState<string | null>(null); const [err, setErr] = useState(""); const [cfg, setCfg] = useState<Config | null>(null); const [more, setMore] = useState(false); const nt = demoNotices(cfg, t);
+  const [siteKey, setSiteKey] = useState<string | null>(null); const [err, setErr] = useState(""); const [cfg, setCfg] = useState<Config | null>(null); const [more, setMore] = useState(false); const [trade, setTrade] = useState(""); const tc = GATE[lang].trade; const nt = demoNotices(cfg, t);
   useEffect(() => { getConfig().then((c) => { setSiteKey(c.turnstileSiteKey); setCfg(c); }); }, []);
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); const fd = new FormData(e.currentTarget); const d: Record<string, string> = {};
     fd.forEach((v, k) => { d[k] = String(v).trim(); }); track("form_submit_attempted");
     if (d.name && !d.city) return setErr(a.cityRequired);
+    if (!d.trade || (d.trade === "other" && !d.category)) return setErr(tc.required);
+    if (d.trade === "other") delete d.trade; else delete d.category;
     if (!d.name || !d.city) return setErr(t.form.required);
     if (siteKey && !d["cf-turnstile-response"]) { track("turnstile_missing"); return setErr(t.form.captcha); }
     // Gentle check: the name/website names a different city (e.g. "The Ritz-Carlton Herzliya" entered as Tel Aviv).
@@ -41,10 +44,20 @@ export default function ScanForm({ t, lang, onStart }: { t: Dict; lang: Locale; 
   }
   return (
     <form onSubmit={submit} className="card space-y-3 p-6 md:p-7" noValidate>
-      {fields.map((f) => (<label key={f} className="vx-label">{h.form[f]}<span className="text-sky-300" aria-hidden> *</span>
-          <input name={f} type="text" placeholder={h.ph[f]} list={f === "city" ? "il-cities" : undefined} autoComplete={f === "city" ? "off" : "organization"} required
-            className="vx-input" onChange={f === "city" ? () => setConfirm(null) : undefined} />
-        </label>))}
+      <div className="grid gap-3 sm:grid-cols-2" data-trade-city>
+        <label className="vx-label">{tc.label}<span className="text-sky-300" aria-hidden> *</span>
+          <select name="trade" required value={trade} onChange={(e) => setTrade(e.target.value)} className="vx-input" data-trade>
+            <option value="" disabled>{tc.placeholder}</option>
+            {TRADES.map((x) => <option key={x.id} value={x.id}>{x[lang]}</option>)}
+            <option value="other">{tc.other}</option>
+          </select></label>
+        {(["city"] as const).map((f) => (<label key={f} className="vx-label">{h.form[f]}<span className="text-sky-300" aria-hidden> *</span>
+          <input name={f} type="text" placeholder={h.ph[f]} list="il-cities" autoComplete="off" required className="vx-input" onChange={() => setConfirm(null)} /></label>))}
+      </div>
+      {trade === "other" && <label className="vx-label">{tc.otherLabel}<span className="text-sky-300" aria-hidden> *</span>
+        <input name="category" type="text" maxLength={80} placeholder={tc.otherPh} className="vx-input" data-trade-other /></label>}
+      <label className="vx-label">{h.form.name}<span className="text-sky-300" aria-hidden> *</span>
+        <input name="name" type="text" placeholder={h.ph.name} autoComplete="organization" required className="vx-input" /></label>
       <div data-more-options>
           <button type="button" aria-expanded={more} aria-controls="scan-more-options" data-more-toggle onClick={() => setMore((m) => !m)}
             className="inline-flex min-h-[44px] items-center gap-1.5 text-sm font-medium text-slate-300 underline-offset-4 hover:underline">

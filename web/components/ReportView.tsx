@@ -8,6 +8,7 @@ import { demoNotices } from "@/lib/notices";
 import ReportBody from "./ReportBody";
 import Reveal from "./Reveal";
 import MaskHeading from "./MaskHeading";
+import { GATE } from "@/lib/gate";
 import LockedReport, { type Partial } from "./LockedReport";
 
 const ENG = { chatgpt: "ChatGPT", gemini: "Gemini", perplexity: "Perplexity" } as Record<string, string>;
@@ -37,6 +38,12 @@ export default function ReportView({ t, lang }: { t: Dict; lang: Locale }) {
       </Reveal>
       <main className="mx-auto max-w-6xl px-5 pb-20">
         <ReportBody t={t} lang={lang} data={r} />
+        {r.live && <div className="card mt-12 p-6 md:p-8" data-weekly-cta>
+          {/* trade1: weekly re-check CTA. Wording follows what runs: automatic weekly re-scans only when the server reports AUTO_RESCAN on. */}
+          <h2 className="vx-h3">{GATE[lang].weekly.title}</h2>
+          <p className="mt-2 text-slate-300">{cfg?.autoRescan ? GATE[lang].weekly.auto : GATE[lang].weekly.manual}</p>
+          <Link href={`/${lang}/checkout?plan=pro`} className="btn-outline mt-5" data-cta="weekly-recheck">{GATE[lang].weekly.btn} <span aria-hidden className="rtl:rotate-180">→</span></Link>
+        </div>}
         <Reveal className="card relative mt-12 overflow-hidden p-10 text-center md:p-14">
           <span className="vx-glowline" aria-hidden />
           <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-full bg-[radial-gradient(60%_80%_at_50%_120%,rgba(37,99,235,.35),transparent_70%)]" />

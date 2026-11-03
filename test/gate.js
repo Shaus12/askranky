@@ -53,7 +53,7 @@ try {
   const cap = await quiet(() => post('/api/scan', { name: 'Sample 8', city: 'Haifa', lang: 'en' }, '192.0.2.71')); assert.equal(cap.status, 429); assert.equal(outbound.length, 0);
   for (const k of ['SCAN_MODE', 'OPENAI_API_KEY', 'LIVE_ENGINES', 'DAILY_SPEND_CAP_USD']) delete process.env[k]; ok('DAILY_SPEND_CAP_USD enforced on the guest path before any engine call');
   const src = fs.readFileSync('web/components/ScanForm.tsx', 'utf8') + fs.readFileSync('web/lib/gate.ts', 'utf8') + fs.readFileSync('web/components/LockedReport.tsx', 'utf8');
-  assert.match(src, /const fields = \["name", "city"\] as const/); assert.ok(!/dent|שיניים|perplexity|claude|copilot/i.test(fs.readFileSync('web/lib/gate.ts', 'utf8'))); ok('form asks for name + city only; gate copy has no dentist wording and no non-live engine claims');
+  assert.match(src, /name="trade"/); assert.match(src, /name="name"/); assert.match(src, /name={f}[^\n]*list="il-cities"/); assert.ok(!/dent|שיניים|perplexity|claude|copilot/i.test(fs.readFileSync('web/lib/gate.ts', 'utf8'))); ok('form asks for name + city only; gate copy has no dentist wording and no non-live engine claims');
   assert.match(fs.readFileSync('docs/ANALYTICS.md', 'utf8'), /emailUnlocked/); ok('docs/ANALYTICS.md documents emailUnlocked');
   console.log(`gate: ${n} checks passed`);
 } finally { srv.close(); TD.done(); }

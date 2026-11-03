@@ -1,7 +1,9 @@
 // gate1: copy for the email-gated free scan (Hebrew first). Only ChatGPT and Gemini are live engines; no category-specific examples.
 export const GATE = {
   he: {
-    formNote: "רק שם העסק והעיר. מקבלים ציון מיד, ואת הדוח המלא שולחים למייל אם רוצים.",
+    formNote: "תחום, עיר ושם העסק. מקבלים ציון מיד, ואת הדוח המלא שולחים למייל אם רוצים.",
+    weekly: { title: "לבדוק שוב כל שבוע", auto: "התשובות של ChatGPT ו-Gemini משתנות. במסלול Pro הסריקה רצה מחדש אוטומטית כל שבוע, ואפשר לראות אם עליתם או ירדתם.", manual: "התשובות של ChatGPT ו-Gemini משתנות. במסלול Pro אפשר להריץ סריקה חוזרת מהדשבורד כל שבוע ולראות אם עליתם או ירדתם.", btn: "למסלול Pro" },
+    trade: { label: "תחום העסק", placeholder: "בחרו תחום", other: "אחר (לכתוב בעצמי)", otherLabel: "מה התחום?", otherPh: "למשל: מתקין מזגנים", required: "נא לבחור את תחום העסק." },
     emailOptional: "מייל (לא חובה, אפשר גם אחרי הסריקה)",
     lockedEyebrow: "תוצאה חלקית",
     scoreLabel: "ציון הנראות שלך ב-ChatGPT וב-Gemini",
@@ -20,7 +22,9 @@ export const GATE = {
     lockedRows: ["תשובות מלאות לכל שאלה", "המקום שלך בכל מנוע", "אתרים ש-AI מצטט", "3 תיקונים מוכנים"],
   },
   en: {
-    formNote: "Just your business name and city. You get a score right away, and the full report by email if you want it.",
+    formNote: "Your trade, city and business name. You get a score right away, and the full report by email if you want it.",
+    weekly: { title: "Re-check every week", auto: "ChatGPT and Gemini answers change. On the Pro plan the scan re-runs automatically every week, so you can see if you moved up or down.", manual: "ChatGPT and Gemini answers change. On the Pro plan you can re-run the scan from your dashboard every week and see if you moved up or down.", btn: "Go to the Pro plan" },
+    trade: { label: "Your trade", placeholder: "Choose a trade", other: "Other (type it in)", otherLabel: "What is your trade?", otherPh: "e.g. AC installer", required: "Please choose your trade." },
     emailOptional: "Email (optional, you can add it after the scan)",
     lockedEyebrow: "Partial result",
     scoreLabel: "Your visibility score in ChatGPT and Gemini",

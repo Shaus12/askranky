@@ -1,6 +1,7 @@
 // Buyer-intent question templates. Hebrew templates are used when the business is Hebrew
 // (lang:'he', or Hebrew letters in category/city).
 import { localizeCity } from './cities.js';
+import { tradeById } from './trades.js';
 // {cat} = category, {city} = city, {inCity} = city with the Hebrew "ב" prefix ("בתל אביב-יפו", "ב-Dubai").
 // Category-specific question sets (5 per free scan, more for paid plans). Each set: 15 EN + 15 HE templates.
 // The "generic" set is the original 15-question list. "health" and "services" start with the same first five generic
@@ -95,9 +96,11 @@ export const HEBREW = /[\u0590-\u05FF]/;
 export const businessLang = b => (b.lang === 'he' || b.lang === 'en') ? b.lang : (HEBREW.test(`${b.category || ''}${b.city || ''}${b.name || ''}`) ? 'he' : 'en');
 export function buildQuestions(business, limit) {
   const lang = businessLang(business);
-  const cat = lang === 'he' ? business.category.trim() : business.category.toLowerCase();
+  // trade1: a trade picked from the form list asks about its field term ("בתחום אינסטלציה") with its own question set.
+  const tr = tradeById(business.trade);
+  const cat = tr ? (lang === 'he' ? tr.heQ : tr.enQ) : lang === 'he' ? business.category.trim() : business.category.toLowerCase();
   const city = localizeCity(business.city, lang);
   // Hebrew "ב" prefix is glued to Hebrew names ("בחיפה") and hyphenated to Latin/digit names ("ב-Haifa").
   const inCity = /^[\u0590-\u05FF]/.test(city) ? `ב${city}` : `ב-${city}`;
-  return SETS[categorySet(business.category)][lang].slice(0, limit).map(t => t.replaceAll('{cat}', cat).replaceAll('{inCity}', inCity).replaceAll('{city}', city));
+  return SETS[tr ? tr.set : categorySet(business.category)][lang].slice(0, limit).map(t => t.replaceAll('{cat}', cat).replaceAll('{inCity}', inCity).replaceAll('{city}', city));
 }

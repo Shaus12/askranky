@@ -1,4 +1,5 @@
 "use client";
+import { TRADES } from "@/lib/trades";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,7 +24,7 @@ function sessionHeaders(): Record<string, string> {
   try { for (let i = 0; i < sessionStorage.length; i++) { const k = sessionStorage.key(i) || ""; if (k.startsWith("ranky-key-")) { const v = sessionStorage.getItem(k); if (v) return { "x-account-id": k.slice(10), "x-dashboard-key": v }; } } } catch {}
   return {};
 }
-type Pending = { name: string; otherNames?: string; website?: string; category: string; city: string; email: string; turnstileToken?: string };
+type Pending = { name: string; otherNames?: string; website?: string; category?: string; trade?: string; city: string; email: string; turnstileToken?: string };
 
 // Shows the scan form when nothing is pending; otherwise POSTs /api/scan and animates progress until the real report id comes back.
 // ?step=N freezes a demo state (used for screenshots).
@@ -86,7 +87,7 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
       {existing && reportId && <p role="note" data-existing-note className="mx-auto mt-3 w-fit max-w-full rounded-lg border border-sky-300/30 bg-sky-300/10 px-4 py-2 text-center text-sm text-sky-100">{t.existing.runNote}</p>}
       {nt.runNote && <p role="note" data-demo-note className="mx-auto mt-3 w-fit max-w-full rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-center text-sm text-zinc-200">{nt.runNote}</p>}
       <h1 className="font-head vx-h3 mt-8 text-center" aria-live="polite">{error ? t.scanErr.title : done ? s.done : s.title}</h1>
-      {biz && <p className="mt-2 text-center text-slate-400">{[biz.name, biz.category, biz.city].join(" · ")}</p>}
+      {biz && <p className="mt-2 text-center text-slate-400">{[biz.name, TRADES.find((x) => x.id === biz.trade)?.[lang] || biz.category, biz.city].filter(Boolean).join(" · ")}</p>}
       {error ? (
         <div className="card mt-10 p-6 text-center"><p role="alert" className="text-red-200">{error}</p>
           <button onClick={() => { setError(""); setMode("form"); }} className="btn-cta mt-6">{t.scanErr.retry}</button></div>
