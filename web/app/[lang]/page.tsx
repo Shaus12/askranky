@@ -7,6 +7,8 @@ import Reveal from "@/components/Reveal";
 import SampleReportHome from "@/components/SampleReportHome";
 import StickyScanCta from "@/components/StickyScanCta";
 import ScanForm from "@/components/ScanForm";
+import HomeSample from "@/components/HomeSample";
+import { SAMPLE_COPY } from "@/lib/sample-copy";
 import Pricing from "@/components/Pricing";
 import Founder from "@/components/Founder";
 import { founderFor, FOUNDER_PHOTO_READY } from "@/lib/founder";
@@ -52,6 +54,11 @@ export default async function Landing({ params }: { params: Promise<{ lang: stri
         <ContextBento h={v} lang={lang} />
         <FeatureGrid h={v} lang={lang} />
         <CommandCenter h={v} lang={lang} />
+
+        <section id="home-sample" className="vx-section relative scroll-mt-16 !pb-0" aria-labelledby="home-sample-t">
+          <div className="mx-auto max-w-6xl px-5 text-center"><h2 id="home-sample-t" className="vx-h3">{SAMPLE_COPY[lang].title}</h2><p className="vx-lede mt-3">{SAMPLE_COPY[lang].sub}</p></div>
+          <div className="mt-8 px-5"><HomeSample lang={lang} /></div>
+        </section>
 
         <Reveal as="section" id="scan-form" className="vx-section mx-auto grid max-w-6xl scroll-mt-20 items-center gap-12 !pt-10 md:grid-cols-[1.05fr_1fr]">
           <div className="text-center md:text-start">
