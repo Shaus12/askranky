@@ -20,9 +20,19 @@ import { home3For } from "@/lib/home-v3";
 import JobsTabs from "@/components/JobsTabs";
 import { ContextBento, FeatureGrid, CommandCenter } from "@/components/HomeV3Sections";
 import { postsFor, fmtDate } from "@/lib/blog";
+import HeLanding from "@/components/HeLanding";
 
 export default async function Landing({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: l } = await params; const lang = (isLocale(l) ? l : "en") as Locale; const t = dict(lang); const h = t.hero; const m = homeFor(lang); const v = home3For(lang); const posts = postsFor(lang).slice(0, 3);
+  if (lang === "he") return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldScript(faqJsonLd(lang)) }} />
+      <Nav t={t} lang={lang} />
+      <HeLanding t={t} />
+      <Footer t={t} lang={lang} />
+      <StickyScanCta lang={lang} label={t.growth.freeScan} />
+    </>
+  );
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldScript(faqJsonLd(lang)) }} />

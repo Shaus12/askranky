@@ -5,7 +5,7 @@ const copy = fs.readFileSync('web/lib/home-v3.ts', 'utf8').replace(/^\s*\/\/.*$/
 assert.ok(!/perplexity|copilot|claude/i.test(copy)); ok('copy names only the live engines (ChatGPT, Gemini)');
 assert.ok(!/weekly|every week|מעקב שבועי|שבועי/i.test(copy)); ok('copy makes no weekly-report claim');
 assert.ok(!/testimonial|\bour customers|הלקוחות שלנו|[$₪]/i.test(copy)); ok('copy has no testimonials, customer claims or prices');
-for (const l of ['he', 'en']) {
+for (const l of ['en']) { // /he home is the landing-redesign-dark page (test/landing1.js); v3 sections stay on /en
   const html = fs.readFileSync(`web/out/${l}.html`, 'utf8');
   const demo = html.slice(html.indexOf('class="v3-win"'), html.indexOf('id="v3-demo-cap"') + 400);
   assert.ok(demo.includes(l === 'he' ? 'המחשה · עסק פיקטיבי' : 'Illustration · fictional business')); ok(`${l}: hero demo is labelled as an illustration`);
