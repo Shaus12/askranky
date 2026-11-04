@@ -6,7 +6,7 @@ import { LEGAL_DOCS, LEGAL_META } from "./legal";
 // Per-language metadata: title/description/OG + canonical and hreflang (he, en, x-default → language-picking root).
 export const SITE = "https://askranky.com";
 const T = {
-  he: { site: "Ranky", title: "Ranky: האם ChatGPT ממליץ על העסק שלך?", desc: "סריקת נראות ב־AI בחינם: מה ChatGPT ו־Gemini עונים כשלקוחות מחפשים עסק כמו שלך, ו־3 תיקונים כדי להפוך לתשובה.", locale: "he_IL" },
+  he: { site: "Ranky", title: "Ranky: איך העסק שלכם יכול להופיע ב־ChatGPT וב־Gemini", desc: "סריקה חינם: מה ChatGPT ו־Gemini עונים כשמחפשים עסק כמו שלכם, ומיד אחריה 3 צעדים מעשיים לעשות היום. בלי מייל ובלי מנוי.", locale: "he_IL" },
   en: { site: "Ranky", title: "Ranky: does ChatGPT recommend your business?", desc: "Free AI visibility scan across ChatGPT and Gemini: see where you rank, who gets picked instead, and 3 fixes to climb.", locale: "en_US" },
 };
 // Per-page title + description (seo-audit #7), Hebrew and English.

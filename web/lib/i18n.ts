@@ -21,7 +21,7 @@ const en = {
   how: { title: "How it works", steps: [
     ["Tell us who you are", "Business name, city and category. That's it."],
     ["We ask the AI engines", "Real buyer questions like “best emergency plumber in Austin” across ChatGPT and Gemini."],
-    ["Get your score + 3 fixes", "See your rank, the competitors named instead of you, the sources AI cites, and ready-to-paste fixes."],
+    ["Get your result + 3 steps for today", "Right after the scan: whether you were named, who was named instead, and 3 steps tailored to your business. Free, no email, no subscription."],
   ] },
   sample: { title: "A report you can act on", sub: "Not just charts: concrete, ready-to-use changes.", open: "Open the full sample report" },
   growth: { sampleLabel: "Sample report", maskedName: "Hotel (name hidden, example)", sampleNote: "Example data for illustration: not a real customer or a real scan.", freeScan: "Free scan" },
@@ -81,7 +81,7 @@ const he: Dict = {
   how: { title: "איך זה עובד", steps: [
     ["ספר לנו מי אתה", "שם העסק, עיר ותחום. זהו."],
     ["אנחנו שואלים את מנועי ה־AI", "שאלות אמיתיות של קונים, כמו „אינסטלטור חירום מומלץ בתל אביב”, ב־ChatGPT ו־Gemini."],
-    ["מקבלים ציון ו־3 תיקונים", "הדירוג שלך, המתחרים שנבחרו במקומך, המקורות ש־AI מצטט, ותיקונים מוכנים להדבקה."],
+    ["מקבלים תוצאה ו־3 צעדים להיום", "מיד אחרי הסריקה: אם הוזכרתם, כמה עסקים אחרים הוזכרו, ו־3 צעדים מותאמים לעסק שלכם. בחינם, בלי מייל ובלי מנוי."],
   ] },
   sample: { title: "דוח שאפשר לפעול לפיו", sub: "לא רק גרפים: שינויים מעשיים ומוכנים ליישום.", open: "לדוח המלא לדוגמה" },
   growth: { sampleLabel: "דוגמה לדוח", maskedName: "מלון (השם מוסתר, דוגמה)", sampleNote: "נתוני דוגמה להמחשה בלבד: לא לקוח אמיתי ולא סריקה אמיתית.", freeScan: "בדיקה חינם" },
@@ -97,6 +97,7 @@ const he: Dict = {
     ["זה בדיוק מה ש־ChatGPT מראה ללקוחות שלי?", "קרוב, אבל לא זהה. אנחנו משתמשים ב־API הרשמי של כל מנוע עם חיפוש ברשת, שמקרב את האפליקציות לצרכנים. התשובות משתנות בין הרצות, ולכן אנחנו מתמקדים במגמות."],
     ["מה המשמעות של הציון?", "0–100, לפי כמה פעמים מזכירים אותך וכמה גבוה אתה מדורג בכל השאלות והמנועים. ציון נמוך הוא פשוט מקום לצמוח, ורוב העסקים המקומיים מתחילים שם."],
     ["כמה מהר אפשר להשתפר?", "הרבה תיקונים (פסקת תשובה ישירה, הופעה בעמודים ש־AI מצטט) יכולים להשפיע תוך כמה סריקות חוזרות."],
+    ["צריך להירשם או לשלם כדי לראות מה לעשות?", "לא. אחרי הסריקה החינמית רואים מיד את התוצאה ו־3 צעדים מעשיים, בלי מייל ובלי מנוי. אם משאירים מייל, מקבלים גם טקסטים מוכנים להעתקה, את האתרים ש־AI ציטט ועותק של הדוח."],
     ["אפשר לבטל בכל עת?", "כן. מנוי חודשי, בלי התחייבות, ביטול מהחשבון."],
   ] },
   finalCta: { title: "גלו תוך בערך דקה", sub: "ייתכן שהמתחרים שלך כבר התשובה. בוא נשנה את זה." },

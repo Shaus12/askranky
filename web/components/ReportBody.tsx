@@ -42,6 +42,10 @@ export default function ReportBody({ t, lang, compact = false, data }: { t: Dict
               <ul className="space-y-3">{r.sources.map((s) => (
                 <li key={s.host} className="flex items-center justify-between"><span dir="ltr">{s.host}{s.own && <span className="ms-2 rounded-full bg-score-high/15 px-2 py-0.5 text-xs font-semibold text-[#7ee2b4]">{t.report.yours}</span>}</span><span className="text-sm text-slate-400">{s.count}×</span></li>))}</ul></div>
           </Reveal>
+          {!!r.actions?.length && <Reveal className="space-y-4"><div data-reveal className="card p-6" data-report-actions>
+            <h3 className="vx-h3">{lang === "he" ? "3 צעדים שאפשר לעשות היום" : "3 steps you can do today"}</h3>
+            <ol className="mt-3 space-y-3">{r.actions.map((a, i) => (<li key={a.id}><b className="text-sky-400">{i + 1}.</b> <b>{a.title}</b> <span className="text-sm text-slate-400">({a.effort})</span><p className="text-slate-300">{a.what}</p><p className="text-sm text-slate-400">{a.why}</p></li>))}</ol>
+          </div></Reveal>}
           <Reveal className="space-y-4">
             <MaskHeading text={t.report.fixes} className="vx-h3" center={false} />
             {r.fixes.map((f, i) => (

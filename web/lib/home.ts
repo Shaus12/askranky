@@ -63,10 +63,10 @@ export const HERO = {
       lede: "Our directional check, 25 Oct 2026: only 1 of 12 local businesses was named (8%), on ChatGPT and on Gemini. A small sample, not a study. Ranky runs the same check on your business: where you rank, who gets picked instead, and 3 fixes." },
   },
   B: {
-    he: { rot: false, h1a: "לקוחות מבקשים המלצה מ־ChatGPT ומ־Gemini.", h1b: "אם אתה לא בתשובה, הם הולכים למתחרה.",
-      lede: "כשמישהו שואל את ChatGPT או את Gemini על עסק מקומי, הוא מקבל כמה שמות ולא עשרה קישורים. Ranky בודק אם העסק שלך ביניהם, מי נבחר במקומך, ו־3 תיקונים כדי להיכנס לתשובה." },
+    he: { rot: false, h1a: "בואו לראות איך העסק שלכם יכול להופיע ב־ChatGPT וב־Gemini.", h1b: "סריקה חינם, ומיד אחריה 3 צעדים לעשות כבר היום.",
+      lede: "בודקים מה ChatGPT ו־Gemini עונים כשמחפשים עסק כמו שלכם. מיד אחרי הסריקה רואים את התוצאה ו־3 צעדים מעשיים שמותאמים לעסק שלכם, בחינם, בלי מייל ובלי מנוי." },
     en: { rot: true, h1a: "Customers ask", h1b: "If you're not in the answer, they go to a competitor.",
-      lede: "When someone asks ChatGPT or Gemini for a local business, they get a few names, not ten links. Ranky checks whether yours is one of them, who gets picked instead, and 3 fixes to get into the answer." },
+      lede: "When someone asks ChatGPT or Gemini for a local business, they get a few names, not ten links. Run a free scan and right after it see your result plus 3 concrete steps you can do today. Free, no email, no subscription." },
   },
 } as const;
 export const heroFor = (l: Locale, v: HeroVariant = HERO_VARIANT) => HERO[v][l];

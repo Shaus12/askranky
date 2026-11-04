@@ -14,7 +14,7 @@ try {
   const sm = await txt('/sitemap.xml'); assert.match(sm.ct, /xml/); assert.match(sm.t, /<loc>https:\/\/askranky\.com\/he<\/loc>/); assert.match(sm.t, /hreflang="en" href="https:\/\/askranky\.com\/en\/scan"/); assert.match(sm.t, /hreflang="x-default"/); assert.ok(!/&(?!amp;)/.test(sm.t)); ok('sitemap.xml: he/en pages with hreflang alternates, XML-escaped');
   // 2. metadata (static export)
   if (fs.existsSync('web/out/he.html')) { const he = fs.readFileSync('web/out/he.html', 'utf8'), en = fs.readFileSync('web/out/en/scan.html', 'utf8');
-    assert.match(he, /<link rel="canonical" href="https:\/\/askranky\.com\/he"\/>/); assert.match(he, /hrefLang="x-default"/); assert.match(he, /og:locale" content="he_IL"/); assert.match(he, /<title>[^<]*ממליץ/);
+    assert.match(he, /<link rel="canonical" href="https:\/\/askranky\.com\/he"\/>/); assert.match(he, /hrefLang="x-default"/); assert.match(he, /og:locale" content="he_IL"/); assert.match(he, /<title>[^<]*להופיע ב־ChatGPT/);
     assert.match(en, /canonical" href="https:\/\/askranky\.com\/en\/scan"/); assert.match(en, /hrefLang="he" href="https:\/\/askranky\.com\/he\/scan"/); ok('per-language title/OG/canonical/hreflang in exported HTML'); }
   // 5. Hebrew sample competitors
   const mock = fs.readFileSync('web/lib/mock.ts', 'utf8'); assert.match(mock, /l === "he" \? \[ \{ name: "אינסטלציה רדיאנט"/); ok('Hebrew sample report uses Hebrew competitors');

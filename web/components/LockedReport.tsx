@@ -8,7 +8,7 @@ import ScoreGauge from "./ScoreGauge";
 // gate1 + free-view: the free result (GET /api/report/:id while the scan is locked): score, who the engines named and the exact answers.
 // The email unlock (POST /api/report/:id/unlock) adds the 3-fix plan, cited sources, the emailed copy and an opt-in weekly re-check request
 // (stored, queued: no free weekly re-check runs yet, and the copy says so). The rows under "unlock" are static labels, not hidden data.
-export type Partial = { locked: true; business: { name: string; city: string; category: string }; scan: { id: string; at: string; mock: boolean; summary: { score: number; checks: number; engines: { ran: string[] }; topCompetitors: { name: string; count: number }[] }; answers?: { question: string; engine: string; text: string; mentioned: boolean }[] }; hiddenCompetitors: number; fixCount?: number };
+export type Partial = { locked: true; business: { name: string; city: string; category: string }; scan: { id: string; at: string; mock: boolean; summary: { score: number; checks: number; engines: { ran: string[] }; topCompetitors: { name: string; count: number }[] }; answers?: { question: string; engine: string; text: string; mentioned: boolean }[] }; hiddenCompetitors: number; fixCount?: number; actions?: { id: string; title: string; what: string; why: string; effort: string }[] };
 const ENG: Record<string, string> = { chatgpt: "ChatGPT", gemini: "Gemini" };
 export default function LockedReport({ t, lang, data, onUnlocked }: { t: Dict; lang: Locale; data: Partial; onUnlocked: () => void }) {
   const g = GATE[lang]; const s = data.scan.summary; const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
@@ -34,6 +34,17 @@ export default function LockedReport({ t, lang, data, onUnlocked }: { t: Dict; l
           {data.hiddenCompetitors > 0 && <p className="mt-3 text-sm text-slate-400">{g.more(data.hiddenCompetitors)}</p>}
         </div>
       </div>
+      {!!data.actions?.length && <div className="card mt-5 p-6" data-free-actions>
+        <h2 className="vx-h3">{g.actionsTitle}</h2>
+        <p className="mt-1 text-sm text-slate-400">{g.actionsSub}</p>
+        <ol className="mt-4 space-y-3">{data.actions.map((a, i) => (
+          <li key={a.id} className="rounded-lg border border-white/10 bg-white/5 px-4 py-3" data-action={a.id}>
+            <div className="flex items-start gap-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-white/15 bg-white/5 text-xs font-bold text-sky-300">{i + 1}</span>
+              <div className="flex-1"><h3 className="font-bold break-words">{a.title}</h3>
+                <p className="mt-1 break-words text-slate-200">{a.what}</p>
+                <p className="mt-1 break-words text-sm text-slate-400"><b>{g.why}</b> {a.why}</p>
+                <span className="mt-2 inline-block rounded-full border border-white/15 px-2 py-0.5 text-xs text-slate-300">⏱ {a.effort}</span></div></div></li>))}</ol>
+      </div>}
       {!!data.scan.answers?.length && <div className="card mt-5 p-6" data-free-answers>
         <h2 className="vx-h3">{g.answersTitle}</h2>
         <p className="mt-1 text-sm text-slate-400">{g.answersSub}</p>

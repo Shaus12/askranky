@@ -1,6 +1,6 @@
 import { parseOtherNames } from './src/names.js';
 import express from 'express'; import fs from 'node:fs'; import path from 'node:path'; import { createHash } from 'node:crypto';
-import { BRAND } from './src/brand.js'; import { PLANS, isPaid, CURRENCIES, PRODUCTS, productBilling, foundingLimit } from './src/plans.js'; import { detectCurrency, billingFor, publicPlans, usdBillingEnabled } from './src/currency.js';
+import { BRAND } from './src/brand.js'; import { buildActions } from './src/actions.js'; import { PLANS, isPaid, CURRENCIES, PRODUCTS, productBilling, foundingLimit } from './src/plans.js'; import { detectCurrency, billingFor, publicPlans, usdBillingEnabled } from './src/currency.js';
 import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan , recordScanFailure } from './src/scan.js'; import { sanitize as sanitizeErr } from './src/providers/http.js'; import { utmFrom, applyUtm } from './src/utm.js';
 import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail, reportSubject } from './src/email/report.js'; import { sendEmail, sendEmailSoft, emailIsMock } from './src/email/send.js';
 import * as V from './src/views.js'; import { isMockMode } from './src/providers/index.js';
@@ -497,7 +497,12 @@ export function partialReport(s, b) {
   return { locked: true, demo: !!s.mock, business: { name: b.name, city: b.city, category: b.category, ...(b.trade ? { trade: b.trade } : {}) },
     scan: { id: s.id, at: s.at, mock: !!s.mock, summary: { score: sum.score, checks: sum.checks, engines: { ran: sum.engines?.ran || [], skipped: (sum.engines?.skipped || []).map(x => ({ engine: x.engine, reason: x.reason })) }, topCompetitors: (sum.topCompetitors || []).map(c => ({ name: c.name, count: c.count })) },
       answers: (s.results || []).filter(r => !r.error && typeof r.answer === 'string').map(r => ({ question: r.question, engine: r.engine, text: r.answer, mentioned: !!r.mentioned })) },
-    hiddenCompetitors: 0, fixCount: Array.isArray(s.fixes) ? s.fixes.length : 0 };
+    hiddenCompetitors: 0, actions: freeActions(s, b), fixCount: Array.isArray(s.fixes) ? s.fixes.length : 0 };
+}
+// free-3-actions: the 3 free steps (src/actions.js) are part of the free view itself, no email or payment. Scans stored before the
+// change get them computed on read from the same scan data.
+export function freeActions(s, b) {
+  return Array.isArray(s.actions) && s.actions.length === 3 ? s.actions : buildActions(s, b || {});
 }
 // Opt-in weekly re-check request (free-view). Stored only with explicit consent at unlock; NOT run by any scheduler yet (src/rescan.js is
 // paid-only and AUTO_RESCAN gated). Kept so the request is honoured once a free weekly re-check exists; the page says "queued, not running".

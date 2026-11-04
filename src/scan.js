@@ -5,7 +5,7 @@ import { summarizeResults } from './summary.js';
 import { buildQuestions } from './questions.js';
 import { checkBudget, recordSpend } from './costs.js';
 import { COST_PER_CHECK, PLANS } from './plans.js';
-import { buildFixes } from './fixes.js';
+import { buildFixes } from './fixes.js'; import { buildActions } from './actions.js';
 import { sentimentFor } from './sentiment.js';
 import { factCheck } from './factcheck.js';
 import { detectAlerts } from './alert-detect.js';
@@ -62,7 +62,7 @@ export async function runScan(account, business, { engines = ENGINES, maxQuestio
   const ok = results.filter(r => !r.error);
   const summary = summarizeResults(results, { plan, engines, skipped, cost });
   const scan = { id: id(12), businessId: business.id, accountId: account.id, at: new Date().toISOString(), mock: ok.length > 0 && ok.every(r => r.mock), ...(utm ? { utm } : {}), ...(internal ? { internal: true } : {}), summary, results };
-  scan.fixes = buildFixes(scan, business);
+  scan.fixes = buildFixes(scan, business); scan.actions = buildActions(scan, business);
   const db = getDb(); const prev = db.scans[business.scanIds?.at(-1)]; scan.alerts = detectAlerts(prev, scan); db.scans[scan.id] = scan; business.scanIds = [...(business.scanIds || []), scan.id]; save();
   return scan;
 }
