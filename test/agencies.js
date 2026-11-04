@@ -5,6 +5,7 @@ process.env.DISABLE_IP_LIMIT = '1';
 const { PLANS, PRODUCTS } = await import('../src/plans.js');
 const { default: app } = await import('../server.js'); const srv = app.listen(0); await new Promise(r => srv.once('listening', r)); const B = 'http://127.0.0.1:' + srv.address().port;
 let n = 0; const ok = m => { n++; console.log('  ✓', m); };
+const agencyLd = l => { const h = fs.readFileSync(`web/out/${l}/agencies.html`, 'utf8'); return (h.match(/application\/ld\+json[^>]*>([\s\S]*?)<\/script>/g) || []).join(''); };
 const vis = h => h.replace(/<script[\s\S]*?<\/script>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&quot;/g, '"').replace(/\s+/g, ' ');
 try {
   const A = PLANS.agency; assert.equal(A.prices.ILS, 549);
@@ -21,7 +22,13 @@ try {
     assert.ok(l === 'he' ? /מופק ידנית/.test(v) && /אין עדיין white-label אוטומטי/.test(v) : /prepared manually/.test(v) && /no automatic white-label yet/.test(v));
     assert.ok(/href="mailto:shaysho1111@gmail.com\?subject=/.test(h) && h.includes(`href="/${l}/scan"`));
     assert.ok(!/dentist|dental|שיניים|Perplexity|Copilot|Claude/i.test(v), 'banned words');
-    assert.ok(!/שוטשווילי|Shotashvili|שי |Shai|מייסד|Founder|TO VERIFY|refund|החזר|Fix-up סיטונאי|wholesale/i.test(v), 'TO VERIFY items');
+    assert.ok(!/שוטשווילי|Shotashvili|(?<![א-ת])שי |Shai|מייסד|Founder|TO VERIFY|refund|החזר|Fix-up סיטונאי|wholesale/i.test(v), 'TO VERIFY items');
+    assert.ok(l === 'he' ? v.includes('סריקה חוזרת מהדשבורד, במסגרת תקציב בדיקות חודשי') && !/שבוע/.test(v) : v.includes('Re-scan from the dashboard within a monthly check budget') && !/\bweekly\b|every week|automatic weekly/i.test(v), 'dashboard rescan frequency, no weekly claims');
+    assert.ok(!/data-autosoon/.test(h) && !/soon:/.test(fs.readFileSync('web/lib/agencies.ts', 'utf8')), 'no autosoon coming-soon note');
+    assert.ok(l === 'he' ? v.includes('התשובות משתנות בין הרצות, לכן אנחנו סורקים מחדש ומציגים את המגמה') : v.includes('Answers vary between runs, so we re-scan and show the trend'), 'disclaimer');
+    assert.ok(!/weekly|שבוע/i.test(JSON.stringify(agencyLd(l))), 'FAQ JSON-LD');
+    assert.ok(l === 'he' ? /ידנית/.test(v.slice(v.indexOf('פיילוט'))) : /by hand/.test(v), 'pilot re-check by hand');
+    ok(`/${l}/agencies: Growth dashboard-budget frequency, no weekly/autosoon, disclaimer + pilot by hand`);
     ok(`/${l}/agencies: built + served 200, canonical/hreflang, indexable, FAQPage, ₪549, manual/no-white-label, mailto + scan CTA, pilot free + 30%, no ₪190/₪100/₪290/founder, no banned or unverified items`);
   }
   const sm = await (await fetch(B + '/sitemap.xml')).text(); assert.ok(sm.includes('/he/agencies</loc>') && sm.includes('/en/agencies</loc>'));

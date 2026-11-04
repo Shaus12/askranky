@@ -2,7 +2,7 @@
 export const GATE = {
   he: {
     formNote: "תחום, עיר ושם העסק. מקבלים תוצאה ו־3 צעדים מיד, ואת הדוח המלא שולחים למייל אם רוצים.",
-    weekly: { title: "לבדוק שוב כל שבוע", auto: "התשובות של ChatGPT ו-Gemini משתנות. במסלול Pro הסריקה רצה מחדש אוטומטית כל שבוע, ואפשר לראות אם עליתם או ירדתם.", manual: "התשובות של ChatGPT ו-Gemini משתנות. במסלול Pro אפשר להריץ סריקה חוזרת מהדשבורד כל שבוע ולראות אם עליתם או ירדתם.", btn: "למסלול Pro" },
+    weekly: { title: "לבדוק שוב מהדשבורד", auto: "התשובות של ChatGPT ו-Gemini משתנות. במסלול Pro הסריקה רצה מחדש אוטומטית כל שבוע, ואפשר לראות אם עליתם או ירדתם.", manual: "התשובות של ChatGPT ו-Gemini משתנות. במסלול Pro אפשר להריץ סריקה חוזרת מהדשבורד ולראות אם עליתם או ירדתם.", btn: "למסלול Pro" },
     trade: { label: "תחום העסק", placeholder: "בחרו תחום", other: "אחר (לכתוב בעצמי)", otherLabel: "מה התחום?", otherPh: "למשל: מתקין מזגנים", required: "נא לבחור את תחום העסק." },
     emailOptional: "מייל (לא חובה, אפשר גם אחרי הסריקה)",
     lockedEyebrow: "התוצאה החינמית שלך",
@@ -21,7 +21,7 @@ export const GATE = {
     answersSub: "השאלות שנשאלו בסריקה הזו והתשובות המלאות, מילה במילה.",
     mentionedYes: "הוזכרתם",
     mentionedNo: "לא הוזכרתם",
-    weeklyOptIn: "אני רוצה התראה שבועית כשהתוצאה משתנה. בדיקה שבועית חינמית עוד לא פועלת: נשמור את הבקשה ונכתוב לכם כשהיא תתחיל.",
+    weeklyOptIn: "אני רוצה התראה כשהתוצאה משתנה. בדיקה חוזרת חינמית עוד לא פועלת: נשמור את הבקשה ונכתוב לכם כשהיא תתחיל.",
     unlocking: "פותחים…",
     invalid: "נא להזין כתובת מייל תקינה.",
     error: "משהו השתבש. נסו שוב.",
@@ -31,7 +31,7 @@ export const GATE = {
   },
   en: {
     formNote: "Your trade, city and business name. You get your result and 3 steps right away, and the full report by email if you want it.",
-    weekly: { title: "Re-check every week", auto: "ChatGPT and Gemini answers change. On the Pro plan the scan re-runs automatically every week, so you can see if you moved up or down.", manual: "ChatGPT and Gemini answers change. On the Pro plan you can re-run the scan from your dashboard every week and see if you moved up or down.", btn: "Go to the Pro plan" },
+    weekly: { title: "Check again from your dashboard", auto: "ChatGPT and Gemini answers change. On the Pro plan the scan re-runs automatically every week, so you can see if you moved up or down.", manual: "ChatGPT and Gemini answers change. On the Pro plan you can re-run the scan from your dashboard and see if you moved up or down.", btn: "Go to the Pro plan" },
     trade: { label: "Your trade", placeholder: "Choose a trade", other: "Other (type it in)", otherLabel: "What is your trade?", otherPh: "e.g. AC installer", required: "Please choose your trade." },
     emailOptional: "Email (optional, you can add it after the scan)",
     lockedEyebrow: "Your free result",
@@ -50,7 +50,7 @@ export const GATE = {
     answersSub: "The questions asked in this scan and the full answers, word for word.",
     mentionedYes: "You were mentioned",
     mentionedNo: "Not mentioned",
-    weeklyOptIn: "I want a weekly alert when the result changes. A free weekly re-check is not running yet: we will save your request and write to you when it starts.",
+    weeklyOptIn: "I want an alert when the result changes. A free re-check is not running yet: we will save your request and write to you when it starts.",
     unlocking: "Unlocking…",
     invalid: "Enter a valid email.",
     error: "Something went wrong. Please try again.",
