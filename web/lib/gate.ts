@@ -1,7 +1,7 @@
 // gate1: copy for the email-gated free scan (Hebrew first). Only ChatGPT and Gemini are live engines; no category-specific examples.
 export const GATE = {
   he: {
-    formNote: "תחום, עיר ושם העסק. מקבלים תוצאה ו־3 צעדים מיד, ואת הדוח המלא שולחים למייל אם רוצים.",
+    formNote: "תחום, עיר ושם העסק. התוצאה ו־3 הצעדים מופיעים על המסך, בלי מייל ובלי מנוי. מוסיפים אימייל רק אם רוצים שהדוח המלא יישלח.",
     weekly: { title: "לבדוק שוב מהדשבורד", auto: "התשובות של ChatGPT ו-Gemini משתנות. במסלול Pro הסריקה רצה מחדש אוטומטית כל שבוע, ואפשר לראות אם עליתם או ירדתם.", manual: "התשובות של ChatGPT ו-Gemini משתנות. במסלול Pro אפשר להריץ סריקה חוזרת מהדשבורד ולראות אם עליתם או ירדתם.", btn: "למסלול Pro" },
     trade: { label: "תחום העסק", placeholder: "בחרו תחום", other: "אחר (לכתוב בעצמי)", otherLabel: "מה התחום?", otherPh: "למשל: מתקין מזגנים", required: "נא לבחור את תחום העסק." },
     emailOptional: "מייל (לא חובה, אפשר גם אחרי הסריקה)",
@@ -30,7 +30,7 @@ export const GATE = {
     lockedRows: ["טקסטים מוכנים להעתקה", "אתרים ש-AI ציטט", "המקום שלך בכל מנוע", "עותק של הדוח במייל"],
   },
   en: {
-    formNote: "Your trade, city and business name. You get your result and 3 steps right away, and the full report by email if you want it.",
+    formNote: "Your trade, city and business name. The result and 3 steps appear on screen, with no email and no subscription. Add an email only if you want the fuller report sent to you.",
     weekly: { title: "Check again from your dashboard", auto: "ChatGPT and Gemini answers change. On the Pro plan the scan re-runs automatically every week, so you can see if you moved up or down.", manual: "ChatGPT and Gemini answers change. On the Pro plan you can re-run the scan from your dashboard and see if you moved up or down.", btn: "Go to the Pro plan" },
     trade: { label: "Your trade", placeholder: "Choose a trade", other: "Other (type it in)", otherLabel: "What is your trade?", otherPh: "e.g. AC installer", required: "Please choose your trade." },
     emailOptional: "Email (optional, you can add it after the scan)",

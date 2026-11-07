@@ -7,9 +7,9 @@ const ph = [...copy.matchAll(/(?:badgePlaceholder|phBusiness|phMeta|phChecks|phN
 assert.ok(ph.length >= 16); for (const x of ph) assert.ok(!/\d/.test(x), `placeholder has a number: ${x}`); assert.ok(!/dent|שיניים/i.test(copy + comp + real));
 ok('placeholder copy (HE+EN) has no numbers, no dentist wording');
 assert.match(real, /he: null, en: null/); assert.match(comp, /data-home-sample=\{s \? "real" : "placeholder"\}/); assert.match(comp, /s \? s\.score : "—"/); ok('no real sample set -> placeholder mode, score shows "—"');
-const page = fs.readFileSync('web/app/[lang]/page.tsx', 'utf8'); assert.ok(page.indexOf('<HomeSample') > 0 && page.indexOf('<HomeSample') < page.indexOf('<ScanForm')); ok('home: sample section sits above the scan form');
-for (const l of ['he', 'en']) { const h = fs.readFileSync(`web/out/${l}.html`, 'utf8'); assert.ok(h.indexOf('data-home-sample') > 0 && h.indexOf('data-home-sample') < h.indexOf('name="trade"')); }
-ok('built /he and /en: sample rendered before the form');
+const page = fs.readFileSync('web/app/[lang]/page.tsx', 'utf8'); assert.ok(page.indexOf('<HomeSample') > 0 && page.indexOf('<HomeSample') < page.indexOf('href="#hero-scan"')); ok('home: sample section sits above the lower scan link (the form itself is in the hero)');
+for (const l of ['he', 'en']) { const h = fs.readFileSync(`web/out/${l}.html`, 'utf8'); assert.ok(h.indexOf('data-hero-scan') > 0 && h.indexOf('data-hero-scan') < h.indexOf('data-home-sample') && h.indexOf('data-home-sample') < h.indexOf('href="#hero-scan"')); }
+ok('built /he and /en: hero form, then sample, then the link back to the form');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'hs-'));
 const scan = { business: { name: 'Acme Pipes' }, scan: { at: '2026-11-01T10:00:00Z', summary: { score: 40, checks: 2, engines: { ran: ['chatgpt', 'gemini'] }, topCompetitors: [{ name: 'Blue Flow', count: 2 }, { name: 'Red Valve', count: 1 }] },
   results: [{ question: 'Best plumbing in Haifa?', engine: 'chatgpt', answer: '1. **Blue Flow** ([blueflow.co.il](https://blueflow.co.il/x)) 2. Red Valve, see https://redvalve.com 3. Acme Pipes', mentioned: true, competitors: [{ name: 'Blue Flow' }] }] } };

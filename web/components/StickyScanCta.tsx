@@ -8,8 +8,10 @@ import type { Locale } from "@/lib/i18n";
 export default function StickyScanCta({ lang, label }: { lang: Locale; label: string }) {
   const [show, setShow] = useState(false);
   useEffect(() => {
-    const form = document.getElementById("scan-form"); let formVisible = false;
-    const io = form ? new IntersectionObserver(([e]) => { formVisible = e.isIntersecting; update(); }) : null; io?.observe(form!);
+    const forms = ["hero-scan", "scan-form"].map((i) => document.getElementById(i)).filter(Boolean) as HTMLElement[];
+    const vis = new Map<Element, boolean>(); let formVisible = false;
+    const io = forms.length ? new IntersectionObserver((es) => { es.forEach((e) => vis.set(e.target, e.isIntersecting)); formVisible = [...vis.values()].some(Boolean); update(); }) : null;
+    forms.forEach((f) => io?.observe(f));
     function update() { setShow(window.scrollY > 600 && !formVisible); }
     update(); window.addEventListener("scroll", update, { passive: true });
     return () => { window.removeEventListener("scroll", update); io?.disconnect(); };

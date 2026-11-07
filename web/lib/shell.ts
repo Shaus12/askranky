@@ -3,8 +3,8 @@ import type { Locale } from "./i18n";
 export const SHELL = {
   en: { product: "Product", resources: "Resources", company: "Company", legal: "Legal", menu: "Menu", close: "Close menu", blog: "Blog", allPosts: "All articles", latest: "Latest articles",
     howD: "Questions, engines and score in 60 seconds", sampleD: "What a full report looks like", faqD: "Common questions, short answers", scanD: "ChatGPT · Gemini, free", contact: "Contact", agencies: "For agencies",
-    tagline: "AI visibility for local businesses. See what ChatGPT and Gemini tell your customers.", feat: "Free AI scan", featD: "60 seconds · ChatGPT · Gemini · score 0–100 · competitors · 3 fixes" },
+    tagline: "AI visibility for local businesses. See what ChatGPT and Gemini tell your customers.", feat: "Free AI scan", featD: "About a minute · ChatGPT · Gemini · 3 steps, no email" },
   he: { product: "מוצר", resources: "מדריכים", company: "חברה", legal: "משפטי", menu: "תפריט", close: "סגירת תפריט", blog: "בלוג", allPosts: "כל המאמרים", latest: "מאמרים אחרונים",
     howD: "מה אנחנו שואלים ומה מקבלים, בערך דקה", sampleD: "איך נראה דוח מלא", faqD: "שאלות נפוצות, תשובות קצרות", scanD: "ChatGPT · Gemini, חינם", contact: "צור קשר", agencies: "לסוכנויות",
-    tagline: "נראות ב־AI לעסקים מקומיים. בודקים מה ChatGPT ו־Gemini עונים ללקוחות שלך.", feat: "בדיקה חינם", featD: "בערך דקה · ChatGPT · Gemini · מי הוזכר · 3 תיקונים" },
+    tagline: "נראות ב־AI לעסקים מקומיים. בודקים מה ChatGPT ו־Gemini עונים ללקוחות שלך.", feat: "בדיקה חינם", featD: "בערך דקה · ChatGPT · Gemini · 3 צעדים, בלי מייל" },
 } satisfies Record<Locale, Record<string, string>>;

@@ -5,7 +5,7 @@ import ScrollFx from "@/components/ScrollFx";
 
 const Arrow = () => <span aria-hidden="true" className="inline-block rtl:rotate-180">→</span>;
 
-/** "Built on what AI actually answers": three-card bento (question set ticker, mention-rate chart, business profile). Example data only. */
+/** Three-card bento. The chart is an example layout; the copy says the percentages are not from a scan. */
 export function ContextBento({ h, lang }: { h: Home3; lang: Locale }) {
   const c = h.ctx; const base = `/${lang}`;
   const bars: [string, number, number][] = [["ChatGPT", 40, 58], ["Gemini", 30, 51]];

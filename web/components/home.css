@@ -1,7 +1,8 @@
 /* Home page (Profound-inspired, v3). Off-black body (#0c0c0e), single accent #3f6fd8, Geist + Heebo (Hebrew); v3 overrides live in home-v3.css. Plain stylesheet: no inline styles, CSP unchanged. */
 .hm-hero, .hm-sec { --b: #2563eb; --b2: #3b82f6; --b3: #60a5fa; --base: #0e0e10; --s1: #141416; --s2: #1a1a1c; --s3: #242426; --ln: #232323; --ln2: #2c2c2c; --t2: #a8a8ad; --t3: #8e8e93; --t4: #75757a; font-family: "Geist", "Heebo", ui-sans-serif, system-ui, sans-serif; }
 [dir="rtl"] .hm-hero, [dir="rtl"] .hm-sec { font-family: "Heebo", "Geist", ui-sans-serif, system-ui, sans-serif; }
-.hm-hero { position: relative; overflow: hidden; text-align: center; }
+/* clip (not hidden) so the mobile sticky submit can escape the hero and sit above the cookie notice. */
+.hm-hero { position: relative; overflow: clip; text-align: center; }
 .hm-hero::before { content: ""; position: absolute; inset: -10% -10% auto; height: 620px; background: radial-gradient(60% 55% at 50% 0%, rgba(37,99,235,.26), transparent 70%); pointer-events: none; }
 .hm-hero-in { position: relative; max-width: 72rem; margin: 0 auto; padding: clamp(3.5rem, 9vw, 6.5rem) 1rem 3.5rem; }
 .hm-chip { display: inline-flex; align-items: center; gap: .4rem; margin-bottom: 1.4rem; padding: .3rem .8rem; border-radius: 9999px; font-size: .78rem; color: #bfdbfe; border: 1px solid rgba(59,130,246,.45); background: rgba(37,99,235,.1); transition: border-color .15s; }

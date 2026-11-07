@@ -4,9 +4,9 @@ import gsap from "gsap";
 import type { Home3 } from "@/lib/home-v3";
 import { reducedMotion } from "@/lib/motion";
 
-/** Hero product demo (Profound-style "agent at work"): a fictional business, three Recents projects, each played as a GSAP timeline
- *  (prompt → working timer → steps ticking → result card). Auto-cycles while visible; a click on a Recent picks it and stops the cycle.
- *  Server HTML holds the first project's final state, so no-JS and reduced-motion visitors see a complete, readable frame. */
+/** Fictional product illustration: three scenes, each played as a GSAP timeline
+ *  (prompt → working timer → steps ticking → card). Auto-cycles while visible. The scene buttons are part of the illustration;
+ *  the caption does not tell visitors to pick one. Server HTML holds the first scene's final state. */
 export default function AgentDemo({ d }: { d: Home3["demo"] }) {
   const [i, setI] = useState(0); const [auto, setAuto] = useState(true); const [secs, setSecs] = useState(0); const [done, setDone] = useState(true);
   const root = useRef<HTMLDivElement>(null); const p = d.projects[i];

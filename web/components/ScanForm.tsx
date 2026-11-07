@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Dict, Locale } from "@/lib/i18n";
 import { getConfig, type Config } from "@/lib/api";
 import { demoNotices } from "@/lib/notices";
 import { ISRAELI_CITIES } from "@/lib/cities";
-import Turnstile from "./Turnstile";
+import Turnstile, { type TsState } from "./Turnstile";
 import { cityHint } from "@/lib/city-hint";
 import { GATE } from "@/lib/gate";
 import { track } from "@/lib/track";
@@ -14,14 +14,35 @@ import { TRADES } from "@/lib/trades";
 // gate1 + trade1: trade (from a list of ~20, or "other" with free text) + city, then the business name (needed to find it in the answers).
 // Website, other names and an optional email live under "more options". The trade id goes to POST /api/scan as `trade`.
 const extra = ["website", "email"] as const;
+// Shown on the submit button while Turnstile is in progress. The server check is unchanged.
+const TSB = {
+  he: { waiting: "ממתין לבדיקת אבטחה…", blocked: "בדיקת האבטחה נכשלה, נסו שוב למעלה", wait: "בדיקת האבטחה עוד לא הושלמה. הפעלנו אותה מחדש, נסו שוב בעוד רגע.", failed: "בדיקת האבטחה לא נטענה. לחצו \"נסו שוב\" בהודעה שמעל הכפתור." },
+  en: { waiting: "Waiting for the security check…", blocked: "Security check failed, retry above", wait: "The security check isn't complete yet. We restarted it; try again in a moment.", failed: "The security check didn't load. Press \"Try again\" in the message above the button." },
+} as const;
 export const PENDING = "ranky-pending-scan";
 // Collects the business details, then hands off to /[lang]/scan which calls POST /api/scan while showing progress.
 // `onStart`: used when the form already lives on /[lang]/scan (router.push to the same URL would do nothing); the parent runs the scan directly.
-export default function ScanForm({ t, lang, onStart }: { t: Dict; lang: Locale; onStart?: (p: Record<string, string>) => void }) {
+// `cta`: optional data-cta on the submit button (the hero's single primary action).
+export default function ScanForm({ t, lang, onStart, cta }: { t: Dict; lang: Locale; onStart?: (p: Record<string, string>) => void; cta?: string }) {
   const h = t.hero; const router = useRouter();
   const a = t.accuracy; const [confirm, setConfirm] = useState<{ d: Record<string, string>; city: string } | null>(null);
   const [siteKey, setSiteKey] = useState<string | null>(null); const [err, setErr] = useState(""); const [cfg, setCfg] = useState<Config | null>(null); const [more, setMore] = useState(false); const [trade, setTrade] = useState(""); const tc = GATE[lang].trade; const nt = demoNotices(cfg, t);
+  const [ts, setTs] = useState<TsState>("off"); const [tsReset, setTsReset] = useState(0);
+  const root = useRef<HTMLFormElement>(null); const viewed = useRef(false);
   useEffect(() => { getConfig().then((c) => { setSiteKey(c.turnstileSiteKey); setCfg(c); }); }, []);
+  // Count a view only once the form is actually on screen. A mount-time event would fire for a form the visitor has not reached.
+  useEffect(() => {
+    const el = root.current;
+    if (!el || viewed.current || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver((entries) => {
+      if (viewed.current) return;
+      if (entries.some((e) => e.isIntersecting && e.intersectionRatio >= 0.25)) {
+        viewed.current = true; track("scan_form_viewed"); io.disconnect();
+      }
+    }, { threshold: [0, 0.25, 0.5] });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); const fd = new FormData(e.currentTarget); const d: Record<string, string> = {};
     fd.forEach((v, k) => { d[k] = String(v).trim(); }); track("form_submit_attempted");
@@ -29,7 +50,7 @@ export default function ScanForm({ t, lang, onStart }: { t: Dict; lang: Locale; 
     if (!d.trade || (d.trade === "other" && !d.category)) return setErr(tc.required);
     if (d.trade === "other") delete d.trade; else delete d.category;
     if (!d.name || !d.city) return setErr(t.form.required);
-    if (siteKey && !d["cf-turnstile-response"]) { track("turnstile_missing"); return setErr(t.form.captcha); }
+    if (siteKey && !d["cf-turnstile-response"]) { track("turnstile_missing"); track("turnstile_blocked"); setTsReset((k) => k + 1); return setErr(ts === "failed" ? TSB[lang].failed : TSB[lang].wait); }
     // Gentle check: the name/website names a different city (e.g. "The Ritz-Carlton Herzliya" entered as Tel Aviv).
     const hint = cityHint({ name: d.name, website: d.website, city: d.city });
     if (hint) { setErr(""); track("city_confirm_shown"); return setConfirm({ d, city: hint[lang] }); }
@@ -43,7 +64,7 @@ export default function ScanForm({ t, lang, onStart }: { t: Dict; lang: Locale; 
     router.push(`/${lang}/scan`);
   }
   return (
-    <form onSubmit={submit} className="card space-y-3 p-6 md:p-7" noValidate>
+    <form ref={root} onSubmit={submit} className="card space-y-3 p-6 md:p-7" noValidate data-scan-form>
       <div className="grid gap-3 sm:grid-cols-2" data-trade-city>
         <label className="vx-label">{tc.label}<span className="text-sky-300" aria-hidden> *</span>
           <select name="trade" required value={trade} onChange={(e) => setTrade(e.target.value)} className="vx-input" data-trade>
@@ -78,7 +99,7 @@ export default function ScanForm({ t, lang, onStart }: { t: Dict; lang: Locale; 
       <datalist id="il-cities">{ISRAELI_CITIES.map((c) => <option key={c.slug} value={c[lang]} />)}</datalist>
       <p className="text-xs text-slate-400" data-privacy>{nt.privacy} <a className="vx-link underline" href={`/${lang}/legal/privacy`}>{t.form.privacyLink}</a>.</p>
       {nt.formNote && <p role="note" data-demo-note className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-zinc-200">{nt.formNote}</p>}
-      <Turnstile siteKey={siteKey} lang={lang} />
+      <Turnstile siteKey={siteKey} lang={lang} resetKey={tsReset} onState={(s) => { setTs(s); if (s === "ready") setErr(""); }} />
       {confirm && <div role="alertdialog" aria-live="polite" data-city-confirm className="rounded-lg border border-sky-300/40 bg-sky-400/10 px-3 py-3 text-sm text-sky-100">
         <p>{a.cityConfirm.replaceAll("{city}", confirm.city)}</p>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -86,7 +107,7 @@ export default function ScanForm({ t, lang, onStart }: { t: Dict; lang: Locale; 
           <button type="button" className="btn-outline !py-1.5 !px-3 text-sm" onClick={() => go(confirm.d)}>{a.keepCity.replaceAll("{entered}", confirm.d.city)}</button>
         </div></div>}
       {err && <p role="alert" className="rounded-lg bg-score-low/15 px-3 py-2 text-sm text-red-200">{err}</p>}
-      <div className="scan-submit-bar" data-submit-bar><button className="btn-cta w-full">{t.form.submit}</button></div>
+      <div className="scan-submit-bar" data-submit-bar><button className="btn-cta w-full" data-ts-submit={siteKey ? ts : "off"} {...(cta ? { "data-cta": cta } : {})} aria-disabled={siteKey && ts !== "ready" ? true : undefined}>{siteKey && ts === "loading" ? TSB[lang].waiting : siteKey && ts === "failed" ? TSB[lang].blocked : t.form.submit}</button></div>
     </form>
   );
 }

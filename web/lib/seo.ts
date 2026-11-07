@@ -7,13 +7,13 @@ import { LEGAL_DOCS, LEGAL_META } from "./legal";
 export const SITE = "https://askranky.com";
 const T = {
   he: { site: "Ranky", title: "Ranky: איך העסק שלכם יכול להופיע ב־ChatGPT וב־Gemini", desc: "סריקה חינם: מה ChatGPT ו־Gemini עונים כשמחפשים עסק כמו שלכם, ומיד אחריה 3 צעדים מעשיים לעשות היום. בלי מייל ובלי מנוי.", locale: "he_IL" },
-  en: { site: "Ranky", title: "Ranky: does ChatGPT recommend your business?", desc: "Free AI visibility scan across ChatGPT and Gemini: see where you rank, who gets picked instead, and 3 fixes to climb.", locale: "en_US" },
+  en: { site: "Ranky", title: "Ranky: does ChatGPT recommend your business?", desc: "Free AI visibility scan across ChatGPT and Gemini: see whether you are named, who gets picked instead, and 3 steps. No email and no subscription.", locale: "en_US" },
 };
 // Per-page title + description (seo-audit #7), Hebrew and English.
 const PAGE: Record<string, { he: string; en: string; dhe: string; den: string }> = {
   "/pricing": { he: "מחירים", en: "Pricing", dhe: "מחירי Ranky: סריקה חינם, ומסלולים חודשיים מ־₪79 בלי מע\"מ. השוואה כנה של מה שפועל היום ומה בקרוב.", den: "Ranky pricing: a free scan, then monthly plans from ₪79, no VAT. An honest comparison of what runs today and what is coming soon." },
   "/agencies": { he: "לסוכנויות", en: "For agencies", dhe: "Ranky לסוכנויות ולפרילנסרים: בדיקת נראות ב־ChatGPT ו־Gemini ללקוחות שלכם, תוכנית Agency ב־₪549 לחודש. דוח לפני/אחרי ידני.", den: "Ranky for agencies and freelancers: check how ChatGPT and Gemini answer for your clients. Agency plan ₪549/month. Manual before/after report." },
-  "/scan": { he: "סריקת AI חינם", en: "Free AI scan", dhe: "בדקו בחינם אם ChatGPT ו־Gemini ממליצים על העסק שלכם, ומי מומלץ במקומכם. חינם, סריקה אחת לכל אימייל, כדקה.", den: "Check free whether ChatGPT and Gemini recommend your business, and who they name instead. Free, one scan per email, about a minute." },
+  "/scan": { he: "סריקת AI חינם", en: "Free AI scan", dhe: "בדקו בחינם אם ChatGPT ו־Gemini ממליצים על העסק שלכם. התוצאה ו־3 צעדים על המסך, בלי מייל. סריקה אחת לכל אימייל אם מוסיפים כתובת.", den: "Free check of whether ChatGPT and Gemini recommend your business. The result and 3 steps are on screen, no email required. One scan per email if you add an address." },
   "/report": { he: "דוח לדוגמה", en: "Sample report", dhe: "כך נראה דוח נראות ב־AI של Ranky: ציון, מתחרים שמומלצים, מקורות שמצוטטים ו־3 תיקונים.", den: "See a sample Ranky AI visibility report: score, competitors AI recommends, cited sources and 3 fixes." },
   "/login": { he: "כניסה", en: "Sign in", dhe: "כניסה לדשבורד של Ranky עם קישור חד־פעמי במייל.", den: "Sign in to your Ranky dashboard with a one-time email link." },
   "/signup": { he: "הרשמה", en: "Create account", dhe: "יצירת חשבון Ranky עם אימייל וסיסמה.", den: "Create a Ranky account with email and password." },

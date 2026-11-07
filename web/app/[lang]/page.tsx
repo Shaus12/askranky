@@ -6,7 +6,6 @@ import Nav from "@/components/Nav";
 import Reveal from "@/components/Reveal";
 import SampleReportHome from "@/components/SampleReportHome";
 import StickyScanCta from "@/components/StickyScanCta";
-import ScanForm from "@/components/ScanForm";
 import HomeSample from "@/components/HomeSample";
 import { SAMPLE_COPY } from "@/lib/sample-copy";
 import Pricing from "@/components/Pricing";
@@ -70,14 +69,14 @@ export default async function Landing({ params }: { params: Promise<{ lang: stri
           <div className="mt-8 px-5">{lang === "he" && <span id="sample" className="block scroll-mt-16" aria-hidden />}<HomeSample lang={lang} /></div>
         </section>
 
-        <Reveal as="section" id="scan-form" className="vx-section mx-auto grid max-w-6xl scroll-mt-20 items-center gap-12 !pt-10 md:grid-cols-[1.05fr_1fr]">
-          <div className="text-center md:text-start">
+        <Reveal as="section" id="scan-form" className="vx-section mx-auto max-w-3xl scroll-mt-20 !pt-10 text-center">
+          <div>
             <p data-reveal className="vx-pill"><span className="dot h-2 w-2 rounded-full bg-blue-400" />{h.eyebrow}</p>
             <div className="mt-6"><MaskHeading text={h.title} className="vx-h3" center={false} /></div>
             <p data-reveal className="vx-lede mt-6">{h.sub}</p>
             <p data-reveal className="mt-4 text-sm text-slate-400">{h.note}</p>
+            <div data-reveal className="mt-6"><a href="#hero-scan" className="btn-cta hm-btn-lg" data-cta="scan-form">{h.cta} <span aria-hidden="true">↑</span></a></div>
           </div>
-          <div data-reveal><ScanForm t={t} lang={lang} /></div>
         </Reveal>
 
         <div className="relative px-5 py-7 text-center text-sm text-slate-400">

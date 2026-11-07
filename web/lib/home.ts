@@ -6,7 +6,7 @@ export const HOME = {
   en: {
     chip: "Our data: how often local businesses get named in AI answers",
     h1a: "Your next customer is asking", h1b: "Make sure the answer is you.",
-    lede: "Ranky asks ChatGPT and Gemini the questions your customers ask, then shows where you rank, who gets picked instead, and 3 fixes to climb.",
+    lede: "Ranky asks ChatGPT and Gemini the questions your customers ask, then shows whether you were named, who gets picked instead, and 3 steps you can take today.",
     how: "How it works",
     win: "ranky / scan", illus: "Illustration · fictional business", biz: "“Sample Plumbing”",
     tabs: ["Scan", "History"], side: ["Visibility score", "Competitors", "Fixes", "Questions", "Reports"], engines: "Engines", recent: "Recent",
@@ -28,7 +28,7 @@ export const HOME = {
   he: {
     chip: "נתונים מארה\"ב: כמה אנשים כבר שואלים AI על עסקים",
     h1a: "הלקוח הבא שלך שואל את", h1b: "בוא נדאג שהתשובה תהיה אתה.",
-    lede: "Ranky שואל את ChatGPT ו־Gemini את השאלות שהלקוחות שלך שואלים, ומראה איפה אתה מדורג, מי נבחר במקומך, ו־3 תיקונים כדי לטפס.",
+    lede: "Ranky שואל את ChatGPT ו־Gemini את השאלות שהלקוחות שלך שואלים, ומראה אם הוזכרת, מי נבחר במקומך, ו־3 צעדים שאפשר לעשות היום.",
     how: "איך זה עובד",
     win: "ranky / סריקה", illus: "המחשה · עסק פיקטיבי", biz: "„אינסטלציה לדוגמה”",
     tabs: ["סריקה", "היסטוריה"], side: ["ציון נראות", "מתחרים", "תיקונים", "שאלות", "דוחות"], engines: "מנועים", recent: "אחרונים",
@@ -58,9 +58,9 @@ export const HERO_VARIANT: HeroVariant = "B";
 export const HERO = {
   A: {
     he: { rot: false, h1a: "בתל אביב, 11 מתוך 12 עסקים מקומיים שבדקנו לא הוזכרו ב־ChatGPT.", h1b: "העסק שלך מוזכר?",
-      lede: "בדיקה כיוונית שלנו מ־25.10.2026: רק 1 מתוך 12 עסקים הוזכר בשם (8%), גם ב־ChatGPT וגם ב־Gemini. זה מדגם קטן, לא מחקר. Ranky בודק את אותו הדבר על העסק שלך: איפה אתה מדורג, מי נבחר במקומך, ו־3 תיקונים." },
+      lede: "בדיקה כיוונית שלנו מ־25.10.2026: רק 1 מתוך 12 עסקים הוזכר בשם (8%), גם ב־ChatGPT וגם ב־Gemini. זה מדגם קטן, לא מחקר. Ranky בודק את אותו הדבר על העסק שלך: אם הוזכרת, מי נבחר במקומך, ו־3 צעדים." },
     en: { rot: false, h1a: "In Tel Aviv, 11 of 12 local businesses we checked weren't named by ChatGPT.", h1b: "Is your business named?",
-      lede: "Our directional check, 25 Oct 2026: only 1 of 12 local businesses was named (8%), on ChatGPT and on Gemini. A small sample, not a study. Ranky runs the same check on your business: where you rank, who gets picked instead, and 3 fixes." },
+      lede: "Our directional check, 25 Oct 2026: only 1 of 12 local businesses was named (8%), on ChatGPT and on Gemini. A small sample, not a study. Ranky runs the same check on your business: whether you were named, who gets picked instead, and 3 steps." },
   },
   B: {
     he: { rot: false, h1a: "בואו לראות איך העסק שלכם יכול להופיע ב־ChatGPT וב־Gemini.", h1b: "סריקה חינם, ומיד אחריה 3 צעדים לעשות כבר היום.",

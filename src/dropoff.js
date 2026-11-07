@@ -8,7 +8,7 @@
 // Server-side event: scan_client_left = POST /api/scan connection closed before the scan answered (the scan itself still finishes and is
 // stored; the visitor just never sees it).
 import { BOT } from './funnel.js';
-export const CLIENT_EVENTS = ['form_submit_attempted', 'turnstile_missing', 'turnstile_error', 'turnstile_expired', 'turnstile_unsupported', 'turnstile_load_failed', 'city_confirm_shown', 'scan_request_sent', 'scan_progress_left', 'scan_error_shown', 'scan_report_ready', 'report_viewed', 'locked_report_viewed'];
+export const CLIENT_EVENTS = ['form_submit_attempted', 'turnstile_missing', 'turnstile_error', 'turnstile_expired', 'turnstile_unsupported', 'turnstile_load_failed', 'turnstile_timeout', 'turnstile_blocked', 'scan_form_viewed', 'city_confirm_shown', 'scan_request_sent', 'scan_progress_left', 'scan_error_shown', 'scan_report_ready', 'report_viewed', 'locked_report_viewed'];
 export const SERVER_EVENTS = ['scan_client_left'];
 const ALL = new Set([...CLIENT_EVENTS, ...SERVER_EVENTS]);
 let mem = {}; // "day|e|iab" -> n
