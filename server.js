@@ -1,7 +1,7 @@
 import { parseOtherNames } from './src/names.js';
 import express from 'express'; import fs from 'node:fs'; import path from 'node:path'; import { createHash } from 'node:crypto';
 import { BRAND } from './src/brand.js'; import { buildActions } from './src/actions.js'; import { PLANS, isPaid, CURRENCIES, PRODUCTS, productBilling, foundingLimit } from './src/plans.js'; import { detectCurrency, billingFor, publicPlans, usdBillingEnabled } from './src/currency.js';
-import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan , recordScanFailure } from './src/scan.js'; import { sanitize as sanitizeErr } from './src/providers/http.js'; import { utmFrom, applyUtm } from './src/utm.js';
+import { getDb, save, id, BACKEND } from './src/store.js'; import { runScan , recordScanFailure } from './src/scan.js'; import { sanitize as sanitizeErr } from './src/providers/http.js'; import { utmFrom, applyUtm } from './src/utm.js'; import { landFrom, applyLand } from './src/landing.js';
 import { getPayments } from './src/payments/index.js'; import { renderWeeklyEmail, reportSubject } from './src/email/report.js'; import { sendEmail, sendEmailSoft, emailIsMock } from './src/email/send.js';
 import * as V from './src/views.js'; import { isMockMode } from './src/providers/index.js';
 import { token, safeEqual, issueMagicLink, consumeMagic } from './src/security/tokens.js'; import { createRateLimiter } from './src/security/ratelimit.js';
@@ -297,14 +297,14 @@ app.post('/scan', scanRejectMiddleware, scanLimiter, captcha, async (q, r) => {
   if (blank(name) || blank(category) || blank(city) || blank(email)) return r.status(400).send(V.landing('Please fill all required fields.'));
   const owner = isOwnerEmail(email); const ipCount = freeScanIps.get(q.ip) || 0; if (!owner && ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).send(V.landing('Free scan limit reached for today.'));
   const db = getDb(); const known = findAccountByEmail(email); if (known && !owner && !paidScanAllowed(q, known)) { const b = loginRequiredBody(q.body?.lang); return r.status(401).send(V.landing(`${q.body?.lang === 'he' ? b.messageHe : b.message} ${BASE}${b.loginUrl}`)); }
-  const account = findOrCreateAccount(email); recordConsent(account, q.body); if (applyUtm(account, q.body)) save();
+  const account = findOrCreateAccount(email); recordConsent(account, q.body); if (applyUtm(account, q.body) | applyLand(account, q.body)) save();
   const hit = owner ? null : freeScanLookup(db, account, q.body); // owner1: OWNER_EMAILS skip the one-free-scan rule
   if (hit && hit.same) return r.redirect(`/r/${hit.reportId}`);
   if (hit) return r.status(409).send(V.landing(`${FREE_USED_MSG} Your existing report: ${BASE}/r/${hit.reportId}`));
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim().slice(0, 80), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
   db.businesses[business.id] = business; save();
   try {
-    const scan = await runScan(account, business, { utm: utmFrom(q.body) }); if (!owner) freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
+    const scan = await runScan(account, business, { utm: utmFrom(q.body), land: landFrom(q.body) }); if (!owner) freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
     await sendReportEmail(account, business, scan, lang);
     r.redirect(`/r/${scan.id}`);
   } catch (e) { r.status(e.code === 'CAP' ? 429 : e.code === 'NO_ENGINE' ? 503 : 500).send(V.landing(e.message)); }
@@ -337,7 +337,7 @@ async function startCheckout(q) {
   const billing = product ? productBilling(product) : billingFor(plan, displayCurrencyFor(q));
   const existing = findAccountByEmail(q.body.email);
   if (existing && !adminTest) { if (chargeLocks.has(existing.id)) return { refused: 'busy' }; if (!product && hasActiveSubscription(existing)) return { refused: 'already' }; if (product && openFixup(existing)) return { refused: 'fixup_open' }; } // never overwrite checkoutState mid-charge, never open a 2nd checkout for a live subscription
-  const account = findOrCreateAccount(q.body.email); applyUtm(account, q.body); account.pendingPlan = plan.id; account.pendingBilling = billing; account.pendingLang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : langOf(q); const state = account.checkoutState = token(24); if (adminTest) account.pendingAdminTest = true; else delete account.pendingAdminTest; delete account.pendingTest; save();
+  const account = findOrCreateAccount(q.body.email); applyUtm(account, q.body); applyLand(account, q.body); account.pendingPlan = plan.id; account.pendingBilling = billing; account.pendingLang = q.body?.lang === 'he' ? 'he' : q.body?.lang === 'en' ? 'en' : langOf(q); const state = account.checkoutState = token(24); if (adminTest) account.pendingAdminTest = true; else delete account.pendingAdminTest; delete account.pendingTest; save();
   // Mock provider: { redirectUrl } (stand-in card page). SUMIT: { embedded: {companyId, publicKey, identifier} } for the on-page Payments JS card form.
   if (!adminTest) getDb().events.push({ at: new Date().toISOString(), type: 'checkout.started', account: account.id, plan: plan.id }); save();
   const co = await getPayments().createCheckout({ account, plan, billing, state, returnUrl: `${BASE}/billing/return?lang=${account.pendingLang}` }); return { ...co, billing, lang: account.pendingLang, plan: plan.id };
@@ -524,10 +524,11 @@ app.post('/api/report/:id/unlock', unlockLimiter, async (q, r) => {
   if (known && !owner && !paidScanAllowed(q, known)) return r.status(401).json(loginRequiredBody(lang));
   const guest = db.accounts[s.accountId]; const b = db.businesses[s.businessId]; const account = findOrCreateAccount(email);
   recordConsent(account, q.body); const recheck = recordRecheckOptIn(account, b, q.body); if (guest?.utm && !account.utm) account.utm = guest.utm;
+  if (!account.land && guest?.land) { const p = landFrom({ path: guest.land }); if (p) account.land = p; }
   if (b) b.accountId = account.id; s.accountId = account.id; delete s.locked; s.unlockedAt = new Date().toISOString();
   if (owner) { s.internal = true; for (const e of db.events) if (e && String(e.type).endsWith('.scan_started') && guest && e.account === guest.id) e.internal = true; }
   if (guest?.guest) { guest.mergedInto = account.id; guest.usage = {}; }
-  db.events.push({ at: s.unlockedAt, type: 'funnel.email_unlocked', account: account.id, ...(s.utm ? { src: s.utm } : guest?.utm ? { src: guest.utm } : {}), ...(owner ? { internal: true } : {}), ...(known ? { existingAccount: true } : {}) }); save();
+  db.events.push({ at: s.unlockedAt, type: 'funnel.email_unlocked', account: account.id, ...(s.utm ? { src: s.utm } : guest?.utm ? { src: guest.utm } : {}), ...(account.land ? { land: account.land } : {}), ...(owner ? { internal: true } : {}), ...(known ? { existingAccount: true } : {}) }); save();
   rememberLang(account, s, lang); await sendReportEmail(account, b, s, lang).catch(() => {});
   r.json({ ok: true, reportId: s.id, ...(recheck ? { recheck: 'queued' } : {}) });
 });
@@ -543,10 +544,10 @@ app.post('/api/scan', scanRejectMiddleware, scanClientLeftMiddleware, scanLimite
     if (blank(name)) return r.status(400).json({ error: 'Please fill all required fields.' });
     const ipCount = freeScanIps.get(q.ip) || 0; if (ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).json({ error: 'free_limit_reached', code: 'free_limit_reached', message: 'Free scan limit reached for today.' });
     if (blank(category)) category = GUEST_CATEGORY[q.body?.lang === 'he' ? 'he' : 'en'];
-    const db = getDb(); const guest = { id: id(10), key: token(32), email: null, guest: true, plan: 'free', createdAt: new Date().toISOString(), usage: {} }; db.accounts[guest.id] = guest; applyUtm(guest, q.body);
+    const db = getDb(); const guest = { id: id(10), key: token(32), email: null, guest: true, plan: 'free', createdAt: new Date().toISOString(), usage: {} }; db.accounts[guest.id] = guest; applyUtm(guest, q.body); applyLand(guest, q.body);
     const business = { id: id(10), accountId: guest.id, name: name.trim().slice(0, 120), website: website?.trim(), category: String(category).trim().slice(0, 80), city: city.trim().slice(0, 80), ...(trade ? { trade } : {}), ...(trade ? { trade } : {}), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
     db.businesses[business.id] = business; save();
-    try { const scan = await runScan(guest, business, { utm: utmFrom(q.body) }); freeScanIps.set(q.ip, ipCount + 1); scan.locked = true; scan.lang = q.body?.lang === 'he' ? 'he' : 'en'; save(); return r.json({ reportId: scan.id, locked: true }); }
+    try { const scan = await runScan(guest, business, { utm: utmFrom(q.body), land: landFrom(q.body) }); freeScanIps.set(q.ip, ipCount + 1); scan.locked = true; scan.lang = q.body?.lang === 'he' ? 'he' : 'en'; save(); return r.json({ reportId: scan.id, locked: true }); }
     catch (e) { scanException(e); if (e.code === 'NO_ENGINE') return r.status(503).json({ error: 'scan_unavailable', code: 'scan_unavailable', message: e.message }); return r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }
   }
   // City is required (no default anywhere): a scan for the wrong city scores 0 and looks like a broken product.
@@ -554,21 +555,21 @@ app.post('/api/scan', scanRejectMiddleware, scanClientLeftMiddleware, scanLimite
   if (blank(name) || blank(category) || blank(email)) return r.status(400).json({ error: 'Please fill all required fields.' });
   const owner = isOwnerEmail(email); const ipCount = freeScanIps.get(q.ip) || 0; if (!owner && ipCount >= 3 && !process.env.DISABLE_IP_LIMIT) return r.status(429).json({ error: 'free_limit_reached', code: 'free_limit_reached', message: 'Free scan limit reached for today.' });
   const db = getDb(); const known = findAccountByEmail(email); if (known && !owner && !paidScanAllowed(q, known)) return r.status(401).json(loginRequiredBody(q.body?.lang));
-  const account = findOrCreateAccount(email); recordConsent(account, q.body); if (applyUtm(account, q.body)) save();
+  const account = findOrCreateAccount(email); recordConsent(account, q.body); if (applyUtm(account, q.body) | applyLand(account, q.body)) save();
   const hit = owner ? null : freeScanLookup(db, account, q.body); // owner1: OWNER_EMAILS skip the one-free-scan rule
   if (hit && hit.same) return r.json({ reportId: hit.reportId, existing: true });
   if (hit) return r.status(409).json(freeUsedBody(hit, q.body?.lang));
   const business = { id: id(10), accountId: account.id, name: name.trim(), website: website?.trim(), category: category.trim(), city: city.trim().slice(0, 80), ...(trade ? { trade } : {}), ...(parseOtherNames(q.body?.otherNames).length ? { aliases: parseOtherNames(q.body.otherNames) } : {}) };
   db.businesses[business.id] = business; save();
   try {
-    const scan = await runScan(account, business, { utm: utmFrom(q.body) }); if (!owner) freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
+    const scan = await runScan(account, business, { utm: utmFrom(q.body), land: landFrom(q.body) }); if (!owner) freeScanIps.set(q.ip, ipCount + 1); const lang = scanLang(account, q.body); rememberLang(account, scan, lang);
     await sendReportEmail(account, business, scan, lang);
     r.json({ reportId: scan.id });
   } catch (e) { scanException(e); if (e.code === 'NO_ENGINE') return r.status(503).json({ error: 'scan_unavailable', code: 'scan_unavailable', message: e.message }); r.status(e.code === 'CAP' ? 429 : 500).json({ error: q.body?.lang === 'he' && e.he ? e.he : e.message }); }
 });
 app.get('/api/report/:id', (q, r) => { const db = getDb(); const s = Object.hasOwn(db.scans, q.params.id) ? db.scans[q.params.id] : null; if (!s) return r.status(404).json({ error: 'not found' });
   const b = db.businesses[s.businessId]; r.set('Cache-Control', 'no-store'); r.set('X-Robots-Tag', 'noindex, nofollow'); if (s.locked) return r.json(partialReport(s, b)); const hist = (b.scanIds || []).map(i => db.scans[i]).filter(Boolean); const idx = hist.findIndex(x => x.id === s.id);
-  r.json({ demo: !!s.mock, business: { name: b.name, category: b.category, city: b.city, website: b.website, ...(b.aliases?.length ? { aliases: b.aliases } : {}) }, scan: (({ utm, ...pubScan }) => pubScan)(s), previousScore: idx > 0 ? hist[idx - 1].summary.score : null, history: hist.slice(0, idx + 1).map(x => x.summary.score), historyAt: hist.slice(0, idx + 1).map(x => x.at) }); });
+  r.json({ demo: !!s.mock, business: { name: b.name, category: b.category, city: b.city, website: b.website, ...(b.aliases?.length ? { aliases: b.aliases } : {}) }, scan: (({ utm, land, ...pubScan }) => pubScan)(s), previousScore: idx > 0 ? hist[idx - 1].summary.score : null, history: hist.slice(0, idx + 1).map(x => x.summary.score), historyAt: hist.slice(0, idx + 1).map(x => x.at) }); });
 app.post('/api/checkout', noCardData, captchaUnlessAdminTest, async (q, r) => { const c = await startCheckout(q); if (c?.refused) return refuseCheckout(r, c.refused); if (c?.prelaunch) return r.status(403).json({ error: 'Pre-launch: checkout is not open yet. Join the waitlist.', prelaunch: true }); if (!c) return r.status(400).json({ error: 'Choose a plan and enter your email.' }); r.json(c); });
 // Pricing for the UI: detected display currency + server prices + what checkout will actually charge.
 app.get('/api/pricing', (q, r) => {

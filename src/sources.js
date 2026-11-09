@@ -9,7 +9,7 @@
 //    events carry {src} and signups / payments use the account's first touch.
 // Cardinality: at most MAX_KEYS_PER_DAY keys per day in memory (later new keys fold into 'other'); output = top TOP rows per window, the
 // rest summed into one 'other' row. Values are pre-sanitized (src/utm.js: [A-Za-z0-9_.-] / host names only), so no HTML or PII can appear.
-import crypto from 'node:crypto'; import { cleanUtm, cleanRef, srcOf } from './utm.js'; import { BOT } from './funnel.js'; import { isOwnerEmail } from './owner.js';
+import crypto from 'node:crypto'; import { cleanUtm, cleanRef, srcOf } from './utm.js'; import { BOT } from './funnel.js'; import { isOwnerEmail } from './owner.js'; import { countPath } from './landing.js';
 export const TOP = 20; const MAX_KEYS_PER_DAY = 300; const SEP = '\u0001';
 let mem = {}; let salt = crypto.randomBytes(16).toString('hex'); const seen = new Map();
 const day = (d = new Date()) => d.toISOString().slice(0, 10);
@@ -23,6 +23,7 @@ export function countLanding(q, now = new Date()) {
   if (!seen.has(d)) { for (const x of seen.keys()) if (x < d) seen.delete(x); seen.set(d, new Set()); }
   const h = crypto.createHash('sha256').update(`${salt}|${d}|${key}|${q.ip || ''}|${ua}`).digest('base64url').slice(0, 16); const set = seen.get(d);
   if (!set.has(h) && set.size < 100000) { set.add(h); row.u++; }
+  try { countPath(q, b.path, now); } catch { /* a bad path bucket never drops the source count */ }
   return true;
 }
 export function flushSources(db, now = new Date()) { let n = 0; for (const [d, rows] of Object.entries(mem)) for (const [key, v] of Object.entries(rows)) { if (!v.n) continue; const [s, c, m] = key.split(SEP); db.events.push({ at: now.toISOString(), type: 'funnel.src_visits', day: d, s, c, m, n: v.n, u: v.u }); n++; } mem = {}; return n; }
