@@ -9,13 +9,13 @@ import { buildFixes } from './fixes.js'; import { buildActions } from './actions
 import { sentimentFor } from './sentiment.js';
 import { factCheck } from './factcheck.js';
 import { detectAlerts } from './alert-detect.js';
-import { getDb, save, id } from './store.js'; import { sanitize } from './providers/http.js';
+import { getDb, save, id } from './store.js'; import { sanitize } from './providers/http.js'; import { cleanBucket } from './landing.js';
 // Aggregate 'scan.failed' event (reason + sanitized per-engine last error; no account, email, prompt or key) for the status endpoint.
 export function recordScanFailure(reason, engines = []) { try { getDb().events.push({ at: new Date().toISOString(), type: 'scan.failed', reason, engines }); save(); } catch {} }
 
 export const NO_ENGINE_MESSAGE = { en: 'Live scans are temporarily unavailable (no AI engine is available right now). Please try again later.', he: 'הסריקות האמיתיות לא זמינות כרגע (אף מנוע AI לא זמין). נסו שוב מאוחר יותר.' };
 // planOverride: a product (e.g. PRODUCTS.fixup) whose question count / competitors / check budget apply instead of the account's plan.
-export async function runScan(account, business, { engines = ENGINES, maxQuestions, utm = null, planOverride = null, auto = false } = {}) {
+export async function runScan(account, business, { engines = ENGINES, maxQuestions, utm = null, land = null, planOverride = null, auto = false } = {}) {
   const plan = planOverride || PLANS[account.plan];
   const questions = buildQuestions(business, Math.min(plan.questionsPerBusiness, maxQuestions || Infinity));
   // Engines that cannot run live (not enabled / key missing) are skipped, never faked. No runnable engine: refuse before any spend.
@@ -24,12 +24,12 @@ export async function runScan(account, business, { engines = ENGINES, maxQuestio
   if (!active.length) { console.error(`[scan] NO_ENGINE: no live engine configured (${skipped.map(x => `${x.engine}=${x.reason}`).join(' ')})`); recordScanFailure('no_engine_configured', skipped.map(x => ({ engine: x.engine, status: x.reason }))); }
   if (!active.length) throw Object.assign(new Error(NO_ENGINE_MESSAGE.en), { code: 'NO_ENGINE', he: NO_ENGINE_MESSAGE.he, skipped });
   // owner1: OWNER_EMAILS accounts are internal (outreach scans): no per-account monthly check budget, but DAILY_SPEND_CAP_USD still applies.
-  const internal = isOwnerEmail(account.email);
+  const internal = isOwnerEmail(account.email); const landB = cleanBucket(land);
   const budget = checkBudget(account, active, questions.length, active.filter(e => !getProvider(e).mock), internal ? { ...plan, monthlyCheckBudget: Infinity } : plan);
   if (!budget.ok) throw Object.assign(new Error(budget.reason), { code: 'CAP', he: budget.reasonHe });
   // Funnel 'scan started': recorded HERE, the one place every scan path goes through (free form, /api/scan, dashboard re-scans, weekly,
   // alerts), so scanStarted >= scanDone. Automatic re-scans and Fix-up scans are excluded, matching scanDone in src/funnel.js.
-    if (!auto && !planOverride) { try { getDb().events.push({ at: new Date().toISOString(), type: 'funnel.scan_started', account: account.id, ...(utm ? { src: utm } : account.utm ? { src: account.utm } : {}), ...(internal ? { internal: true } : {}) }); save(); } catch {} }
+    if (!auto && !planOverride) { try { getDb().events.push({ at: new Date().toISOString(), type: 'funnel.scan_started', account: account.id, ...(utm ? { src: utm } : account.utm ? { src: account.utm } : {}), ...(landB ? { land: landB } : {}), ...(internal ? { internal: true } : {}) }); save(); } catch {} }
 
   // Every (question, engine) check runs through a small worker pool (SCAN_CONCURRENCY, default 4 = both engines x 2 questions) with a
   // per-call timeout in the providers, so a full live scan stays well under Cloudflare's ~100s. Results keep question-then-engine order.
@@ -61,7 +61,7 @@ export async function runScan(account, business, { engines = ENGINES, maxQuestio
 
   const ok = results.filter(r => !r.error);
   const summary = summarizeResults(results, { plan, engines, skipped, cost });
-  const scan = { id: id(12), businessId: business.id, accountId: account.id, at: new Date().toISOString(), mock: ok.length > 0 && ok.every(r => r.mock), ...(utm ? { utm } : {}), ...(internal ? { internal: true } : {}), summary, results };
+  const scan = { id: id(12), businessId: business.id, accountId: account.id, at: new Date().toISOString(), mock: ok.length > 0 && ok.every(r => r.mock), ...(utm ? { utm } : {}), ...(landB ? { land: landB } : {}), ...(internal ? { internal: true } : {}), summary, results };
   scan.fixes = buildFixes(scan, business); scan.actions = buildActions(scan, business);
   const db = getDb(); const prev = db.scans[business.scanIds?.at(-1)]; scan.alerts = detectAlerts(prev, scan); db.scans[scan.id] = scan; business.scanIds = [...(business.scanIds || []), scan.id]; save();
   return scan;

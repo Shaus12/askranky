@@ -45,7 +45,9 @@ export default function ScanProgress({ t, lang }: { t: Dict; lang: Locale }) {
   }, [lang, n]);
   // Starts the scan (from the stored pending form after /[lang] → /[lang]/scan, or directly from the form shown on this page).
   function run(p: Pending) {
-    t0.current = Date.now(); maxPct.current = 0; setElapsed(0); setBiz(p); setStep(0); setReportId(""); setExisting(false); setError(""); setUsed(null); setLoginReq(null); setMode("run"); track("scan_request_sent"); waiting.current = true;
+    if (waiting.current) return;
+    waiting.current = true;
+    t0.current = Date.now(); maxPct.current = 0; setElapsed(0); setBiz(p); setStep(0); setReportId(""); setExisting(false); setError(""); setUsed(null); setLoginReq(null); setMode("run"); track("scan_request_sent");
     api<{ reportId: string; existing?: boolean }>("/api/scan", { body: { ...p, lang, ...getUtm() }, headers: sessionHeaders() })
       .then((j) => { waiting.current = false; track("scan_report_ready"); sessionStorage.removeItem(PENDING); setExisting(!!j.existing); setReportId(j.reportId); })
       .catch((e) => { waiting.current = false; sessionStorage.removeItem(PENDING); if (e?.code !== "login_required" && e?.code !== "free_scan_used") track("scan_error_shown"); if (e?.code === "login_required") setLoginReq({ loginUrl: typeof e.data?.loginUrl === "string" ? e.data.loginUrl : undefined }); else if (e?.code === "free_scan_used") setUsed({ reportId: typeof e.data?.reportId === "string" ? e.data.reportId : undefined }); else setError(errMessage(e, t)); });

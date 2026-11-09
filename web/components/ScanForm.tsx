@@ -10,14 +10,15 @@ import { cityHint } from "@/lib/city-hint";
 import { GATE } from "@/lib/gate";
 import { track } from "@/lib/track";
 import { TRADES } from "@/lib/trades";
+import { turnstileSubmitAction } from "@/lib/turnstile-gate";
 
 // gate1 + trade1: trade (from a list of ~20, or "other" with free text) + city, then the business name (needed to find it in the answers).
 // Website, other names and an optional email live under "more options". The trade id goes to POST /api/scan as `trade`.
 const extra = ["website", "email"] as const;
 // Shown on the submit button while Turnstile is in progress. The server check is unchanged.
 const TSB = {
-  he: { waiting: "ממתין לבדיקת אבטחה…", blocked: "בדיקת האבטחה נכשלה, נסו שוב למעלה", wait: "בדיקת האבטחה עוד לא הושלמה. הפעלנו אותה מחדש, נסו שוב בעוד רגע.", failed: "בדיקת האבטחה לא נטענה. לחצו \"נסו שוב\" בהודעה שמעל הכפתור." },
-  en: { waiting: "Waiting for the security check…", blocked: "Security check failed, retry above", wait: "The security check isn't complete yet. We restarted it; try again in a moment.", failed: "The security check didn't load. Press \"Try again\" in the message above the button." },
+  he: { waiting: "ממתין לבדיקת אבטחה…", blocked: "בדיקת האבטחה נכשלה, נסו שוב למעלה", wait: "בדיקת האבטחה עוד לא הושלמה. נשלח את הטופס ברגע שתהיה מוכנה.", failed: "בדיקת האבטחה לא נטענה. לחצו \"נסו שוב\" בהודעה שמעל הכפתור.", storage: "הדפדפן חסם שמירת הטופס. נסו שוב, או פתחו את הדף בדפדפן (⋮ ← פתח בדפדפן)." },
+  en: { waiting: "Waiting for the security check…", blocked: "Security check failed, retry above", wait: "The security check isn't complete yet. We'll send the form as soon as it is ready.", failed: "The security check didn't load. Press \"Try again\" in the message above the button.", storage: "This browser blocked saving the form. Try again, or open the page in your browser (⋮ → Open in browser)." },
 } as const;
 export const PENDING = "ranky-pending-scan";
 // Collects the business details, then hands off to /[lang]/scan which calls POST /api/scan while showing progress.
@@ -28,7 +29,7 @@ export default function ScanForm({ t, lang, onStart, cta }: { t: Dict; lang: Loc
   const a = t.accuracy; const [confirm, setConfirm] = useState<{ d: Record<string, string>; city: string } | null>(null);
   const [siteKey, setSiteKey] = useState<string | null>(null); const [err, setErr] = useState(""); const [cfg, setCfg] = useState<Config | null>(null); const [more, setMore] = useState(false); const [trade, setTrade] = useState(""); const tc = GATE[lang].trade; const nt = demoNotices(cfg, t);
   const [ts, setTs] = useState<TsState>("off"); const [tsReset, setTsReset] = useState(0);
-  const root = useRef<HTMLFormElement>(null); const viewed = useRef(false);
+  const root = useRef<HTMLFormElement>(null); const viewed = useRef(false); const resume = useRef(false);
   useEffect(() => { getConfig().then((c) => { setSiteKey(c.turnstileSiteKey); setCfg(c); }); }, []);
   // Count a view only once the form is actually on screen. A mount-time event would fire for a form the visitor has not reached.
   useEffect(() => {
@@ -43,25 +44,40 @@ export default function ScanForm({ t, lang, onStart, cta }: { t: Dict; lang: Loc
     io.observe(el);
     return () => io.disconnect();
   }, []);
-  function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault(); const fd = new FormData(e.currentTarget); const d: Record<string, string> = {};
-    fd.forEach((v, k) => { d[k] = String(v).trim(); }); track("form_submit_attempted");
-    if (d.name && !d.city) return setErr(a.cityRequired);
-    if (!d.trade || (d.trade === "other" && !d.category)) return setErr(tc.required);
+  function fields(form: HTMLFormElement) { const fd = new FormData(form); const d: Record<string, string> = {}; fd.forEach((v, k) => { d[k] = String(v).trim(); }); return d; }
+  // Returns an error, or null after dropping the unused trade/category field. Mutates `d` the same way the submit always did.
+  function problem(d: Record<string, string>) {
+    if (d.name && !d.city) return a.cityRequired;
+    if (!d.trade || (d.trade === "other" && !d.category)) return tc.required;
     if (d.trade === "other") delete d.trade; else delete d.category;
-    if (!d.name || !d.city) return setErr(t.form.required);
-    if (siteKey && !d["cf-turnstile-response"]) { track("turnstile_missing"); track("turnstile_blocked"); setTsReset((k) => k + 1); return setErr(ts === "failed" ? TSB[lang].failed : TSB[lang].wait); }
-    // Gentle check: the name/website names a different city (e.g. "The Ritz-Carlton Herzliya" entered as Tel Aviv).
-    const hint = cityHint({ name: d.name, website: d.website, city: d.city });
-    if (hint) { setErr(""); track("city_confirm_shown"); return setConfirm({ d, city: hint[lang] }); }
-    go(d);
+    if (!d.name || !d.city) return t.form.required;
+    return null;
   }
   function go(d: Record<string, string>) {
     setConfirm(null);
     const pending = { ...d, lang, turnstileToken: d["cf-turnstile-response"] };
     if (onStart) return onStart(pending);
-    sessionStorage.setItem(PENDING, JSON.stringify(pending));
+    try { sessionStorage.setItem(PENDING, JSON.stringify(pending)); }
+    catch { return setErr(TSB[lang].storage); }
     router.push(`/${lang}/scan`);
+  }
+  function send(d: Record<string, string>) {
+    // Gentle check: the name/website names a different city (e.g. "The Ritz-Carlton Herzliya" entered as Tel Aviv).
+    const hint = cityHint({ name: d.name, website: d.website, city: d.city });
+    if (hint) { setErr(""); track("city_confirm_shown"); return setConfirm({ d, city: hint[lang] }); }
+    go(d);
+  }
+  // `problem` mutates trade/category, so call it once per read of the form.
+  function afterReady(d: Record<string, string>) { const msg = problem(d); if (msg) return setErr(msg); send(d); }
+  function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault(); const d = fields(e.currentTarget); track("form_submit_attempted");
+    const msg = problem(d); if (msg) return setErr(msg);
+    const action = turnstileSubmitAction(siteKey, d["cf-turnstile-response"], ts);
+    // Loading: do not reset the challenge. One early tap arms a single auto-send for when the token arrives.
+    if (action === "wait") { track("turnstile_missing"); track("turnstile_blocked"); resume.current = true; return setErr(TSB[lang].wait); }
+    if (action === "reset") { track("turnstile_missing"); track("turnstile_blocked"); resume.current = false; setTsReset((k) => k + 1); return setErr(ts === "failed" ? TSB[lang].failed : TSB[lang].wait); }
+    resume.current = false;
+    send(d);
   }
   return (
     <form ref={root} onSubmit={submit} className="card space-y-3 p-6 md:p-7" noValidate data-scan-form>
@@ -99,7 +115,17 @@ export default function ScanForm({ t, lang, onStart, cta }: { t: Dict; lang: Loc
       <datalist id="il-cities">{ISRAELI_CITIES.map((c) => <option key={c.slug} value={c[lang]} />)}</datalist>
       <p className="text-xs text-slate-400" data-privacy>{nt.privacy} <a className="vx-link underline" href={`/${lang}/legal/privacy`}>{t.form.privacyLink}</a>.</p>
       {nt.formNote && <p role="note" data-demo-note className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-zinc-200">{nt.formNote}</p>}
-      <Turnstile siteKey={siteKey} lang={lang} resetKey={tsReset} onState={(s) => { setTs(s); if (s === "ready") setErr(""); }} />
+      <Turnstile siteKey={siteKey} lang={lang} resetKey={tsReset} onState={(s) => {
+        setTs(s);
+        if (s === "failed") { resume.current = false; return; }
+        if (s !== "ready") return;
+        setErr("");
+        if (!resume.current || !root.current) return;
+        resume.current = false;
+        const d = fields(root.current);
+        if (!d["cf-turnstile-response"]) return setErr(TSB[lang].wait);
+        afterReady(d);
+      }} />
       {confirm && <div role="alertdialog" aria-live="polite" data-city-confirm className="rounded-lg border border-sky-300/40 bg-sky-400/10 px-3 py-3 text-sm text-sky-100">
         <p>{a.cityConfirm.replaceAll("{city}", confirm.city)}</p>
         <div className="mt-2 flex flex-wrap gap-2">

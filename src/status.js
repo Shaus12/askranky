@@ -6,7 +6,7 @@
 // Every section is computed independently: a missing table/field yields null for that field (never an exception, never invented data).
 import { getDb } from './store.js'; import { PLANS, isPaid } from './plans.js'; import { dailyCapUsd } from './costs.js';
 import { getPayments } from './payments/index.js'; import { isMockMode } from './providers/index.js'; import { emailIsMock } from './email/send.js'; import { isPrelaunch } from './prelaunch.js';
-import { GRACE_DAYS } from './jobs/billing-sync.js'; import { buildFunnel } from './funnel.js'; import { cleanUtm } from './utm.js';
+import { GRACE_DAYS } from './jobs/billing-sync.js'; import { buildFunnel } from './funnel.js'; import { cleanUtm } from './utm.js'; import { isOwnerEmail } from './owner.js';
 const DAY = 864e5, HOUR = 36e5;
 const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0); const r2 = v => Math.round(num(v) * 100) / 100;
 // Short, scrubbed text: strips anything that looks like an email, URL, long token, or run of digits (ids, phone/card/amount-like numbers).
@@ -23,6 +23,8 @@ const resetInfo = now => { const next = new Date(Date.UTC(now.getUTCFullYear(), 
 const safe = (f) => { try { return f(); } catch { return null; } };
 const ts = v => { const t = Date.parse(v); return Number.isFinite(t) ? t : NaN; };
 const isTestAcc = a => !!(a.testSubscription || a.pendingTest);
+// Same signup definition as the funnel: a guest scan, an OWNER_EMAILS address, or an admin-test account is not a signup.
+const countsAsSignup = a => !a.guest && !a.adminTest && !isOwnerEmail(a.email);
 // Paying = a paid plan with a live subscription that is not cancelled / past_due (same rule as subscribers.paying).
 const isPayingAcc = a => { const plan = PLANS[a.plan]; return !!plan && isPaid(plan) && !!a.subscriptionRef && a.status !== 'cancelled' && a.status !== 'past_due'; };
 // First-touch utm_source key: validated, lower-cased; 'direct' when none. Only the source name is ever output (never emails / ids / IPs).
@@ -65,7 +67,7 @@ export function buildStatus({ now = new Date(), db = getDb(), running = false } 
       alertState: { threshold: 0.8, reached: cap > 0 ? usd >= 0.8 * cap : usd > 0, capReached: usd >= cap, lastAlertLoggedAt: lastAlert },
       ...resetInfo(now), resetBasis: 'UTC midnight' };
   });
-  const signups = safe(() => { const o = { today: 0, last24h: 0, total: accounts.length }; for (const a of accounts) { const t = ts(a.createdAt); if (String(a.createdAt).slice(0, 10) === today) o.today++; if (t >= t24) o.last24h++; } return o; });
+  const signups = safe(() => { const list = accounts.filter(countsAsSignup); const o = { today: 0, last24h: 0, total: list.length }; for (const a of list) { const t = ts(a.createdAt); if (String(a.createdAt || '').slice(0, 10) === today) o.today++; if (t >= t24) o.last24h++; } return o; });
   const subs = safe(() => {
     const o = { paying: 0, byPlan: { starter: 0, pro: 0, agency: 0 }, mrrIls: 0, trialOrFree: 0, cancelledInPeriod: 0 };
     for (const a of accounts) {
@@ -90,7 +92,7 @@ export function buildStatus({ now = new Date(), db = getDb(), running = false } 
     const firstScanSrc = {}; for (const s of [...scans].sort((a, b) => (ts(a.at) || 0) - (ts(b.at) || 0))) { const k = srcKey(s.utm?.source); if (k && s.accountId && !firstScanSrc[s.accountId]) firstScanSrc[s.accountId] = k; }
     const wlSrc = {}; for (const w of wl) { const k = srcKey(w.utm?.source); if (k && w.email && !wlSrc[w.email]) wlSrc[w.email] = k; }
     const accSrc = {}; const testIds = new Set(Object.values(db?.accounts || {}).filter(a => a && typeof a === 'object' && isTestAcc(a)).map(a => a.id));
-    for (const a of accounts) { const k = accSrc[a.id] = srcKey(a.utm?.source) || firstScanSrc[a.id] || wlSrc[a.email] || 'direct'; const r = row(k); r.signups++; if (isPayingAcc(a)) r.paying++; }
+    for (const a of accounts) { const k = accSrc[a.id] = srcKey(a.utm?.source) || firstScanSrc[a.id] || wlSrc[a.email] || 'direct'; if (!countsAsSignup(a)) continue; const r = row(k); r.signups++; if (isPayingAcc(a)) r.paying++; }
     for (const s of scans) { if (testIds.has(s.accountId)) continue; const r = row(accSrc[s.accountId] || srcKey(s.utm?.source) || 'direct'); r.scansTotal++; if (ts(s.at) >= t24) r.scansLast24h++; }
     for (const w of wl) row(srcKey(w.utm?.source) || 'direct').waitlist++;
     return Object.fromEntries(Object.entries(out).sort((a, b) => b[1].scansTotal - a[1].scansTotal || b[1].signups - a[1].signups || a[0].localeCompare(b[0])));
